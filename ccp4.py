@@ -57,7 +57,7 @@ def parse(handle, verbose=False):
         header.nintervalY = header.ncrs[1] - 1
         if verbose: warnings.warn("Fixed number of Y interval")
     if header.nintervalZ == 0 & header.ncrs[2] > 0:
-        header.nintervaLZ = header.ncrs[2] - 1
+        header.nintervalZ = header.ncrs[2] - 1
         if verbose: warnings.warn("Fixed number of Z interval.")
 
     if header.col2xyz == 0 & header.row2xyz == 0 & header.sec2xyz == 0:
@@ -174,8 +174,8 @@ class DensityHeader(object):
         self.labels = labels
 
         self.mapSize = self.ncrs[0] * self.ncrs[1] * self.ncrs[2] * 4
-        self.xyzInterval = [self.nintervalX, self.nintervalY, self.nintervalZ]
         self.xyzLength = [self.xlength, self.ylength, self.zlength]
+        self.xyzInterval = [self.nintervalX, self.nintervalY, self.nintervalZ]
         self.gridLength = [x/y for x, y in zip(self.xyzLength, self.xyzInterval)]
 
         indices = [0, 0, 0]
@@ -203,7 +203,7 @@ class DensityHeader(object):
         gamma = np.pi / 180 * self.gamma
 
         # Orthogonalization matrix for calculation between fractional coordinates and orthogonal coordinates
-        # Formula based on 'Biomolecular Crystallography' by Bernhard Rupp, p235
+        # Formula based on 'Biomolecular Crystallography' by Bernhard Rupp, p233
         orthoMat = [[self.xlength, self.ylength * np.cos(beta), self.zlength * np.cos(beta)],
                     [0, self.ylength * np.sin(beta), self.zlength * (np.cos(alpha) - np.cos(beta) * np.cos(
                         gamma)) / np.sin(gamma)],
@@ -211,36 +211,9 @@ class DensityHeader(object):
                                                   2 * np.cos(alpha) * np.cos(beta) * np.cos(gamma)) / np.sin(gamma)]]
 
         if self.futureUse[-3] == 0.0 and self.futureUse[-2] == 0.0 and self.futureUse[-1] == 0.0:
-            origin = np.dot(orthoMat, [self.crsStart[self.map2xyz[0]] / self.nintervalX,
-                                       self.crsStart[self.map2xyz[1]] / self.nintervalY,
-                                       self.crsStart[self.map2xyz[2]] / self.nintervalZ])
+            origin = np.dot(orthoMat, [self.crsStart[self.map2xyz[i]] / self.xyzInterval[i] for i in range(3)])
         else:
-            origin = [self.originEM[0], self.originEM[1], self.originEM[2]]
-
-        # This is how LiteMol calculate the origin
-        xscale = self.gridLength[0]
-        yscale = self.gridLength[1]
-        zscale = self.gridLength[2]
-
-        z1 = np.cos(beta)
-        z2 = (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma)
-        z3 = np.sqrt(1.0 - z1 * z1 - z2 * z2)
-
-        xAxis = [xscale, 0.0, 0.0]
-        yAxis = [np.cos(gamma) * yscale, np.sin(gamma) * yscale, 0.0]
-        zAxis = [z1 * zscale, z2 * zscale, z3 * zscale]
-
-        if self.futureUse[-3] == 0.0 and self.futureUse[-2] == 0.0 and self.futureUse[-1] == 0.0:
-            origin1 = [
-                xAxis[0] * self.crsStart[self.map2xyz[0]] + yAxis[0] * self.crsStart[self.map2xyz[1]] +
-                zAxis[0] * self.crsStart[self.map2xyz[2]],
-                yAxis[1] * self.crsStart[self.map2xyz[1]] + zAxis[1] * self.crsStart[self.map2xyz[2]],
-                zAxis[2] * self.crsStart[self.map2xyz[2]]
-            ]
-        else:
-            origin1 = [self.originEM[0], self.originEM[1], self.originEM[2]]
-        print('LiteMol origin: ', origin1)
-        print('My origin: ', origin)
+            origin = [self.originEM[i] for i in range(3)]
 
         return origin
 
@@ -253,9 +226,8 @@ class DensityHeader(object):
         RETURNS
             crs coordinates
         """
-        crsGridPos = [int((xyzCoord[i] - self.origin[i]) / self.gridLength[i]) for i in range(3)]
-        return [crsGridPos[self.map2crs[2]], crsGridPos[self.map2crs[1]], crsGridPos[self.map2crs[0]]]
-
+        crsGridPos = [int(round((xyzCoord[i] - self.origin[i]) / self.gridLength[i])) for i in range(3)]
+        return [crsGridPos[self.map2crs[i]] for i in range(3)]
 
     def crs2xyzCoord(self, crsCoord):
         """
@@ -265,9 +237,7 @@ class DensityHeader(object):
         RETURNS
             xyz coordinates
         """
-        # First convert the crs coordinates in the order used in the 3-d density matrix to the crs in the order of the header
-        crsGridPos = [crsCoord[2], crsCoord[1], crsCoord[0]]
-        return [int(crsGridPos[self.map2xyz[i]]) * self.gridLength[i] + self.origin[i] for i in range(3)]
+        return [int(crsCoord[self.map2xyz[i]]) * self.gridLength[i] + self.origin[i] for i in range(3)]
 
 
 class DensityMatrix:
@@ -292,12 +262,11 @@ class DensityMatrix:
         for ind in range(3):
             crsInterval = self.header.xyzInterval[self.header.map2crs[ind]]
 
-            if crsCoord[ind] < 0 or crsCoord[ind] > self.header.ncrs[ind]:
+            if crsCoord[ind] < 0 or crsCoord[ind] >= self.header.ncrs[ind]:
                 n = np.floor(crsCoord[ind] / crsInterval)
                 crsCoord[ind] -= int(n * crsInterval)
-                print("flag", n, crsCoord[ind])
 
-            if self.header.ncrs[ind] < crsCoord[ind] < crsInterval:
+            if self.header.ncrs[ind] <= crsCoord[ind] < crsInterval:
                 return False
 
         return True
@@ -309,12 +278,12 @@ class DensityMatrix:
             # warnings.warn(message)
             return 0
 
-        return self.density[crsCoord[0], crsCoord[1], crsCoord[2]]
+        return self.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
     def getPointDensityFromXyz(self, xyzCoord):
         """RETURNS the density of a point given PARAMETER xyz coordinate"""
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
-        print("crs grids: ", crsCoord)
+        print("crs grid: ", crsCoord)
 
         return self.getPointDensityFromCrs(crsCoord)
 
@@ -330,22 +299,22 @@ class DensityMatrix:
                     If cutoff < 0, include only points with density < cutoff.
                     If cutoff > 0, include only points with density > cutoff.
         """
-
+        print(self.getPointDensityFromCrs([9,9,13]))
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
 
         xyzRadius = [np.ceil(radius / self.header.gridLength[i]) for i in range(3)]
-        crsRadius = [int(x) for x in [xyzRadius[self.header.map2crs[0]], xyzRadius[self.header.map2crs[1]], xyzRadius[self.header.map2crs[2]]]]
+        crsRadius = [int(x) for x in [xyzRadius[self.header.map2crs[y]] for y in range(3)]]
 
-        print('grid positions', crsCoord)
-        print("crs radius:", crsRadius)
-        print('cutoff: ', densityCutoff)
+        # print('grid positions', crsCoord)
+        # print("crs radius:", crsRadius)
+        # print('cutoff: ', densityCutoff)
         crsCoordList = []
         for cInd in range(-crsRadius[0], crsRadius[0]+1):
             for rInd in range(-crsRadius[1], crsRadius[1]+1):
                 for sInd in range(- crsRadius[2], crsRadius[2]+1):
                     if cInd ** 2 / crsRadius[0] ** 2 + rInd ** 2 / crsRadius[1] ** 2 + sInd ** 2 / crsRadius[2] ** 2 < 1:
                         crs = [x+y for x, y in zip(crsCoord, [cInd, rInd, sInd])]
-                        # print(crs, self.getPointDensityFromCrs(crs))
+                        if crs == [9,9,13]: print(crs, self.getPointDensityFromCrs(crs))
                         if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
                             crsCoordList.append(crs)
         print('crs grids: ', crsCoordList)
@@ -371,7 +340,7 @@ class DensityMatrix:
 
         return totalDensity
 
-    def findAberrantBlubs(self, xyzCoord, radius, densityCutoff=0):
+    def findAberrantBlobs(self, xyzCoord, radius, densityCutoff=0):
         """
         Find and aggregates all neighbouring aberrant points into blob (red/green meshes) and
         RETURNS
@@ -412,21 +381,17 @@ class DensityMatrix:
         for adjacentSet in adjSetList:
             totalDensity = 0
             weights = [0, 0, 0]
-            weights1 = [0, 0, 0]
             for point in [crsCoordList[x] for x in adjacentSet]:
                 density = self.getPointDensityFromCrs(point)
                 # print('point, density: ', point, density)
 
                 totalDensity += density
-                for i in range(3):
-                    weights[i] += density * point[i]
+                pointXYZ = self.header.crs2xyzCoord(point)
+                weights = [weights[i] + density * pointXYZ[i] for i in range(3)]
 
-                weights1 = [weights1[i] + density * point[i] for i in range(3)]
-                print("compare methods: ", weights, weights1)
-
-            centroidGrid = [weight/totalDensity for weight in weights]
+            centroidXYZ = [weight/totalDensity for weight in weights]
             # print('centroid grid: ', centroidGrid)
-            blobs.append({'centroid': self.header.crs2xyzCoord(centroidGrid), 'total_density': totalDensity, 'volume': self.header.unitVolume * len(adjacentSet)})
+            blobs.append({'centroid': centroidXYZ, 'total_density': totalDensity, 'volume': self.header.unitVolume * len(adjacentSet)})
 
         return blobs
 

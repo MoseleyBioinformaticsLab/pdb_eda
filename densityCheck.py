@@ -4,21 +4,37 @@ import ccp4
 import matplotlib.pyplot as plt
 import numpy as np
 
-#pdbid = '1cbs' # 2Fo - Fc
-#density1 = ccp4.readFromPDBID(pdbid)
+# pdbid = '1cbs' # 2Fo - Fc
+# density1 = ccp4.readFromPDBID(pdbid)
 
-pdbid = '1cbs_diff' # Fo - Fc
+pdbid = '1cbs_diff'  # Fo - Fc
 densityObj = ccp4.readFromPDBID(pdbid)
+print("origin: ", densityObj.origin)
 
 testPos = [6.1, 21.3, 20.7]  # green, big positive
 testPos1 = [34.3, 25.3, 22.8]  # red, big negative
 print('density: ', densityObj.getPointDensityFromXyz(testPos1))
 
-cutoff = -3 * densityObj.header.rmsd
-blub = densityObj.findAberrantBlubs(testPos1, 5, cutoff)
-print('aberrant blubs: ', blub)
-print('test position: ', testPos1)
+cutoff = 3 * densityObj.header.rmsd
+
+densityObj.density[:20, :20, :20] = 0
+centerXYZ = densityObj.header.crs2xyzCoord([10, 10, 10])
+
+# Set up green blob
+densityObj.density[11:13, 11:13, 11:13] = 1  # (x,y,z), Volume 2*2*2=8
+densityObj.density[7:10, 11:14, 7:10] = 1  # (-x,y,-z), Volume 3*3*3=27
+
+# Set up red blob
+densityObj.density[11:13, 7:9, 7:9] = -1  # (-x,-y,z), Volume 2*2*2=8
+densityObj.density[7:10, 7:10, 11:14] = -1  # (x,-y,-z), Volume 3*3*3=27
+
+blub = densityObj.findAberrantBlobs(centerXYZ, 5, -cutoff)
+
 print('unit volume: ', densityObj.header.unitVolume)
+print('aberrant blubs: ', blub)
+
+print(densityObj.header.crs2xyzCoord([12, 8, 8]))
+
 '''
 fo = np.array(density1) - np.array(density2)
 fc = np.array(density1) - np.array(density2) * 2
