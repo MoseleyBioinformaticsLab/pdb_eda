@@ -8,7 +8,6 @@ ccpp4.py
 
 import urllib.request
 import struct
-import matplotlib.pyplot as plt
 import numpy as np
 import statistics
 import warnings
@@ -77,7 +76,7 @@ def parse(handle, verbose=False):
     sigma = np.std(densities)
     mean = np.mean(densities)
     median = np.median(densities)
-    mode = 0 #statistics.mode(densities)
+    mode = 0  # statistics.mode(densities)
     print('mean, median, mode, sigma, header rmsd, difference of the last two: ', mean, median, mode, sigma, header.rmsd, sigma - header.rmsd)
 
     return DensityMatrix(header, origin, densities)
@@ -112,9 +111,12 @@ class DensityHeader(object):
         RETURNS
             DensityHeader object
         """
-        self.ncrs = headerTuple[0:3]  # Number of Columns    (fastest changing in map)
-        # Number of Rows
-        # Number of Sections   (slowest changing in map)
+        self.ncrs = headerTuple[0:3]
+        """
+        Number of Columns    (fastest changing in map)
+        Number of Rows
+        Number of Sections   (slowest changing in map)
+        """
         self.mode = headerTuple[3]
         self.endian = endian
         """
@@ -283,7 +285,7 @@ class DensityMatrix:
     def getPointDensityFromXyz(self, xyzCoord):
         """RETURNS the density of a point given PARAMETER xyz coordinate"""
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
-        print("crs grid: ", crsCoord)
+        # print("crs grid: ", crsCoord)
 
         return self.getPointDensityFromCrs(crsCoord)
 
@@ -299,7 +301,6 @@ class DensityMatrix:
                     If cutoff < 0, include only points with density < cutoff.
                     If cutoff > 0, include only points with density > cutoff.
         """
-        print(self.getPointDensityFromCrs([9,9,13]))
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
 
         xyzRadius = [np.ceil(radius / self.header.gridLength[i]) for i in range(3)]
@@ -314,10 +315,9 @@ class DensityMatrix:
                 for sInd in range(- crsRadius[2], crsRadius[2]+1):
                     if cInd ** 2 / crsRadius[0] ** 2 + rInd ** 2 / crsRadius[1] ** 2 + sInd ** 2 / crsRadius[2] ** 2 < 1:
                         crs = [x+y for x, y in zip(crsCoord, [cInd, rInd, sInd])]
-                        if crs == [9,9,13]: print(crs, self.getPointDensityFromCrs(crs))
                         if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
                             crsCoordList.append(crs)
-        print('crs grids: ', crsCoordList)
+        # print('crs grids: ', crsCoordList)
 
         return crsCoordList
 
@@ -342,7 +342,7 @@ class DensityMatrix:
 
     def findAberrantBlobs(self, xyzCoord, radius, densityCutoff=0):
         """
-        Find and aggregates all neighbouring aberrant points into blob (red/green meshes) and
+        Within given range, find and aggregates all neighbouring aberrant points into blobs (red/green meshes) and
         RETURNS
             a list of aberrant blobs described by their xyz centroid, total density, and volume.
         PARAMS
@@ -375,7 +375,7 @@ class DensityMatrix:
             usedIndex.update(newSet)
             adjSetList.append(newSet)
 
-        print("New function: ", adjSetList)
+        # print("New function: ", adjSetList)
 
         blobs = []
         for adjacentSet in adjSetList:
@@ -391,59 +391,23 @@ class DensityMatrix:
 
             centroidXYZ = [weight/totalDensity for weight in weights]
             # print('centroid grid: ', centroidGrid)
-            blobs.append({'centroid': centroidXYZ, 'total_density': totalDensity, 'volume': self.header.unitVolume * len(adjacentSet)})
+            blobs.append(DensityBlob(centroidXYZ, totalDensity, self.header.unitVolume * len(adjacentSet), self.header))
 
         return blobs
 
 
-        """
-        blobs = []
-        for crsindex in crsCoordList:
-            blob = set(x for x in crsCoordList if -1 <= (crsIndex[0] - x[0]) <= 1 and -1 <= (crsIndex[1] - x[1]) <= 1 and -1 <= (crsIndex[2] - x[2]) <= 1 )
-            blob.add(crsIndex)
-            blobs.append(blob)
+class DensityBlob:
+    def __init__(self, centroid, density, volume, header):
+        self.centroid = centroid
+        self.totalDensity = density
+        self.volume = volume
+        self.header = header
 
-        foundIntersection = True
-        while foundIntersection:
-            foundIntersection = False
-            currBlob = blobs.pop()
-            intersectingBlobs = [blob for blob in blobs if blob.intersection(currBlobs)]
-            if intersectionBlobs:
-                foundIntersection = True
-                # update currBlob
-                # remove intersecting blob
-                # add blob to the other end of blobs
+    def __eq__(self, other):
+        if abs(self.volume - other.volume) >= 1e-6: return False
+        if abs(self.totalDensity - other.totalDensity) >= 1e-6: return False
+        for i in range(0, 3):
+            if abs(self.centroid[i] - other.centroid[i]) >= 1e-6: return False
 
-        # My old code
-        adjacencySets = [set() for x in crsCoordList]
-        for i, crs1 in enumerate(crsCoordList):
-            for j, crs2 in enumerate(crsCoordList):
-                if -1 <= (crs1[0] - crs2[0]) <= 1 and -1 <= (crs1[1] - crs2[1]) <= 1 and -1 <= (crs1[2] - crs2[2]) <= 1:
-                    adjacencySets[i].add(j)
-        # print('adjacency sets: ', adjacencySets)
-
-        # Aggregate adjacency crs index sets together
-        idxLists = []
-        for i, adjacentSet in enumerate(adjacencySets):
-            if len(adjacentSet) == 0:
-                idxLists.append([i])
-            else:
-                repFlag = 0
-                for adjacentSet in idxLists:
-                    if i in adjacentSet:
-                        repFlag = 1
-                        break
-                if repFlag == 1: continue
-
-                oldSet = set()
-                newSet = adjacentSet
-
-                while oldSet != newSet:
-                    oldSet = newSet.copy()
-                    for ind in oldSet:
-                        newSet.update(adjacencySets[ind])
-
-                idxLists.append(newSet)
-        print('aberrant lists: ', idxLists)
-        """
+        return True
 

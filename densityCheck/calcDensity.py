@@ -1,6 +1,6 @@
 # !/usr/bin/python3
 
-import ccp4
+from . import ccp4
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -27,6 +27,20 @@ densityObj.density[7:10, 11:14, 7:10] = 1  # (-x,y,-z), Volume 3*3*3=27
 # Set up red blob
 densityObj.density[11:13, 7:9, 7:9] = -1  # (-x,-y,z), Volume 2*2*2=8
 densityObj.density[7:10, 7:10, 11:14] = -1  # (x,-y,-z), Volume 3*3*3=27
+
+resultRed = densityObj.findAberrantBlobs(centerXYZ, 5, -1 * cutoff)
+centroid2 = [(densityObj.header.crs2xyzCoord([7, 7, 11])[i] + densityObj.header.crs2xyzCoord([8, 8, 12])[i]) / 2 for i in range(3)]
+trueRed = [ccp4.DensityBlob(centroid2, -8, densityObj.header.unitVolume * 8),
+           ccp4.DensityBlob(densityObj.header.crs2xyzCoord([12, 8, 8]), -27, densityObj.header.unitVolume * 27)]
+
+resultRed.sort(key=lambda x: (x.volume, x.totalDensity))
+trueRed.sort(key=lambda x: (x.volume, x.totalDensity))
+
+for i in range(0, len(resultRed)):
+    if resultRed[i] == trueRed[i]:
+        print("check okay")
+
+
 
 blub = densityObj.findAberrantBlobs(centerXYZ, 5, -cutoff)
 
