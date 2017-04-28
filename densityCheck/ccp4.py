@@ -313,7 +313,7 @@ class DensityMatrix:
         for cInd in range(-crsRadius[0], crsRadius[0]+1):
             for rInd in range(-crsRadius[1], crsRadius[1]+1):
                 for sInd in range(- crsRadius[2], crsRadius[2]+1):
-                    if cInd ** 2 / crsRadius[0] ** 2 + rInd ** 2 / crsRadius[1] ** 2 + sInd ** 2 / crsRadius[2] ** 2 < 1:
+                    if cInd ** 2 / crsRadius[0] ** 2 + rInd ** 2 / crsRadius[1] ** 2 + sInd ** 2 / crsRadius[2] ** 2 <= 1:
                         crs = [x+y for x, y in zip(crsCoord, [cInd, rInd, sInd])]
                         if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
                             crsCoordList.append(crs)
@@ -379,35 +379,89 @@ class DensityMatrix:
 
         blobs = []
         for adjacentSet in adjSetList:
-            totalDensity = 0
-            weights = [0, 0, 0]
-            for point in [crsCoordList[x] for x in adjacentSet]:
-                density = self.getPointDensityFromCrs(point)
-                # print('point, density: ', point, density)
+            coords = [crsCoordList[x] for x in adjacentSet]
 
-                totalDensity += density
-                pointXYZ = self.header.crs2xyzCoord(point)
-                weights = [weights[i] + density * pointXYZ[i] for i in range(3)]
-
-            centroidXYZ = [weight/totalDensity for weight in weights]
-            # print('centroid grid: ', centroidGrid)
-            blobs.append(DensityBlob(centroidXYZ, totalDensity, self.header.unitVolume * len(adjacentSet), self.header))
+            blob = DensityBlob.fromCrsList(coords, self.header, self.density)
+            blobs.append(blob)
 
         return blobs
 
 
 class DensityBlob:
-    def __init__(self, centroid, density, volume, header):
+    def __init__(self, centroid, totalDensity, volume, crsList, header):
+        """
+        Initialize a DensityBlob object
+        PARAMS
+            :param centroid: the centroid of the blob
+            :param totalDensity: the totalDensity of the blob
+            :param volume: the volume of the blob, number of density units * unit volumes
+            :param crsList: the crs list of the blob
+            :param header: the header of the ccp4 file
+        RETURNs
+            DensityBlob object
+        """
         self.centroid = centroid
-        self.totalDensity = density
+        self.totalDensity = totalDensity
         self.volume = volume
+        self.crsList = crsList
         self.header = header
 
+
+    @staticmethod
+    def fromCrsList(crsList, header, densityMat):
+        """
+        The creator of a DensityBlob object
+        PARAMS
+            crsList: the crs list of the blob
+            header: the header of the ccp4 file
+            densityMat: the 3-d density matrix that just passed in for calculating centroid etc, so the object does not have to have a density list data member
+        RETURNS
+            DensityBlob object
+        """
+        weights = [0, 0, 0]
+        totalDen = 0
+        for i, point in enumerate(crsList):
+            density = densityMat[point[2], point[1], point[0]]
+            pointXYZ = header.crs2xyzCoord(point)
+            weights = [weights[i] + density * pointXYZ[i] for i in range(3)]
+            totalDen += density
+
+        centroidXYZ = [weight / totalDen for weight in weights]
+        return DensityBlob(centroidXYZ, totalDen, header.unitVolume * len(crsList), crsList, header)
+
+
     def __eq__(self, other):
+        """
+        OVERRIDE the '==' operator of DensityBlob object
+        """
         if abs(self.volume - other.volume) >= 1e-6: return False
         if abs(self.totalDensity - other.totalDensity) >= 1e-6: return False
         for i in range(0, 3):
             if abs(self.centroid[i] - other.centroid[i]) >= 1e-6: return False
 
         return True
+
+    def testOverlap(self, otherBlob):
+        """
+        RETURN true if two blobs overlaps or right next to each other
+        """
+        if any(x in self.crsList for x in otherBlob.crsList):
+            return True
+        elif any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in self.crsList for y in otherBlob.crsList):
+            return True
+        else:
+            return False
+
+    def merge(self, otherBlob, densityMat):
+        """
+        UPDATE the original blob given PARAM another blob
+        """
+        combinedList = self.crsList + [x for x in otherBlob.crsList if x not in self.crsList]
+        newBlob = DensityBlob.fromCrsList(combinedList, self.header, densityMat)
+        self.centroid = newBlob.centroid
+        self.totalDensity = newBlob.totalDensity
+        self.volume = newBlob.volume
+        self.crsList = newBlob.crsList
+        self.header = newBlob.header
+
 

@@ -83,26 +83,51 @@ def test_aberrant_blob():
     densityObj.density[11:13, 7:9, 7:9] = -1  # (-x,-y,z), Volume 2*2*2=8
     densityObj.density[7:10, 7:10, 11:14] = -1  # (x,-y,-z), Volume 3*3*3=27
 
-    resultGreen = densityObj.findAberrantBlobs(centerXYZ, 5, densityCutoff)
+    calcGreen = densityObj.findAberrantBlobs(centerXYZ, 5, densityCutoff)
     centroid1 = [(densityObj.header.crs2xyzCoord([11, 11, 11])[i] + densityObj.header.crs2xyzCoord([12, 12, 12])[i])/2 for i in range(3)]
-    trueGreen = [ccp4.DensityBlob(centroid1, 8, densityObj.header.unitVolume * 8, densityObj.header),
-                 ccp4.DensityBlob(densityObj.header.crs2xyzCoord([8, 12, 8]), 27, densityObj.header.unitVolume * 27, densityObj.header)]
+    trueGreen = [ccp4.DensityBlob(centroid1, 8, densityObj.header.unitVolume * 8, [], densityObj.header),
+                 ccp4.DensityBlob(densityObj.header.crs2xyzCoord([8, 12, 8]), 27, [], densityObj.header.unitVolume * 27, densityObj.header)]
 
-    resultGreen.sort(key=lambda x: (x.volume, x.totalDensity))
+    calcGreen.sort(key=lambda x: (x.volume, x.totalDensity))
     trueGreen.sort(key=lambda x: (x.volume, x.totalDensity))
-    for i in range(0, len(resultGreen)):
-        assert resultGreen[i] == trueGreen[i]
+    for i in range(0, len(calcGreen)):
+        assert calcGreen[i] == trueGreen[i]
 
-    resultRed = densityObj.findAberrantBlobs(centerXYZ, 5, -1 * densityCutoff)
+    calcRed = densityObj.findAberrantBlobs(centerXYZ, 5, -1 * densityCutoff)
     centroid2 = [(densityObj.header.crs2xyzCoord([7, 7, 11])[i] + densityObj.header.crs2xyzCoord([8, 8, 12])[i]) / 2 for i in range(3)]
-    trueRed = [ccp4.DensityBlob(centroid2, -8, densityObj.header.unitVolume * 8, densityObj.header),
-               ccp4.DensityBlob(densityObj.header.crs2xyzCoord([12, 8, 8]), -27, densityObj.header.unitVolume * 27, densityObj.header)]
+    trueRed = [ccp4.DensityBlob(centroid2, -8, densityObj.header.unitVolume * 8, [], densityObj.header),
+               ccp4.DensityBlob(densityObj.header.crs2xyzCoord([12, 8, 8]), -27, [], densityObj.header.unitVolume * 27, densityObj.header)]
 
-    resultRed.sort(key=lambda x: (x.volume, x.totalDensity))
+    calcRed.sort(key=lambda x: (x.volume, x.totalDensity))
     trueRed.sort(key=lambda x: (x.volume, x.totalDensity))
 
-    for i in range(0, len(resultRed)):
-        assert resultRed[i] == trueRed[i]
+    for i in range(0, len(calcRed)):
+        assert calcRed[i] == trueRed[i]
+
+
+def test_merge_blob():
+    """Test the merge funtion in class DensityBlob"""
+    densityObj.density[:20, :20, :20] = 0
+    centerXYZ = densityObj.header.crs2xyzCoord([10, 10, 10])
+    densityCutoff = 3 * densityObj.header.rmsd
+
+    # Set up one green and one red blob
+    densityObj.density[11:13, 11:13, 11:13] = 1
+    calc1 = densityObj.findAberrantBlobs(centerXYZ, 5, densityCutoff)
+
+    densityObj.density[11:13, 11:13, 11:13] = 0
+    densityObj.density[8:10, 8:10, 8:10] = 1
+    densityObj.density[10, 10, 10] = 1
+    calc2 = densityObj.findAberrantBlobs(centerXYZ, 5, densityCutoff)
+    densityObj.density[11:13, 11:13, 11:13] = 1
+
+    calc1[0].merge(calc2[0], densityObj.density)
+    trueMerge = ccp4.DensityBlob(centerXYZ, 17, densityObj.header.unitVolume * 17, [], densityObj.header)
+
+    assert calc1[0].testOverlap(calc2[0])
+    assert calc1[0] == trueMerge
+
+
 
 
 
