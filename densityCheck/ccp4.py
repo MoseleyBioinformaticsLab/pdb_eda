@@ -458,6 +458,7 @@ class DensityBlob:
         """
         combinedList = self.crsList + [x for x in otherBlob.crsList if x not in self.crsList]
         newBlob = DensityBlob.fromCrsList(combinedList, self.header, densityMat)
+
         self.centroid = newBlob.centroid
         self.totalDensity = newBlob.totalDensity
         self.volume = newBlob.volume
