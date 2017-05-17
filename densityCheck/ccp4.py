@@ -77,7 +77,7 @@ def parse(handle, verbose=False):
     mean = np.mean(densities)
     median = np.median(densities)
     mode = 0  # statistics.mode(densities)
-    print('mean, median, mode, sigma, header rmsd, difference of the last two: ', mean, median, mode, sigma, header.rmsd, sigma - header.rmsd)
+    #print('mean, median, mode, sigma, header rmsd, difference of the last two: ', mean, median, mode, sigma, header.rmsd, sigma - header.rmsd)
 
     return DensityMatrix(header, origin, densities)
 
@@ -94,7 +94,7 @@ class DensityHeader(object):
         # Header
         headerFormat = endian + 10 * 'i' + 6 * 'f' + 3 * 'i' + 3 * 'f' + 3 * 'i' + 27 * 'f' + 4 * 'c' + 'ifi'
         headerTuple = struct.unpack(headerFormat, fileHeader[:224])
-        print(headerTuple)
+        #print(headerTuple)
         labels = fileHeader[224:]  # Labels in header
         labels = labels.replace(b' ', b'')
 

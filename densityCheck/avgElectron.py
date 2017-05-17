@@ -4,17 +4,8 @@ import Bio.PDB as pdb
 import ccp4
 import numpy as np
 import sys
+import os.path
 
-pdbid = sys.argv[1]
-densityObj = ccp4.readFromPDBID(pdbid)
-densityCutoff = sigma = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
-
-parser = pdb.PDBParser()
-structure = parser.get_structure(pdbid, pdbid+'.pdb')
-
-atoms = structure.get_atoms()
-#atoms = list(structure.get_atoms())
-#atoms[0].get_coord()
 
 elementElectron = {'C': 6, 'N': 7, 'O': 8, 'P': 15, 'S': 16}
 electrons = {'GLY_N': 8, 'GLY_CA': 8, 'GLY_C': 6, 'GLY_O': 8, 'GLY_OXT': 9,
@@ -76,48 +67,52 @@ for atom, num in electrons.items():
         totalElectrons[atom[0:3]] = num
 
 
-"""
-## Aggregate the whole chain
-radius = 0.8
-
-clouds = []
-for atom in structure.get_atoms():
-    if atom.parent.id[0] != ' ': continue
-
-    blobs = densityObj.findAberrantBlobs(atom.coord, radius)
-    for blob in blobs:
-        for cloud in clouds:
-            if cloud.testOverlap(blob):
-                atoms = cloud.atoms
-                cloud.merge(blob, densityObj.density)
-                cloud.atoms = atoms + [atom]
-                break
-
-        else:
-            blob.atoms = [atom]
-            clouds.append(blob)
-
-for cloud in clouds:
-    cloud.totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])
-
-
-fileHandle = open('output.txt', 'w')
-for cloud in clouds:
-    print(cloud.centroid, cloud.volume, cloud.totalDensity, cloud.totalElectron, [x.serial_number for x in cloud.atoms], file=fileHandle)
+pdbidfile = sys.argv[1]
+pdbids = []
+with open(pdbidfile, "r") as fileHandle:
+    for pdbid in fileHandle:
+        pdbids.append(pdbid.split(" ; ")[0])
 fileHandle.close()
-"""
 
-"""
-## Aggregate per amino acid residue
-radius = 0.66
-resDict = {}
-resList = []
-for residue in structure.get_residues():
-    if residue.id[0] != ' ': continue
+fileHandle = open(sys.argv[2], 'w')
+print(*["pdbid", "chainMean", "chainMedian", "chainLogMean", "resMean", "resMedian", "chainLogMedian", "resLogMean", "resLogMedian", "atomMean", "atomMedian", "atomLogMean", "atomLogMedian"], sep=", ", file=fileHandle)
 
+for pdbid in pdbids:
+    try:
+        densityObj = ccp4.readFromPDBID(pdbid)
+        densityCutoff = sigma = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
+
+        pdbfile = './pdb/pdb' + pdbid + '.ent'
+        if os.path.isfile(pdbfile):
+            pass
+        else:
+            pdbl = pdb.PDBList()
+            pdbl.retrieve_pdb_file(pdbid, pdir = './pdb/')
+
+        parser = pdb.PDBParser()
+        structure = parser.get_structure(pdbid, pdbfile)
+    except:
+        continue
+
+    #if "organism_scientific" not in structure.header["source"]["1"].keys():
+    #    continue
+
+    #atoms = structure.get_atoms()
+    #atoms = list(structure.get_atoms())
+    #atoms[0].get_coord()
+
+    ######################
+    ## Aggregate by chains
+    ######################
     clouds = []
-    for atom in residue.child_list:
-        blobs = densityObj.findAberrantBlobs(atom.coord, radius)
+    for atom in structure.get_atoms():
+        if atom.parent.id[0] != ' ': continue
+
+        resAtom = atom.parent.resname + '_' + atom.name
+        if resAtom not in atomType.keys():
+            continue
+
+        blobs = densityObj.findAberrantBlobs(atom.coord, radii[atomType[resAtom]], densityCutoff)
         for blob in blobs:
             for cloud in clouds:
                 if cloud.testOverlap(blob):
@@ -130,37 +125,92 @@ for residue in structure.get_residues():
                 blob.atoms = [atom]
                 clouds.append(blob)
 
-    for cloud in clouds:
-        if len(cloud.atoms) >= 4:
-            if residue.resname in resDict.keys():
-                resDict[residue.resname].append(cloud)
-            else:
-                resDict[residue.resname] = [cloud]
+    #for cloud in clouds:
+    #    cloud.totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])
+    #    print(cloud.centroid, cloud.volume, cloud.totalDensity, cloud.totalElectron, [x.serial_number for x in cloud.atoms], file=fileHandle)
 
-        resList.append(residue.resname + ', ' + str(cloud.totalDensity/totalElectrons[residue.resname]))
+    chainAvgDensity = [cloud.totalDensity/sum([electrons[atom.parent.resname + '_' + atom.name]]) for cloud in clouds for atom in cloud.atoms]
+    chainLogMean = 10**np.mean([np.log10(x) for x in chainAvgDensity])
+    chainLogMedian = 10**np.median([np.log10(x) for x in chainAvgDensity])
+    chainMean = np.mean(chainAvgDensity)
+    chainMedian = np.median(chainAvgDensity)
 
-fileHandle = open('output.byres.txt', 'w')
-#for resname, blobList in resDict.items():
-#    print(resname, len(blobList), [x.totalDensity for x in blobList], sum([x.totalDensity for x in blobList])/len(blobList)/totalElectrons[resname], file=fileHandle)
+    ####################################
+    ## Aggregate per amino acid residues
+    ####################################
+    resDict = {}
+    resList = []
+    resAvgDensity = []
+    for residue in structure.get_residues():
+        if residue.id[0] != ' ': continue
 
-print(*resList, sep="\n", file=fileHandle)
+        clouds = []
+        for atom in residue.child_list:
+            resAtom = atom.parent.resname + '_' + atom.name
+            if resAtom not in atomType.keys():
+                continue
+
+            blobs = densityObj.findAberrantBlobs(atom.coord, radii[atomType[resAtom]], densityCutoff)
+            for blob in blobs:
+                for cloud in clouds:
+                    if cloud.testOverlap(blob):
+                        atoms = cloud.atoms
+                        cloud.merge(blob, densityObj.density)
+                        cloud.atoms = atoms + [atom]
+                        break
+
+                else:
+                    blob.atoms = [atom]
+                    clouds.append(blob)
+
+        for cloud in clouds:
+            if len(cloud.atoms) >= 4:
+                if residue.resname in resDict.keys():
+                    resDict[residue.resname].append(cloud)
+                else:
+                    resDict[residue.resname] = [cloud]
+
+            resList.append(residue.resname + ', ' + str(cloud.totalDensity/totalElectrons[residue.resname]))
+            resAvgDensity.append(cloud.totalDensity/totalElectrons[residue.resname])
+
+    #for resname, blobList in resDict.items():
+    #    print(resname, len(blobList), [x.totalDensity for x in blobList], sum([x.totalDensity for x in blobList])/len(blobList)/totalElectrons[resname], file=fileHandle)
+    #print(*resList, sep="\n", file=fileHandle)
+    resLogMean = 10**np.mean([np.log10(x) for x in resAvgDensity])
+    resLogMedian = 10**np.median([np.log10(x) for x in resAvgDensity])
+    resMean = np.mean(resAvgDensity)
+    resMedian = np.median(resAvgDensity)
+
+    ###################
+    ## Density per atom
+    ###################
+    atomList = []
+    atomAvgDensity = []
+    for atom in structure.get_atoms():
+        if atom.parent.id[0] != ' ': continue
+
+        resAtom = atom.parent.resname + '_' + atom.name
+        if resAtom not in atomType.keys():
+            continue
+
+        blobs = densityObj.findAberrantBlobs(atom.coord, radii[atomType[resAtom]], densityCutoff)
+        if len(blobs) == 0:
+            continue
+
+        atomList.append(atom.parent.resname + ', ' + atom.name + ', ' + atomType[resAtom] + ', ' + str(blobs[0].totalDensity/electrons[resAtom]) + ', ' + str(atom.bfactor) + ', ' + str(atom.occupancy))
+        atomAvgDensity.append(blobs[0].totalDensity/electrons[resAtom])
+
+    atomLogMean = 10**np.mean([np.log10(x) for x in atomAvgDensity])
+    atomLogMedian = 10**np.median([np.log10(x) for x in atomAvgDensity])
+    atomMean = np.mean(atomAvgDensity)
+    atomMedian = np.median(atomAvgDensity)
+
+    #fileHandle = open('output.byatom.' + pdbid + '.txt', 'w')
+    #print(*atomList, sep="\n", file=fileHandle)
+    #fileHandle.close()
+
+    #print(pdbid, np.median([float(x.split(", ")[3]) for x in atomList]), structure.header["deposition_date"], structure.header["resolution"], structure.header["head"].replace(" ", "_"), structure.header["source"]["1"]["organism_scientific"].replace(" ", "_"), file=fileHandle)
+    print(*[pdbid, chainMean, chainMedian, chainLogMean, resMean, resMedian, chainLogMedian, resLogMean, resLogMedian, atomMean, atomMedian, atomLogMean, atomLogMedian], sep=", ", file=fileHandle)
+    os.remove(pdbfile)
+
 fileHandle.close()
-"""
-
-atomList = []
-for atom in structure.get_atoms():
-    if atom.parent.id[0] != ' ': continue
-
-    resAtom = atom.parent.resname + '_' + atom.name
-    blobs = densityObj.findAberrantBlobs(atom.coord, radii[atomType[resAtom]], densityCutoff)
-    if len(blobs) == 0:
-        #print(atom.__dict__)
-        continue
-
-    atomList.append(atom.parent.resname + ', ' + atom.name + ', ' + atomType[resAtom] + ', ' + str(blobs[0].totalDensity/electrons[resAtom]))
-
-fileHandle = open('output.byatom.' + pdbid + '.txt', 'w')
-print(*atomList, sep="\n", file=fileHandle)
-fileHandle.close()
-
-
