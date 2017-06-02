@@ -466,3 +466,4 @@ class DensityBlob:
         self.header = newBlob.header
 
 
+

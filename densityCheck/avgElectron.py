@@ -5,7 +5,7 @@ import ccp4
 import numpy as np
 import sys
 import os.path
-
+import pdb as pdb1
 
 elementElectron = {'C': 6, 'N': 7, 'O': 8, 'P': 15, 'S': 16}
 electrons = {'GLY_N': 8, 'GLY_CA': 8, 'GLY_C': 6, 'GLY_O': 8, 'GLY_OXT': 9,
@@ -51,6 +51,7 @@ atomType = {'GLY_N': 'N_single_bb', 'GLY_CA': 'C_single_bb', 'GLY_C': 'C_double_
             'ARG_N': 'N_single_bb', 'ARG_CA': 'C_single_bb', 'ARG_C': 'C_double_bb', 'ARG_O': 'O_double_bb', 'ARG_CB': 'C_single', 'ARG_CG': 'C_single', 'ARG_CD': 'C_single', 'ARG_NE':  'N_single', 'ARG_CZ': 'C_double', 'ARG_NH1':  'N_double', 'ARG_NH2':  'N_single', 'ARG_OXT': 'O_single',
             'HIS_N': 'N_single_bb', 'HIS_CA': 'C_single_bb', 'HIS_C': 'C_double_bb', 'HIS_O': 'O_double_bb', 'HIS_CB': 'C_single', 'HIS_CG': 'C_double', 'HIS_ND1':  'N_single', 'HIS_CD2': 'C_double', 'HIS_CE1': 'C_double', 'HIS_NE2':  'N_double', 'HIS_OXT': 'O_single'}
 
+
 ## Data from https://arxiv.org/pdf/0804.2488.pdf
 radii = {'C_single': 0.77, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_bb': 0.77, 'C_double_bb': 0.67,
          'O_single': 0.67, 'O_double': 0.60, 'O_intermediate': 0.64, 'O_double_bb': 0.60,
@@ -75,14 +76,14 @@ with open(pdbidfile, "r") as fileHandle:
 fileHandle.close()
 
 fileHandle = open(sys.argv[2], 'w')
-print(*["pdbid", "chainMean", "chainMedian", "chainLogMean", "resMean", "resMedian", "chainLogMedian", "resLogMean", "resLogMedian", "atomMean", "atomMedian", "atomLogMean", "atomLogMedian"], sep=", ", file=fileHandle)
+print(*["pdbid", "chainMean", "chainMedian", "chainLogMean", "chainLogMedian", "resMean", "resMedian", "resLogMean", "resLogMedian", "atomMean", "atomMedian", "atomLogMean", "atomLogMedian"], sep=", ", file=fileHandle)
 
 for pdbid in pdbids:
     try:
         densityObj = ccp4.readFromPDBID(pdbid)
         densityCutoff = sigma = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
 
-        pdbfile = './pdb/pdb' + pdbid + '.ent'
+        pdbfile = './pdb/pdb' + pdbid.lower() + '.ent'
         if os.path.isfile(pdbfile):
             pass
         else:
@@ -91,6 +92,8 @@ for pdbid in pdbids:
 
         parser = pdb.PDBParser()
         structure = parser.get_structure(pdbid, pdbfile)
+        pdbObj = pdb1.readPDBfile(pdbfile)
+        program = pdbObj.header.program
     except:
         continue
 
@@ -101,6 +104,7 @@ for pdbid in pdbids:
     #atoms = list(structure.get_atoms())
     #atoms[0].get_coord()
 
+    """
     ######################
     ## Aggregate by chains
     ######################
@@ -180,6 +184,7 @@ for pdbid in pdbids:
     resLogMedian = 10**np.median([np.log10(x) for x in resAvgDensity])
     resMean = np.mean(resAvgDensity)
     resMedian = np.median(resAvgDensity)
+    """
 
     ###################
     ## Density per atom
@@ -209,8 +214,9 @@ for pdbid in pdbids:
     #print(*atomList, sep="\n", file=fileHandle)
     #fileHandle.close()
 
-    #print(pdbid, np.median([float(x.split(", ")[3]) for x in atomList]), structure.header["deposition_date"], structure.header["resolution"], structure.header["head"].replace(" ", "_"), structure.header["source"]["1"]["organism_scientific"].replace(" ", "_"), file=fileHandle)
-    print(*[pdbid, chainMean, chainMedian, chainLogMean, resMean, resMedian, chainLogMedian, resLogMean, resLogMedian, atomMean, atomMedian, atomLogMean, atomLogMedian], sep=", ", file=fileHandle)
-    os.remove(pdbfile)
+    print(pdbid, np.median([float(x.split(", ")[3]) for x in atomList]), structure.header["deposition_date"], structure.header["resolution"], structure.header["head"].replace(" ", "_"), structure.header["source"]["1"]["organism_scientific"].strip().replace(" ", "_"), program,file=fileHandle)
+    #print(*[pdbid, chainMean, chainMedian, chainLogMean, chainLogMedian, resMean, resMedian, resLogMean, resLogMedian, atomMean, atomMedian, atomLogMean, atomLogMedian], sep=", ", file=fileHandle)
+    #os.remove(pdbfile)
 
 fileHandle.close()
+

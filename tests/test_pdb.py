@@ -1,3 +1,6 @@
-import pdb
+from ..densityCheck import pdb
 
-pdbFile = '1cbs.pdb'
+pdbFile = "./pdb/pdb1g3v.ent"
+pdbObj = pdb.readPDBfile(pdbFile)
+
+print(pdbObj.header.pdbid)
