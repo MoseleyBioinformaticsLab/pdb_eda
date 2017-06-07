@@ -19,7 +19,7 @@ def parse(handle, verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER file handle."""
     atoms = []
     modelCount = 0
-    PDBid = date = method = resolution = rValue = rFree = program = 0
+    PDBid = date = method = resolution = rValue = rFree = program = spaceGroup = 0
     for record in handle.readlines():
         if record.startswith('ATOM') or record.startswith('HETATM'):
             keyValues = {'record': record,
@@ -64,8 +64,12 @@ def parse(handle, verbose=False):
         elif record.startswith('MODEL'):
             modelCount += 1
             if modelCount > 1: break
+        elif record.startswith('REMARK 290 SYMMETRY OPERATORS FOR SPACE GROUP:'):
+            match = re.search('^REMARK 290 SYMMETRY OPERATORS FOR SPACE GROUP: (.+)$', record)
+            if match:
+                spaceGroup = match.group(1).strip().replace(' ', '_')
 
-    header = PDBheader(PDBid, date, method, resolution, rValue, rFree, program)
+    header = PDBheader(PDBid, date, method, resolution, rValue, rFree, program, spaceGroup)
     return PDBentry(header, atoms)
 
 
@@ -76,7 +80,7 @@ class PDBentry:
 
 
 class PDBheader:
-    def __init__(self, PDBid, date, method, resolution, rValue, rFree, program):
+    def __init__(self, PDBid, date, method, resolution, rValue, rFree, program, spaceGroup):
         self.pdbid = PDBid
         self.date = date
         self.method = method
@@ -84,6 +88,7 @@ class PDBheader:
         self.rValue = rValue
         self.rFree = rFree
         self.program = program
+        self.spaceGroup = spaceGroup
 
 
 class Atom:
