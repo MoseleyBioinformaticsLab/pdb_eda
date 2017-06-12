@@ -6,6 +6,7 @@ import numpy as np
 import sys
 import os.path
 import pdb as pdb1
+import crystalContacts
 
 elementElectron = {'C': 6, 'N': 7, 'O': 8, 'P': 15, 'S': 16}
 electrons = {'GLY_N': 8, 'GLY_CA': 8, 'GLY_C': 6, 'GLY_O': 8, 'GLY_OXT': 9,
@@ -80,21 +81,34 @@ print(*["pdbid", "resolution", "spaceGroup", "chainMean", "chainMedian", "chainL
 
 for pdbid in pdbids:
     try:
+        pdbid = pdbid.lower()
         densityObj = ccp4.readFromPDBID(pdbid)
         densityCutoff = sigma = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
 
-        pdbfile = './pdb/pdb' + pdbid.lower() + '.ent'
+        pdbfile = './pdb/pdb' + pdbid + '.ent'
         if os.path.isfile(pdbfile):
             pass
         else:
             pdbl = pdb.PDBList()
             pdbl.retrieve_pdb_file(pdbid, pdir = './pdb/')
 
+	# Bio Python parser
         parser = pdb.PDBParser()
         structure = parser.get_structure(pdbid, pdbfile)
+        atoms = structure.get_atoms()
+
+	## my own parser
         pdbObj = pdb1.readPDBfile(pdbfile)
         program = pdbObj.header.program
         spaceGroup = pdbObj.header.spaceGroup
+        print(sapceGroup, file=fileHandle)
+ 
+	## crystal contacts by Michael 
+        #mmcifFile = '/mlab/data/databases/PDB/mmcif/2015_09_04/' + pdbid[1:2] + '/' + pdbid + '.cif.gz'
+        #cc = crystalContacts.get_contact_atoms(mmcifFile)
+        #contactAtoms = [atom.parent.id[1] + '_' + atom.name for atom in cc]
+
+        #print(len(atoms), len(contactAtoms), file=fileHandle)
     except:
         continue
 
@@ -240,6 +254,8 @@ for pdbid in pdbids:
 
         resClouds = []
         for atom in residue.child_list:
+            #if atom.parent.id[1] + '_' + atom.name in contactAtoms: continue
+
             resAtom = atom.parent.resname + '_' + atom.name
             if resAtom not in atomType.keys():
                 continue
