@@ -1,12 +1,12 @@
 # !/usr/bin/python3
 
-import Bio.PDB as pdb
 import ccp4
 import numpy as np
 import sys
 import os.path
 import pdb as pdb1
-import crystalContacts
+import Bio.PDB as pdb
+#import crystalContacts
 
 elementElectron = {'C': 6, 'N': 7, 'O': 8, 'P': 15, 'S': 16}
 electrons = {'GLY_N': 8, 'GLY_CA': 8, 'GLY_C': 6, 'GLY_O': 8, 'GLY_OXT': 9,
@@ -95,20 +95,27 @@ for pdbid in pdbids:
 	# Bio Python parser
         parser = pdb.PDBParser()
         structure = parser.get_structure(pdbid, pdbfile)
-        atoms = structure.get_atoms()
 
 	## my own parser
         pdbObj = pdb1.readPDBfile(pdbfile)
         program = pdbObj.header.program
         spaceGroup = pdbObj.header.spaceGroup
-        print(sapceGroup, file=fileHandle)
  
+        '''
 	## crystal contacts by Michael 
-        #mmcifFile = '/mlab/data/databases/PDB/mmcif/2015_09_04/' + pdbid[1:2] + '/' + pdbid + '.cif.gz'
-        #cc = crystalContacts.get_contact_atoms(mmcifFile)
-        #contactAtoms = [atom.parent.id[1] + '_' + atom.name for atom in cc]
+        mmcifFile = '/mlab/data/databases/PDB/mmcif/2015_09_04/' + pdbid[1:3] + '/' + pdbid + '.cif.gz'
+        if os.path.isfile(mmcifFile):
+            pass
+        else:
+            print("No", pdbid, "mmcif file exist" )
+            continue
 
-        #print(len(atoms), len(contactAtoms), file=fileHandle)
+        cc = crystalContacts.get_contact_atoms(mmcifFile)
+        contactAtoms = [str(atom.parent.id[1]) + '_' + atom.name for atom in cc]
+
+        atomNum = sum(1 for x in structure.get_atoms())
+        contactNum = sum(1 for x in contactAtoms)
+        '''
     except:
         continue
 
@@ -254,7 +261,7 @@ for pdbid in pdbids:
 
         resClouds = []
         for atom in residue.child_list:
-            #if atom.parent.id[1] + '_' + atom.name in contactAtoms: continue
+            #if str(atom.parent.id[1]) + '_' + atom.name in contactAtoms: continue
 
             resAtom = atom.parent.resname + '_' + atom.name
             if resAtom not in atomType.keys():
@@ -299,6 +306,7 @@ for pdbid in pdbids:
                 chainClouds.append(blob)
 
     for cloud in chainClouds:
+        if len(cloud.atoms) <= 50 : continue
         totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])
         chainAvgDensity.append(cloud.totalDensity / totalElectron)
     #    print(cloud.centroid, cloud.volume, cloud.totalDensity, totalElectron, [x.serial_number for x in cloud.atoms], file=fileHandle)

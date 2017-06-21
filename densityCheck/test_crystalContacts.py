@@ -9,6 +9,9 @@ pdbfile = '/mlab/data/databases/PDB/mmcif/2015_09_04/g3/1g3z.cif.gz'
 mmcifFile = '/mlab/data/databases/PDB/mmcif/2015_09_04/' + pdbid.lower()[1:3] + '/' + pdbid + '.cif.gz'
 
 atoms = crystalContacts.get_contact_atoms(mmcifFile)
+contactAtoms = [str(atom.parent.id[1]) + '_' + atom.name for atom in atoms]
+print(contactAtoms)
+
 atom = atoms[100]
 
 print(len(atoms))
