@@ -193,6 +193,9 @@ class DensityHeader(object):
         self.unitVolume = self.xlength * self.ylength * self.zlength / self.nintervalX / self.nintervalY / self.nintervalZ * \
                           np.sqrt(1 - np.cos(alpha) ** 2 - np.cos(beta) ** 2 - np.cos(gamma) ** 2 + 2 * np.cos(alpha) * np.cos(beta) * np.cos(gamma))
 
+        self.oMatrix = [[self.xlength, self.ylength * np.cos(beta), self.zlength * np.cos(beta)],
+                        [0, self.ylength * np.sin(beta), self.zlength * (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma)],
+                        [0, 0, self.unitVolume /self.xlength / self.ylength / np.sin(gamma)]]
         self.origin = self._calculateOrigin()
 
 
@@ -200,20 +203,11 @@ class DensityHeader(object):
         """
         Calculate and RETURNS the xyz coordinates from the header information with no extra PARAMETER
         """
-        alpha = np.pi / 180 * self.alpha
-        beta = np.pi / 180 * self.beta
-        gamma = np.pi / 180 * self.gamma
-
         # Orthogonalization matrix for calculation between fractional coordinates and orthogonal coordinates
         # Formula based on 'Biomolecular Crystallography' by Bernhard Rupp, p233
-        orthoMat = [[self.xlength, self.ylength * np.cos(beta), self.zlength * np.cos(beta)],
-                    [0, self.ylength * np.sin(beta), self.zlength * (np.cos(alpha) - np.cos(beta) * np.cos(
-                        gamma)) / np.sin(gamma)],
-                    [0, 0, self.zlength * np.sqrt(1 - np.cos(alpha) ** 2 - np.cos(beta) ** 2 - np.cos(gamma) ** 2 +
-                                                  2 * np.cos(alpha) * np.cos(beta) * np.cos(gamma)) / np.sin(gamma)]]
 
         if self.futureUse[-3] == 0.0 and self.futureUse[-2] == 0.0 and self.futureUse[-1] == 0.0:
-            origin = np.dot(orthoMat, [self.crsStart[self.map2xyz[i]] / self.xyzInterval[i] for i in range(3)])
+            origin = np.dot(self.oMatrix, [self.crsStart[self.map2xyz[i]] / self.xyzInterval[i] for i in range(3)])
         else:
             origin = [self.originEM[i] for i in range(3)]
 
@@ -280,6 +274,12 @@ class DensityMatrix:
             # warnings.warn(message)
             return 0
 
+        """
+        metal = [224.312, -57.515, -13.837]
+        fraction = np.dot(orthoInverse, metal)
+        nn = [int(fraction[i] * densityObj.header.xyzInterval[i]) - densityObj.header.crsStart[densityObj.header.map2xyz[i]] for i in range(3)]
+        densityObj1.getPointDensityFromCrs(nn)
+        """
         return self.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
     def getPointDensityFromXyz(self, xyzCoord):
