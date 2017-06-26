@@ -41,8 +41,11 @@ def test_origin_match_LiteMol():
         ]
     else:
         origin = [densityObj.header.originEM[0], densityObj.header.originEM[1], densityObj.header.originEM[2]]
+        # [-6.0065791481419613, -1.783500051498413, -1.7638636502352627]
+        # array([-6.00657915, -1.78350005, -1.76386365])
 
-    assert {x == approx(y) for x, y in zip(origin, densityObj.origin)}
+    for x, y in zip(origin, densityObj.origin):
+        assert x == approx(y)
 
 
 def test_xyz_crs_conversion():
@@ -52,8 +55,8 @@ def test_xyz_crs_conversion():
     assert [60, 160, 60] == approx(densityObj.header.xyz2crsCoord(densityObj.header.crs2xyzCoord([60, 160, 60])))  # Row out of boundary
     assert [60, 60, 160] == approx(densityObj.header.xyz2crsCoord(densityObj.header.crs2xyzCoord([60, 60, 160])))  # Section out of boundary
 
-    assert posRed == approx(densityObj.header.crs2xyzCoord(densityObj.header.xyz2crsCoord(posRed)), abs=np.max(densityObj.header.gridLength)/2)
-    assert posGreen == approx(densityObj.header.crs2xyzCoord(densityObj.header.xyz2crsCoord(posGreen)), abs=np.max(densityObj.header.gridLength)/2)
+    assert posRed == approx(densityObj.header.crs2xyzCoord(densityObj.header.xyz2crsCoord(posRed)), abs=np.max(densityObj.header.gridLength)/2) # [46, 67, 42]
+    assert posGreen == approx(densityObj.header.crs2xyzCoord(densityObj.header.xyz2crsCoord(posGreen)), abs=np.max(densityObj.header.gridLength)/2) # [39, 20, 38]
 
 
 def test_aberrant_point():

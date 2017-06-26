@@ -193,9 +193,22 @@ class DensityHeader(object):
         self.unitVolume = self.xlength * self.ylength * self.zlength / self.nintervalX / self.nintervalY / self.nintervalZ * \
                           np.sqrt(1 - np.cos(alpha) ** 2 - np.cos(beta) ** 2 - np.cos(gamma) ** 2 + 2 * np.cos(alpha) * np.cos(beta) * np.cos(gamma))
 
-        self.oMatrix = [[self.xlength, self.ylength * np.cos(beta), self.zlength * np.cos(beta)],
-                        [0, self.ylength * np.sin(beta), self.zlength * (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma)],
-                        [0, 0, self.unitVolume /self.xlength / self.ylength / np.sin(gamma)]]
+        ## A resuable part in the cell volumn calculation
+        temp = np.sqrt(1 - np.cos(alpha) ** 2 - np.cos(beta) ** 2 - np.cos(gamma) ** 2 + 2 * np.cos(alpha) * np.cos(beta) * np.cos(gamma))
+
+        self.orthoMat = [[self.xlength, self.ylength * np.cos(gamma), self.zlength * np.cos(beta)],
+                         [0, self.ylength * np.sin(gamma), self.zlength * (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma)],
+                         [0, 0, self.zlength * temp / np.sin(gamma)]]
+
+        self.deOrthoMat = np.linalg.inv(self.orthoMat)
+        self.deOrthoMat[self.deOrthoMat < 1e-10] = 0.0
+
+        """
+        self.deOrthoMat = [[1/self.xlength, - np.cos(gamma) / np.sin(gamma) / self.xlength,
+                            (np.cos(gamma) * (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma) - np.cos(beta) * np.sin(gamma)) / self.xlength / temp],
+                           [0, 1/np.sin(gamma)/self.ylength, - (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma) / self.ylength / temp],
+                           [0, 0, np.sin(gamma) / self.zlength / temp]]
+        """
         self.origin = self._calculateOrigin()
 
 
@@ -207,7 +220,7 @@ class DensityHeader(object):
         # Formula based on 'Biomolecular Crystallography' by Bernhard Rupp, p233
 
         if self.futureUse[-3] == 0.0 and self.futureUse[-2] == 0.0 and self.futureUse[-1] == 0.0:
-            origin = np.dot(self.oMatrix, [self.crsStart[self.map2xyz[i]] / self.xyzInterval[i] for i in range(3)])
+            origin = np.dot(self.orthoMat, [self.crsStart[self.map2xyz[i]] / self.xyzInterval[i] for i in range(3)])
         else:
             origin = [self.originEM[i] for i in range(3)]
 
@@ -223,7 +236,11 @@ class DensityHeader(object):
             crs coordinates
         """
         crsGridPos = [int(round((xyzCoord[i] - self.origin[i]) / self.gridLength[i])) for i in range(3)]
-        return [crsGridPos[self.map2crs[i]] for i in range(3)]
+        if self.alpha == self.beta == self.gamma == 90:
+            return [crsGridPos[self.map2crs[i]] for i in range(3)]
+        else:
+            fraction = np.dot(self.deOrthoMat, xyzCoord)
+            return [int(fraction[i] * self.xyzInterval[i]) - self.crsStart[self.map2xyz[i]] for i in range(3)]
 
     def crs2xyzCoord(self, crsCoord):
         """
@@ -233,7 +250,10 @@ class DensityHeader(object):
         RETURNS
             xyz coordinates
         """
-        return [int(crsCoord[self.map2xyz[i]]) * self.gridLength[i] + self.origin[i] for i in range(3)]
+        if self.alpha == self.beta == self.gamma == 90:
+            return [int(crsCoord[self.map2xyz[i]]) * self.gridLength[i] + self.origin[i] for i in range(3)]
+        else:
+            return np.dot(self.orthoMat, [(crsCoord[i] + self.crsStart[self.map2xyz[i]]) / self.xyzInterval[i] for i in range(3)])
 
 
 class DensityMatrix:
@@ -274,12 +294,6 @@ class DensityMatrix:
             # warnings.warn(message)
             return 0
 
-        """
-        metal = [224.312, -57.515, -13.837]
-        fraction = np.dot(orthoInverse, metal)
-        nn = [int(fraction[i] * densityObj.header.xyzInterval[i]) - densityObj.header.crsStart[densityObj.header.map2xyz[i]] for i in range(3)]
-        densityObj1.getPointDensityFromCrs(nn)
-        """
         return self.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
     def getPointDensityFromXyz(self, xyzCoord):
