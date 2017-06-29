@@ -131,6 +131,11 @@ def test_merge_blob():
     assert calc1[0] == trueMerge
 
 
+def test_aberrant():
+    """Non-orthogonal electron density map"""
+    id1 = '2IM3'  # 2Fo - Fc
+    metal = [224.312, -57.515, -13.837]
+    obj1 = ccp4.readFromPDBID(id1)
 
-
+    assert obj1.getPointDensityFromXyz(metal)  == approx(0.44502562284469604)
 

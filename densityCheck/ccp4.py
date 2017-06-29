@@ -327,10 +327,17 @@ class DensityMatrix:
         for cInd in range(-crsRadius[0], crsRadius[0]+1):
             for rInd in range(-crsRadius[1], crsRadius[1]+1):
                 for sInd in range(- crsRadius[2], crsRadius[2]+1):
-                    if cInd ** 2 / crsRadius[0] ** 2 + rInd ** 2 / crsRadius[1] ** 2 + sInd ** 2 / crsRadius[2] ** 2 <= 1:
-                        crs = [x+y for x, y in zip(crsCoord, [cInd, rInd, sInd])]
-                        if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
-                            crsCoordList.append(crs)
+                    crs = [x + y for x, y in zip(crsCoord, [cInd, rInd, sInd])]
+                    if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
+                        if self.header.alpha == self.header.beta == self.header.gamma == 90:
+                            if cInd**2 / crsRadius[0]**2 + rInd**2 / crsRadius[1]**2 + sInd**2 / crsRadius[2]**2 <= 1:
+                                crsCoordList.append(crs)
+                        else:
+                            xyz = self.header.crs2xyzCoord(crs)
+                            dist = np.sqrt((xyz[0] - xyzCoord[0])**2 + (xyz[1] - xyzCoord[1])**2 + (xyz[2] - xyzCoord[2])**2)
+                            if dist < radius:
+                                crsCoordList.append(crs)
+
         # print('crs grids: ', crsCoordList)
 
         return crsCoordList
