@@ -235,12 +235,12 @@ class DensityHeader(object):
         RETURNS
             crs coordinates
         """
-        crsGridPos = [int(round((xyzCoord[i] - self.origin[i]) / self.gridLength[i])) for i in range(3)]
         if self.alpha == self.beta == self.gamma == 90:
-            return [crsGridPos[self.map2crs[i]] for i in range(3)]
+            crsGridPos = [int(round((xyzCoord[i] - self.origin[i]) / self.gridLength[i])) for i in range(3)]
         else:
             fraction = np.dot(self.deOrthoMat, xyzCoord)
-            return [int(fraction[i] * self.xyzInterval[i]) - self.crsStart[self.map2xyz[i]] for i in range(3)]
+            crsGridPos = [int(fraction[i] * self.xyzInterval[i]) - self.crsStart[self.map2xyz[i]] for i in range(3)]
+        return [crsGridPos[self.map2crs[i]] for i in range(3)]
 
     def crs2xyzCoord(self, crsCoord):
         """
@@ -253,7 +253,7 @@ class DensityHeader(object):
         if self.alpha == self.beta == self.gamma == 90:
             return [int(crsCoord[self.map2xyz[i]]) * self.gridLength[i] + self.origin[i] for i in range(3)]
         else:
-            return np.dot(self.orthoMat, [(crsCoord[i] + self.crsStart[self.map2xyz[i]]) / self.xyzInterval[i] for i in range(3)])
+            return np.dot(self.orthoMat, [(crsCoord[self.map2xyz[i]] + self.crsStart[self.map2xyz[i]]) / self.xyzInterval[i] for i in range(3)])
 
 
 class DensityMatrix:
