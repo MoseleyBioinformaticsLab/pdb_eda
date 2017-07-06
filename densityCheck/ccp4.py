@@ -201,7 +201,7 @@ class DensityHeader(object):
                          [0, 0, self.zlength * temp / np.sin(gamma)]]
 
         self.deOrthoMat = np.linalg.inv(self.orthoMat)
-        self.deOrthoMat[self.deOrthoMat < 1e-10] = 0.0
+        self.deOrthoMat[abs(self.deOrthoMat) < 1e-10] = 0.0
 
         """
         self.deOrthoMat = [[1/self.xlength, - np.cos(gamma) / np.sin(gamma) / self.xlength,
