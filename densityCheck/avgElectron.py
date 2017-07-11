@@ -150,10 +150,10 @@ for pdbid in pdbids:
             if len(blobs) == 0:
                 continue
 
-            atomList.append(atom.parent.resname + ', ' + atom.name + ', ' + atomType[resAtom] + ', ' + str(
-                blobs[0].totalDensity / electrons[resAtom]) + ', ' + str(atom.bfactor) + ', ' + str(atom.occupancy))
+            atomList.append(str(residue.id[1]) + ', ' + resAtom + ', ' + atomType[resAtom] + ', ' + str(blobs[0].totalDensity / electrons[resAtom]) + ', ' + str(atom.occupancy) + ', ' + str(len(blobs[0].crsList)))
             atomAvgDensity.append(blobs[0].totalDensity / electrons[resAtom])
 
+    """
             for blob in blobs:
                 for cloud in resClouds:
                     if cloud.testOverlap(blob):
@@ -215,5 +215,8 @@ for pdbid in pdbids:
     print(*[pdbid, structure.header["resolution"], spaceGroup, chainMean, chainMedian, chainLogMean, chainLogMedian,
             resMean, resMedian, resLogMean, resLogMedian, atomMean, atomMedian, atomLogMean, atomLogMedian], sep=", ",
           file=fileHandle)
+    """
+
+    print(*atomList, sep="\n", file=fileHandle)
 
 fileHandle.close()
