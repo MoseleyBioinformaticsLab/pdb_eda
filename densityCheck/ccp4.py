@@ -317,26 +317,32 @@ class DensityMatrix:
         """
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
 
+        """
         xyzRadius = [round(radius / self.header.gridLength[i]) for i in range(3)]
         crsRadius = [int(x) for x in [xyzRadius[self.header.map2crs[y]] for y in range(3)]]
+        """
+
+        crsRadius = self.header.xyz2crsCoord(self.origin + [radius, radius, radius])
 
         # print('grid positions', crsCoord)
         # print("crs radius:", crsRadius)
         # print('cutoff: ', densityCutoff)
         crsCoordList = []
-        for cInd in range(-crsRadius[0], crsRadius[0]+1):
-            for rInd in range(-crsRadius[1], crsRadius[1]+1):
-                for sInd in range(- crsRadius[2], crsRadius[2]+1):
+        for cInd in range(-crsRadius[0]-1, crsRadius[0]+1):
+            for rInd in range(-crsRadius[1]-1, crsRadius[1]+1):
+                for sInd in range(- crsRadius[2]-1, crsRadius[2]+1):
                     crs = [x + y for x, y in zip(crsCoord, [cInd, rInd, sInd])]
                     if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
+                        """
                         if self.header.alpha == self.header.beta == self.header.gamma == 90:
                             if cInd**2 / crsRadius[0]**2 + rInd**2 / crsRadius[1]**2 + sInd**2 / crsRadius[2]**2 <= 1:
                                 crsCoordList.append(crs)
                         else:
-                            xyz = self.header.crs2xyzCoord(crs)
-                            dist = np.sqrt((xyz[0] - xyzCoord[0])**2 + (xyz[1] - xyzCoord[1])**2 + (xyz[2] - xyzCoord[2])**2)
-                            if dist <= radius:
-                                crsCoordList.append(crs)
+                        """
+                        xyz = self.header.crs2xyzCoord(crs)
+                        dist = np.sqrt((xyz[0] - xyzCoord[0])**2 + (xyz[1] - xyzCoord[1])**2 + (xyz[2] - xyzCoord[2])**2)
+                        if dist <= radius:
+                            crsCoordList.append(crs)
 
         # print('crs grids: ', crsCoordList)
 
