@@ -317,7 +317,7 @@ class DensityMatrix:
         """
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
 
-        xyzRadius = [np.ceil(radius / self.header.gridLength[i]) for i in range(3)]
+        xyzRadius = [round(radius / self.header.gridLength[i]) for i in range(3)]
         crsRadius = [int(x) for x in [xyzRadius[self.header.map2crs[y]] for y in range(3)]]
 
         # print('grid positions', crsCoord)
