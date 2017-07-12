@@ -239,7 +239,7 @@ class DensityHeader(object):
             crsGridPos = [int(round((xyzCoord[i] - self.origin[i]) / self.gridLength[i])) for i in range(3)]
         else:
             fraction = np.dot(self.deOrthoMat, xyzCoord)
-            crsGridPos = [int(fraction[i] * self.xyzInterval[i]) - self.crsStart[self.map2xyz[i]] for i in range(3)]
+            crsGridPos = [int(round(fraction[i] * self.xyzInterval[i])) - self.crsStart[self.map2xyz[i]] for i in range(3)]
         return [crsGridPos[self.map2crs[i]] for i in range(3)]
 
     def crs2xyzCoord(self, crsCoord):
@@ -251,7 +251,7 @@ class DensityHeader(object):
             xyz coordinates
         """
         if self.alpha == self.beta == self.gamma == 90:
-            return [int(crsCoord[self.map2xyz[i]]) * self.gridLength[i] + self.origin[i] for i in range(3)]
+            return [crsCoord[self.map2xyz[i]] * self.gridLength[i] + self.origin[i] for i in range(3)]
         else:
             return np.dot(self.orthoMat, [(crsCoord[self.map2xyz[i]] + self.crsStart[self.map2xyz[i]]) / self.xyzInterval[i] for i in range(3)])
 
@@ -335,7 +335,7 @@ class DensityMatrix:
                         else:
                             xyz = self.header.crs2xyzCoord(crs)
                             dist = np.sqrt((xyz[0] - xyzCoord[0])**2 + (xyz[1] - xyzCoord[1])**2 + (xyz[2] - xyzCoord[2])**2)
-                            if dist < radius:
+                            if dist <= radius:
                                 crsCoordList.append(crs)
 
         # print('crs grids: ', crsCoordList)
