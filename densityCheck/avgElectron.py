@@ -1,5 +1,6 @@
 # !/usr/bin/python3
 
+import pandas
 import ccp4
 import numpy as np
 import sys
@@ -151,7 +152,8 @@ for pdbid in pdbids:
             if len(blobs) == 0:
                 continue
 
-            atomList.append(str(residue.id[1]) + ', ' + resAtom + ', ' + atomType[resAtom] + ', ' + str(blobs[0].totalDensity / electrons[resAtom]) + ', ' + str(atom.occupancy) + ', ' + str(len(blobs[0].crsList)))
+            #atomList.append(str(residue.id[1]) + ', ' + resAtom + ', ' + atomType[resAtom] + ', ' + str(blobs[0].totalDensity / electrons[resAtom]) + ', ' + str(atom.occupancy) + ', ' + str(len(blobs[0].crsList)))
+            atomList.append([residue.id[1], resAtom, atomType[resAtom], blobs[0].totalDensity / electrons[resAtom], len(blobs[0].crsList)])
             atomAvgDensity.append(blobs[0].totalDensity / electrons[resAtom])
 
 
@@ -221,6 +223,22 @@ for pdbid in pdbids:
           file=fileHandle)
     """
 
-    print(*resList, sep="\n", file=fileHandle)
+    # reduce atom type to element and single/double/intermediate
+    def atomtype(x):
+        aa = x.split('_')
+        return aa[0] + '_' + aa[1]
+
+    # normalize the density by median volumn of given atom type
+    def normVolumn(row):
+        return float(row['density']) / float(row['volumn']) * float(medians['volumn'][row['atomType']])
+
+    atoms = pandas.DataFrame(atomList, columns=['resID', 'resAtom', 'atomType', 'density', 'volumn'])
+    atoms['atomType'] = atoms['atomType'].apply(atomtype)
+    medians = atoms.groupby(['atomType']).median()
+    atoms['adjDensity'] = atoms.apply(lambda row: normVolumn(row), axis=1)
+    medians = atoms.groupby(['atomType']).median()
+    medianAdjDen = medians.sort_index()['adjDensity']
+
+    print(*medianAdjDen, sep=", ", file=fileHandle)
 
 fileHandle.close()
