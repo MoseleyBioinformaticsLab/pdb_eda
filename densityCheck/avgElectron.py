@@ -74,9 +74,9 @@ with open(pdbidfile, "r") as fileHandle:
 fileHandle.close()
 
 fileHandle = open(sys.argv[2], 'w')
-print(*["pdbid", "resolution", "spaceGroup", "chainMean", "chainMedian", "chainLogMean", "chainLogMedian", "resMean",
-        "resMedian", "resLogMean", "resLogMedian", "atomMean", "atomMedian", "atomLogMean", "atomLogMedian"], sep=", ",
-      file=fileHandle)
+#print(*["pdbid", "resolution", "spaceGroup", "chainMean", "chainMedian", "chainLogMean", "chainLogMedian", "resMean",
+#        "resMedian", "resLogMean", "resLogMedian", "atomMean", "atomMedian", "atomLogMean", "atomLogMedian"], sep=", ",
+#      file=fileHandle)
 
 for pdbid in pdbids:
     try:
@@ -131,6 +131,7 @@ for pdbid in pdbids:
     chainClouds = []
     chainAvgDensity = []
     resDict = {}
+    chainList = []
     resList = []
     resAvgDensity = []
     atomList = []
@@ -153,7 +154,7 @@ for pdbid in pdbids:
             atomList.append(str(residue.id[1]) + ', ' + resAtom + ', ' + atomType[resAtom] + ', ' + str(blobs[0].totalDensity / electrons[resAtom]) + ', ' + str(atom.occupancy) + ', ' + str(len(blobs[0].crsList)))
             atomAvgDensity.append(blobs[0].totalDensity / electrons[resAtom])
 
-    """
+
             for blob in blobs:
                 for cloud in resClouds:
                     if cloud.testOverlap(blob):
@@ -172,7 +173,7 @@ for pdbid in pdbids:
                 else:
                     resDict[residue.resname] = [cloud]
 
-            resList.append(residue.resname + ', ' + str(cloud.totalDensity / totalElectrons[residue.resname]))
+            resList.append(str(residue.id[1]) + ', ' + residue.resname + ', ' + str(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])) + ', ' + str(len(cloud.crsList)))
             resAvgDensity.append(
                 cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms]))
 
@@ -190,7 +191,10 @@ for pdbid in pdbids:
         if len(cloud.atoms) <= 50: continue
         totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])
         chainAvgDensity.append(cloud.totalDensity / totalElectron)
+        atom = cloud.atoms[0]
+        chainList.append(atom.parent.parent.id + ', ' + str(atom.parent.id[1]) + ', ' + atom.parent.resname + ', ' + str(cloud.totalDensity / totalElectron) + ', ' + str(len(cloud.crsList)))
 
+    """
     # print(cloud.centroid, cloud.volume, cloud.totalDensity, totalElectron, [x.serial_number for x in cloud.atoms], file=fileHandle)
 
     # for resname, blobList in resDict.items():
@@ -217,6 +221,6 @@ for pdbid in pdbids:
           file=fileHandle)
     """
 
-    print(*atomList, sep="\n", file=fileHandle)
+    print(*resList, sep="\n", file=fileHandle)
 
 fileHandle.close()
