@@ -54,12 +54,10 @@ atomType = {'GLY_N': 'N_single_bb', 'GLY_CA': 'C_single_bb', 'GLY_C': 'C_double_
             'HIS_N': 'N_single_bb', 'HIS_CA': 'C_single_bb', 'HIS_C': 'C_double_bb', 'HIS_O': 'O_double_bb', 'HIS_CB': 'C_single', 'HIS_CG': 'C_intermediate', 'HIS_ND1': 'N_intermediate', 'HIS_CD2': 'C_intermediate', 'HIS_CE1': 'C_intermediate', 'HIS_NE2': 'N_intermediate', 'HIS_OXT': 'O_intermediate'}
 
 ## Data from https://arxiv.org/pdf/0804.2488.pdf
-radii = {'C_single': 0.83, 'C_double': 0.63, 'C_intermediate': 0.74, 'C_single_bb': 0.83, 'C_double_bb': 0.63,
-         'O_single': 0.84, 'O_double': 0.71, 'O_intermediate': 0.97, 'O_double_bb': 0.71,
-         'N_single': 0.71, 'N_double': 0.74, 'N_intermediate': 0.84, 'N_single_bb': 0.71,
-         'S_single': 0.77}
-
-#radii[sys.argv[3]] = float(sys.argv[4])
+radii = {'C_single': 0.99, 'C_double': 0.72, 'C_intermediate': 0.75, 'C_single_bb': 0.74, 'C_double_bb': 0.63,
+         'O_single': 0.88, 'O_double': 0.89, 'O_intermediate': 0.99, 'O_double_bb': 0.74,
+         'N_single': 1.38, 'N_intermediate': 0.88, 'N_single_bb': 0.74, #'N_double': 0.74, 
+         'S_single': 0.79}
 
 totalElectrons = {}
 for atom, num in electrons.items():
@@ -81,8 +79,12 @@ fileHandle = open(sys.argv[2], 'w')
 #print(*["pdbid", "resolution", "spaceGroup", "chainMean", "chainMedian", "chainLogMean", "chainLogMedian", "resMean",
 #        "resMedian", "resLogMean", "resLogMedian", "atomMean", "atomMedian", "atomLogMean", "atomLogMedian"], sep=", ",
 #      file=fileHandle)
+#radii[sys.argv[3]] = float(sys.argv[4]) # for radii optimization
+fileHandleB = open(sys.argv[3], 'w') #for b factor print out
+
 diff=[]
 for pdbid in pdbids:
+    print("working on ", pdbid)
     try:
         #atomTypeCount = dict.fromkeys(atomType, 0) ## for atom type composition calculation
         pdbid = pdbid.lower()
@@ -97,7 +99,7 @@ for pdbid in pdbids:
             pdbl.retrieve_pdb_file(pdbid, pdir='./pdb/')
 
         # Bio Python parser
-        parser = pdb.PDBParser()
+        parser = pdb.PDBParser(QUIET=True)
         structure = parser.get_structure(pdbid, pdbfile)
 
         ## my own parser
@@ -157,9 +159,9 @@ for pdbid in pdbids:
             if len(blobs) == 0:
                 continue
 
-            atomList.append([residue.id[1], resAtom, atomType[resAtom], blobs[0].totalDensity / electrons[resAtom], len(blobs[0].crsList)])
+            atomList.append([residue.id[1], resAtom, atomType[resAtom], blobs[0].totalDensity / electrons[resAtom], len(blobs[0].crsList), atom.get_bfactor()])
             atomAvgDensity.append(blobs[0].totalDensity / electrons[resAtom])
-            atomTypeCount[resAtom] += 1
+            #atomTypeCount[resAtom] += 1
 
             ## Aggregate residue blobs
             for blob in blobs:
@@ -180,9 +182,8 @@ for pdbid in pdbids:
                 else:
                     resDict[residue.resname] = [cloud]
 
-            resList.append(str(residue.id[1]) + ', ' + residue.resname + ', ' + str(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])) + ', ' + str(len(cloud.crsList)))
-            resAvgDensity.append(
-                cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms]))
+                resList.append(str(residue.id[1]) + ', ' + residue.resname + ', ' + str(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])) + ', ' + str(len(cloud.crsList)))
+                resAvgDensity.append(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms]))
 
         ## Aggregate chain blobs
         for blob in resClouds:
@@ -241,25 +242,44 @@ for pdbid in pdbids:
         return float(row['density']) / float(row['volumn']) * float(medians['volumn'][row['atomType']])
 
     try:
-      atoms = pandas.DataFrame(atomList, columns=['resID', 'resAtom', 'atomType', 'density', 'volumn'])
+      atoms = pandas.DataFrame(atomList, columns=['resID', 'resAtom', 'atomType', 'density', 'volumn', 'bfactor'])
       #atoms['atomType'] = atoms['atomType'].apply(formatAtomtype)
       medians = atoms.groupby(['atomType']).median()
       atoms['adjDensity'] = atoms.apply(lambda row: normVolumn(row), axis=1)
       medians = atoms.groupby(['atomType']).median()
-      medianAdjDen = medians.sort_index()['adjDensity']
+      #medianAdjDen = medians.sort_index()['adjDensity']
     except:
       continue
 
+    medianAdjDen = []
+    bfactors = []
+    for key in sorted(radii.keys()):
+      try:
+         medianAdjDen.append(medians['adjDensity'][key])
+      except:
+         medianAdjDen.append(np.nan)
+
+      # b factors calculation
+      try:
+         bfactors.append(medians['bfactor'][key])
+      except:
+         bfactors.append(np.nan)
+
+    bfactorMedian = np.median(atoms.bfactor)
+
     if n == 1:
       n = 0
-      print("pdbid", "chainMedian", *medians.sort_index().index, sep=', ', file=fileHandle)
-      #print("pdbid", *sorted(atomTypeCount.keys()), sep=', ', file=fileHandle) 
+      print("pdbid", "chainMedian", *sorted(radii.keys()), sep=', ', file=fileHandle)
+      print("pdbid", "chainMedian", *sorted(radii.keys()), sep=', ', file=fileHandleB) ## for print out b factors
+      #print("pdbid", *sorted(atomTypeCount.keys()), sep=', ', file=fileHandle) ## for radii optimization, old
 
-    if len(medianAdjDen) == 13:
-      #print(pdbid, chainMedian, *medianAdjDen, sep=", ", file=fileHandle)
-      diff.append((chainMedian - medianAdjDen[int(sys.argv[5])])/chainMedian)
-      #print(pdbid, *[atomTypeCount[key] for key in sorted(atomTypeCount.keys())], sep=', ', file=fileHandle)
+    #if len(medianAdjDen) == 13:
+    print(pdbid, chainMedian, *medianAdjDen, sep=", ", file=fileHandle) ## for checking the medians of chain and all atom types
+    print(pdbid, bfactorMedian, *bfactors, sep=", ", file=fileHandleB) ## for print out b factors
+    #diff.append((chainMedian - medianAdjDen[int(sys.argv[5])])/chainMedian) ## for radii optimization
+    #print(pdbid, *[atomTypeCount[key] for key in sorted(atomTypeCount.keys())], sep=', ', file=fileHandle) ## for atom type composition
 
-#print(np.mean(diff), np.median(diff), file=fileHandle)
+#print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
 
 fileHandle.close()
+fileHandleB.close()

@@ -11,6 +11,7 @@ import struct
 import numpy as np
 import statistics
 import warnings
+import scipy.spatial
 
 urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 urlSuffix = ".ccp4"
@@ -472,9 +473,10 @@ class DensityBlob:
         """
         RETURN true if two blobs overlaps or right next to each other
         """
-        if any(x in self.crsList for x in otherBlob.crsList):
-            return True
-        elif any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in self.crsList for y in otherBlob.crsList):
+        #if any(x in self.crsList for x in otherBlob.crsList):
+        #    return True
+        #elif any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in self.crsList for y in otherBlob.crsList):
+        if np.any(scipy.spatial.distance.cdist(np.matrix(self.crsList), np.matrix(otherBlob.crsList)) <= np.sqrt(3)):
             return True
         else:
             return False
