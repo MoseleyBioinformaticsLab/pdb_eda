@@ -54,7 +54,7 @@ atomType = {'GLY_N': 'N_single_bb', 'GLY_CA': 'C_single_bb', 'GLY_C': 'C_double_
             'HIS_N': 'N_single_bb', 'HIS_CA': 'C_single_bb', 'HIS_C': 'C_double_bb', 'HIS_O': 'O_double_bb', 'HIS_CB': 'C_single', 'HIS_CG': 'C_intermediate', 'HIS_ND1': 'N_intermediate', 'HIS_CD2': 'C_intermediate', 'HIS_CE1': 'C_intermediate', 'HIS_NE2': 'N_intermediate', 'HIS_OXT': 'O_intermediate'}
 
 ## Data from https://arxiv.org/pdf/0804.2488.pdf
-radii = {'C_single': 0.99, 'C_double': 0.72, 'C_intermediate': 0.75, 'C_single_bb': 0.74, 'C_double_bb': 0.64,
+radii = {'C_single': 0.99, 'C_double': 0.72, 'C_intermediate': 0.76, 'C_single_bb': 0.74, 'C_double_bb': 0.64,
          'O_single': 0.89, 'O_double': 0.88, 'O_intermediate': 0.99, 'O_double_bb': 0.75,
          'N_single': 1.37, 'N_intermediate': 0.87, 'N_single_bb': 0.73, #'N_double': 0.74, 
          'S_single': 0.80}
