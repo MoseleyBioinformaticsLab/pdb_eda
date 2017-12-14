@@ -7,6 +7,8 @@ import sys
 import os.path
 import pdb as myPDB
 import Bio.PDB as pdb
+import validationStats
+import copy
 #import crystalContacts
 
 n = 1
@@ -70,10 +72,9 @@ for atom, num in electrons.items():
 
 pdbidfile = sys.argv[1]
 pdbids = []
-with open(pdbidfile, "r") as fileHandle:
-    for pdbid in fileHandle:
+with open(pdbidfile, "r") as fileHandleIn:
+    for pdbid in fileHandleIn:
         pdbids.append(pdbid.split(" ; ")[0])
-fileHandle.close()
 
 fileHandle = open(sys.argv[2], 'w')
 #print(*["pdbid", "resolution", "spaceGroup", "chainMean", "chainMedian", "chainLogMean", "chainLogMedian", "resMean",
@@ -82,7 +83,7 @@ fileHandle = open(sys.argv[2], 'w')
 #radii[sys.argv[3]] = float(sys.argv[4]) # for radii optimization
 #fileHandleB = open(sys.argv[3], 'w') #for b factor print out
 
-diff=[]
+diff = []
 for pdbid in pdbids:
     print("working on ", pdbid)
     try:
@@ -98,40 +99,33 @@ for pdbid in pdbids:
             pdbl = pdb.PDBList()
             pdbl.retrieve_pdb_file(pdbid, pdir='./pdb/', file_format="pdb")
 
-        # Bio Python parser
+        # Bio Python PDB parser
         parser = pdb.PDBParser(QUIET=True)
         structure = parser.get_structure(pdbid, pdbfile)
 
-        ## my own parser
+        ## my own PDB parser
         pdbObj = myPDB.readPDBfile(pdbfile)
         program = pdbObj.header.program
         spaceGroup = pdbObj.header.spaceGroup
 
-        '''
-        ## crystal contacts by Michael
-        mmcifFile = '/mlab/data/databases/PDB/mmcif/2015_09_04/' + pdbid[1:3] + '/' + pdbid + '.cif.gz'
-        if os.path.isfile(mmcifFile):
-            pass
-        else:
-            print("No", pdbid, "mmcif file exist" )
-            continue
-
-        cc = crystalContacts.get_contact_atoms(mmcifFile)
-        contactAtoms = [str(atom.parent.id[1]) + '_' + atom.name for atom in cc]
-
-        atomNum = sum(1 for x in structure.get_atoms())
-        contactNum = sum(1 for x in contactAtoms)
-        '''
     except:
         continue
 
-    # if "organism_scientific" not in structure.header["source"]["1"].keys():
-    #    continue
+    valid = validationStats.validationStats(pdbid)
+    try:
+        diffDensityObj = ccp4.readFromPDBID(pdbid + '_diff')
+    except:
+        continue
 
-    # atoms = structure.get_atoms()
-    # atoms = list(structure.get_atoms())
-    # atoms[0].get_coord()
+    fo = copy.deepcopy(densityObj)
+    fc = copy.deepcopy(densityObj)
+    fo.density = densityObj.density - diffDensityObj.density
+    fc.density = densityObj.density - diffDensityObj.density * 2
 
+    rsccList = valid.rscc(structure, fc, fo)
+    print(*rsccList, sep="\n", file=fileHandle)
+
+    continue
     ########################################
     ## Aggregate by atom, residue, and chain
     ########################################
@@ -205,32 +199,6 @@ for pdbid in pdbids:
 
     chainMedian = np.median(chainAvgDensity)
 
-    """
-    # print(cloud.centroid, cloud.volume, cloud.totalDensity, totalElectron, [x.serial_number for x in cloud.atoms], file=fileHandle)
-
-    # for resname, blobList in resDict.items():
-    #    print(resname, len(blobList), [x.totalDensity for x in blobList], sum([x.totalDensity for x in blobList])/len(blobList)/totalElectrons[resname], file=fileHandle)
-    # print(*resList, sep="; ")
-
-    chainLogMean = 10 ** np.mean([np.log10(x) for x in chainAvgDensity])
-    chainLogMedian = 10 ** np.median([np.log10(x) for x in chainAvgDensity])
-    chainMean = np.mean(chainAvgDensity)
-    chainMedian = np.median(chainAvgDensity)
-
-    resLogMean = 10 ** np.mean([np.log10(x) for x in resAvgDensity])
-    resLogMedian = 10 ** np.median([np.log10(x) for x in resAvgDensity])
-    resMean = np.mean(resAvgDensity)
-    resMedian = np.median(resAvgDensity)
-
-    atomLogMean = 10 ** np.mean([np.log10(x) for x in atomAvgDensity])
-    atomLogMedian = 10 ** np.median([np.log10(x) for x in atomAvgDensity])
-    atomMean = np.mean(atomAvgDensity)
-    atomMedian = np.median(atomAvgDensity)
-
-    print(*[pdbid, structure.header["resolution"], spaceGroup, chainMean, chainMedian, chainLogMean, chainLogMedian,
-            resMean, resMedian, resLogMean, resLogMedian, atomMean, atomMedian, atomLogMean, atomLogMedian], sep=", ",
-          file=fileHandle)
-    """
 
     # reduce atom type to element and single/double/intermediate
     def formatAtomtype(x):
