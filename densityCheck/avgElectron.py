@@ -80,7 +80,7 @@ fileHandle = open(sys.argv[2], 'w')
 #print(*["pdbid", "resolution", "spaceGroup", "chainMean", "chainMedian", "chainLogMean", "chainLogMedian", "resMean",
 #        "resMedian", "resLogMean", "resLogMedian", "atomMean", "atomMedian", "atomLogMean", "atomLogMedian"], sep=", ",
 #      file=fileHandle)
-#radii[sys.argv[3]] = float(sys.argv[4]) # for radii optimization
+radii[sys.argv[3]] = float(sys.argv[4]) # for radii optimization
 #fileHandleB = open(sys.argv[3], 'w') #for b factor print out
 
 diff = []
@@ -123,9 +123,8 @@ for pdbid in pdbids:
     fc.density = densityObj.density - diffDensityObj.density * 2
 
     rsccList = valid.rscc(structure, fc, fo)
-    print(*rsccList, sep="\n", file=fileHandle)
+    #print(*rsccList, sep="\n", file=fileHandle)
 
-    continue
     ########################################
     ## Aggregate by atom, residue, and chain
     ########################################
@@ -153,7 +152,7 @@ for pdbid in pdbids:
             if len(blobs) == 0:
                 continue
 
-            atomList.append([residue.id[1], resAtom, atomType[resAtom], blobs[0].totalDensity / electrons[resAtom], len(blobs[0].crsList), atom.get_bfactor()])
+            atomList.append([residue.id[1], resAtom, atomType[resAtom], blobs[0].totalDensity / electrons[resAtom], len(blobs[0].crsList), atom.get_bfactor(), np.linalg.norm(atom.coord - blobs[0].centroid)])
             atomAvgDensity.append(blobs[0].totalDensity / electrons[resAtom])
             #atomTypeCount[resAtom] += 1
 
@@ -210,7 +209,10 @@ for pdbid in pdbids:
         return float(row['density']) / float(row['volumn']) * float(medians['volumn'][row['atomType']])
 
     try:
-      atoms = pandas.DataFrame(atomList, columns=['resID', 'resAtom', 'atomType', 'density', 'volumn', 'bfactor'])
+      atoms = pandas.DataFrame(atomList, columns=['resID', 'resAtom', 'atomType', 'density', 'volumn', 'bfactor', 'centroidDist'])
+      centroidCutoff = atoms['centroidDist'].median() + atoms['centroidDist'].std() * 2
+      atoms = atoms[atoms['centroidDist'] < centroidCutoff]
+
       #atoms['atomType'] = atoms['atomType'].apply(formatAtomtype)
       medians = atoms.groupby(['atomType']).median()
       atoms['adjDensity'] = atoms.apply(lambda row: normVolumn(row), axis=1)
@@ -244,10 +246,10 @@ for pdbid in pdbids:
     #if len(medianAdjDen) == 13:
     print(pdbid, chainMedian, *medianAdjDen, sep=", ", file=fileHandle) ## for checking the medians of chain and all atom types
     #print(pdbid, bfactorMedian, *bfactors, sep=", ", file=fileHandleB) ## for print out b factors
-    #diff.append((chainMedian - medianAdjDen[int(sys.argv[4])])/chainMedian) ## for radii optimization
+    diff.append((chainMedian - medianAdjDen[int(sys.argv[5])])/chainMedian) ## for radii optimization
     #print(pdbid, *[atomTypeCount[key] for key in sorted(atomTypeCount.keys())], sep=', ', file=fileHandle) ## for atom type composition
 
-#print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
+print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
 
 fileHandle.close()
 #fileHandleB.close()
