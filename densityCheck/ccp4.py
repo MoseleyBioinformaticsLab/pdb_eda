@@ -346,7 +346,6 @@ class DensityMatrix:
                             crsCoordList.append(crs)
 
         # print('crs grids: ', crsCoordList)
-
         return crsCoordList
 
     def getTotalDensityFromXyz(self, xyzCoord, radius, densityCutoff=0):
