@@ -415,7 +415,7 @@ class DensityMatrix:
 
 
 class DensityBlob:
-    def __init__(self, centroid, totalDensity, volume, crsList, header):
+    def __init__(self, centroid, totalDensity, volume, crsList, header, densityMatrix):
         """
         Initialize a DensityBlob object
         PARAMS
@@ -432,10 +432,12 @@ class DensityBlob:
         self.volume = volume
         self.crsList = crsList
         self.header = header
+        self.densityMatrix = densityMatrix
+        self.nearbyAtoms = []
 
 
     @staticmethod
-    def fromCrsList(crsList, header, densityMat):
+    def fromCrsList(crsList, header, densityMatrix):
         """
         The creator of a DensityBlob object
         PARAMS
@@ -448,13 +450,13 @@ class DensityBlob:
         weights = [0, 0, 0]
         totalDen = 0
         for i, point in enumerate(crsList):
-            density = densityMat[point[2], point[1], point[0]]
+            density = densityMatrix[point[2], point[1], point[0]]
             pointXYZ = header.crs2xyzCoord(point)
             weights = [weights[i] + density * pointXYZ[i] for i in range(3)]
             totalDen += density
 
         centroidXYZ = [weight / totalDen for weight in weights]
-        return DensityBlob(centroidXYZ, totalDen, header.unitVolume * len(crsList), crsList, header)
+        return DensityBlob(centroidXYZ, totalDen, header.unitVolume * len(crsList), crsList, header, densityMatrix)
 
 
     def __eq__(self, other):
@@ -480,18 +482,19 @@ class DensityBlob:
         else:
             return False
 
-    def merge(self, otherBlob, densityMat):
+    def merge(self, otherBlob):
         """
         UPDATE the original blob given PARAM another blob
         """
         combinedList = self.crsList + [x for x in otherBlob.crsList if x not in self.crsList]
-        newBlob = DensityBlob.fromCrsList(combinedList, self.header, densityMat)
+        newBlob = DensityBlob.fromCrsList(combinedList, self.header, self.densityMatrix)
 
         self.centroid = newBlob.centroid
         self.totalDensity = newBlob.totalDensity
         self.volume = newBlob.volume
         self.crsList = newBlob.crsList
         self.header = newBlob.header
+        self.densityMatrix = newBlob.densityMatrix
 
 
 

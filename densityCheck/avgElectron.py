@@ -1,14 +1,16 @@
 # !/usr/bin/python3
 
-import pandas
 import ccp4
+import pdb as myPDB
+import validationStats
+
+import pandas
 import numpy as np
 import sys
 import os.path
-import pdb as myPDB
 import Bio.PDB as pdb
-import validationStats
-import copy
+#import scipy.spatial
+#import copy
 #import crystalContacts
 
 n = 1
@@ -55,20 +57,12 @@ atomType = {'GLY_N': 'N_single_bb', 'GLY_CA': 'C_single_bb', 'GLY_C': 'C_double_
             'ARG_N': 'N_single_bb', 'ARG_CA': 'C_single_bb', 'ARG_C': 'C_double_bb', 'ARG_O': 'O_double_bb', 'ARG_CB': 'C_single', 'ARG_CG': 'C_single', 'ARG_CD': 'C_single', 'ARG_NE': 'N_intermediate', 'ARG_CZ': 'C_double', 'ARG_NH1': 'N_intermediate', 'ARG_NH2': 'N_intermediate', 'ARG_OXT': 'O_intermediate',
             'HIS_N': 'N_single_bb', 'HIS_CA': 'C_single_bb', 'HIS_C': 'C_double_bb', 'HIS_O': 'O_double_bb', 'HIS_CB': 'C_single', 'HIS_CG': 'C_intermediate', 'HIS_ND1': 'N_intermediate', 'HIS_CD2': 'C_intermediate', 'HIS_CE1': 'C_intermediate', 'HIS_NE2': 'N_intermediate', 'HIS_OXT': 'O_intermediate'}
 
-## Data from https://arxiv.org/pdf/0804.2488.pdf
+## Data originally from https://arxiv.org/pdf/0804.2488.pdf
 radii = {'C_single': 0.91, 'C_double': 0.71, 'C_intermediate': 0.76, 'C_single_bb': 0.74, 'C_double_bb': 0.64,
          'O_single': 0.88, 'O_double': 0.83, 'O_intermediate': 0.91, 'O_double_bb': 0.75,
          'N_single': 1.03, 'N_intermediate': 0.83, 'N_single_bb': 0.73, #'N_double': 0.74,
          'S_single': 0.80}
 
-totalElectrons = {}
-for atom, num in electrons.items():
-    if atom[-3:] == 'OXT': continue
-
-    if atom[0:3] in totalElectrons.keys():
-        totalElectrons[atom[0:3]] += num
-    else:
-        totalElectrons[atom[0:3]] = num
 
 pdbidfile = sys.argv[1]
 pdbids = []
@@ -88,7 +82,7 @@ for pdbid in pdbids:
         #atomTypeCount = dict.fromkeys(atomType, 0) ## for atom type composition calculation
         pdbid = pdbid.lower()
         densityObj = ccp4.readFromPDBID(pdbid)
-        densityCutoff = sigma = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
+        densityCutoff = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
 
         pdbfile = './pdb/pdb' + pdbid + '.ent'
         if os.path.isfile(pdbfile):
@@ -101,20 +95,23 @@ for pdbid in pdbids:
         parser = pdb.PDBParser(QUIET=True)
         structure = parser.get_structure(pdbid, pdbfile)
 
+        '''
         ## my own PDB parser
         pdbObj = myPDB.readPDBfile(pdbfile)
         program = pdbObj.header.program
         spaceGroup = pdbObj.header.spaceGroup
+        '''
 
     except:
         continue
 
-    valid = validationStats.validationStats(pdbid)
     try:
         diffDensityObj = ccp4.readFromPDBID(pdbid + '_diff')
     except:
         continue
 
+    '''
+    valid = validationStats.validationStats(pdbid)
     fo = copy.deepcopy(densityObj)
     fc = copy.deepcopy(densityObj)
     fc.density = densityObj.density - diffDensityObj.density * 2
@@ -130,6 +127,7 @@ for pdbid in pdbids:
         sys.exit()
     else:
         continue
+    '''
 
     ########################################
     ## Aggregate by atom, residue, and chain
@@ -174,7 +172,7 @@ for pdbid in pdbids:
                 for cloud in resClouds:
                     if cloud.testOverlap(blob):
                         atoms = cloud.atoms
-                        cloud.merge(blob, densityObj.density)
+                        cloud.merge(blob)
                         cloud.atoms = atoms + [atom]
                         break
                 else:
@@ -196,7 +194,7 @@ for pdbid in pdbids:
             for cloud in chainClouds:
                 if cloud.testOverlap(blob):
                     atoms = cloud.atoms
-                    cloud.merge(blob, densityObj.density)
+                    cloud.merge(blob)
                     cloud.atoms = atoms + blob.atoms
                     break
             else:
@@ -249,22 +247,75 @@ for pdbid in pdbids:
 
     bfactorMedian = np.median(atoms.bfactor)
 
-    if n == 1:
-      n = 0
-      print("pdbid", "chainMedian", *sorted(radii.keys()), sep=', ', file=fileHandle)
+    #if n == 1:
+      #n = 0
+      #print("pdbid", "chainMedian", *sorted(radii.keys()), sep=', ', file=fileHandle)
       #print("pdbid", "chainMedian", *sorted(radii.keys()), sep=', ', file=fileHandleB) ## for print out b factors
       #print("pdbid", *sorted(atomTypeCount.keys()), sep=', ', file=fileHandle) ## for radii optimization, old
 
-    print(pdbid, chainMedian, *medianAdjDen, sep=", ", file=fileHandle) ## for checking the medians of chain and all atom types
+    #print(pdbid, chainMedian, *medianAdjDen, sep=", ", file=fileHandle) ## for checking the medians of chain and all atom types
     #print(pdbid, bfactorMedian, *bfactors, sep=", ", file=fileHandleB) ## for print out b factors
     #print(pdbid, *[atomTypeCount[key] for key in sorted(atomTypeCount.keys())], sep=', ', file=fileHandle) ## for atom type composition
 
-    diff.append((chainMedian - medianAdjDen[int(sys.argv[5])]) / chainMedian)  ## for radii optimization
+    #diff.append((chainMedian - medianAdjDen[int(sys.argv[5])]) / chainMedian)  ## for radii optimization
 
-print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
+
+    # find all red/green blobs
+    greenBlobList = []
+    redBlobList = []
+    sigma3 = np.mean(diffDensityObj.densityArray) + 3 * np.std(diffDensityObj.densityArray)
+    for i in range(diffDensityObj.header.crsStart[0], diffDensityObj.header.crsStart[0] + diffDensityObj.header.ncrs[0]):
+        for j in range(diffDensityObj.header.crsStart[1], diffDensityObj.header.crsStart[1] + diffDensityObj.header.ncrs[1]):
+            for k in range(diffDensityObj.header.crsStart[2], diffDensityObj.header.crsStart[2] + diffDensityObj.header.ncrs[2]):
+                blob = ccp4.DensityBlob.fromCrsList([[i, j, k]], diffDensityObj.header, diffDensityObj.density)
+
+                if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 > 0:
+                    if len(greenBlobList) == 0:
+                        greenBlobList.append(blob)
+                    else:
+                        for greenBlob in greenBlobList:
+                            if greenBlob.testOverlap(blob):
+                                greenBlob.merge(blob)
+                                break
+                        else:
+                            greenBlobList.append(blob)
+
+                if diffDensityObj.getPointDensityFromCrs([i,j,k]) <= - sigma3 < 0:
+                    if len(redBlobList) == 0:
+                        redBlobList.append(blob)
+                    else:
+                        for redBlob in redBlobList:
+                            if redBlob.testOverlap(blob):
+                                redBlob.merge(blob)
+                                break
+                        else:
+                            redBlobList.append(blob)
+
+    diffMapStats = []
+    atomsCoords = np.array([i.coord for i in structure.get_atoms()])
+    for blob in greenBlobList + redBlobList:
+        blobCoords = np.array([blob.header.crs2xyzCoord(i) for i in blob.crsList])
+        #dists = scipy.spatial.distance.cdist(atomsCoords, blobCoords).min(axis=1)  # distance of each atom to its closest blob grid
+        dists = np.linalg.norm([np.sum(j, axis=0) for j in [blobCoords - i for i in atomsCoords]], axis=1) / len(blobCoords)  # Averge vector norm of all grid point in a blob to each atom
+        blob.nearbyAtoms = [j for i, j in enumerate(structure.get_atoms()) if dists[i] <= 3]
+
+        ind = np.argmin(dists)
+        atom = list(structure.get_atoms())[ind]
+        diffMapStats.append([blob.centroid, np.sign(blob.totalDensity), abs(blob.totalDensity / chainMedian), blob.volume, dists.min(), atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name])
+
+    diffMapStats.sort(key=lambda x: x[2], reverse=True)  # sort by number of electron
+    diffMapStats.sort(key=lambda x: x[4])  # sort by distance
+
+    dists = [row[4] for row in diffMapStats]
+    import matplotlib.pyplot as plt
+    plt.hist(dists, bins=100)
+
+
+#print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
 
 #fileHandle = open("results/cen." + pdbid + ".txt", 'w') ## form print out centroid-coordinates difference
 #print(*atomList, sep='\n', file=fileHandle) ## for single atoms
 
 fileHandle.close()
 #fileHandleB.close()
+
