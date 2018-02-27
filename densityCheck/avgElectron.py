@@ -9,7 +9,8 @@ import numpy as np
 import sys
 import os.path
 import Bio.PDB as pdb
-#import scipy.spatial
+import matplotlib.pyplot as plt
+import scipy.spatial
 #import copy
 #import crystalContacts
 
@@ -70,7 +71,7 @@ with open(pdbidfile, "r") as fileHandleIn:
     for pdbid in fileHandleIn:
         pdbids.append(pdbid.split(" ; ")[0])
 
-suffix = sys.argv[2]
+#suffix = sys.argv[2]
 #fileHandle = open(sys.argv[2], 'w')
 #radii[sys.argv[3]] = float(sys.argv[4])  # for radii optimization
 #fileHandleB = open(sys.argv[3], 'w') #for b factor print out
@@ -260,13 +261,15 @@ for pdbid in pdbids:
     #diff.append((chainMedian - medianAdjDen[int(sys.argv[5])]) / chainMedian)  ## for radii optimization
 
 
+    ###########################
     # find all red/green blobs
+    ###########################
     greenBlobList = []
     redBlobList = []
     sigma3 = np.mean(diffDensityObj.densityArray) + 3 * np.std(diffDensityObj.densityArray)
-    for i in range(diffDensityObj.header.crsStart[0], diffDensityObj.header.crsStart[0] + diffDensityObj.header.ncrs[0]):
-        for j in range(diffDensityObj.header.crsStart[1], diffDensityObj.header.crsStart[1] + diffDensityObj.header.ncrs[1]):
-            for k in range(diffDensityObj.header.crsStart[2], diffDensityObj.header.crsStart[2] + diffDensityObj.header.ncrs[2]):
+    for i in range(diffDensityObj.header.ncrs[0]):
+        for j in range(diffDensityObj.header.ncrs[1]):
+            for k in range(diffDensityObj.header.ncrs[2]):
                 blob = ccp4.DensityBlob.fromCrsList([[i, j, k]], diffDensityObj.header, diffDensityObj.density)
 
                 if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 > 0:
@@ -294,6 +297,8 @@ for pdbid in pdbids:
     diffMapStats = []
     atomsCoords = np.array([i.coord for i in structure.get_atoms()])
     for blob in greenBlobList + redBlobList:
+        '''
+        ## distanct to the closest atoms
         blobCoords = np.array([blob.header.crs2xyzCoord(i) for i in blob.crsList])
         #dists = scipy.spatial.distance.cdist(atomsCoords, blobCoords).min(axis=1)  # distance of each atom to its closest blob grid
         dists = np.linalg.norm([np.sum(j, axis=0) for j in [blobCoords - i for i in atomsCoords]], axis=1) / len(blobCoords)  # Averge vector norm of all grid point in a blob to each atom
@@ -302,13 +307,96 @@ for pdbid in pdbids:
         ind = np.argmin(dists)
         atom = list(structure.get_atoms())[ind]
         diffMapStats.append([blob.centroid, np.sign(blob.totalDensity), abs(blob.totalDensity / chainMedian), blob.volume, dists.min(), atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name])
+        '''
 
-    diffMapStats.sort(key=lambda x: x[2], reverse=True)  # sort by number of electron
-    diffMapStats.sort(key=lambda x: x[4])  # sort by distance
+        ## distance to the closest blue cloud
+        blobCoords = np.array([blob.header.crs2xyzCoord(i) for i in blob.crsList])
+        blobcrs = blob.header.xyz2crsCoord(blob.centroid)
+        t = 100
+        minRedBlueAvgDist = 100
+        minCoord = []
+        for n in range(1, 100):
+            if n == t + 3:
+                atomBlueDists = [np.linalg.norm(np.array(minCoord) - i) for i in atomsCoords]
+                ind = np.argmin(atomBlueDists)
+                atom = list(structure.get_atoms())[ind]
 
-    dists = [row[4] for row in diffMapStats]
-    import matplotlib.pyplot as plt
-    plt.hist(dists, bins=100)
+                redBlueDists = [np.linalg.norm(np.array(minCoord) - i) for i in blobCoords]
+                redAtomAvgDist = np.linalg.norm(sum(blobCoords - atom.coord)) / len(blobCoords)
+
+                diffMapStats.append([minRedBlueAvgDist, min(atomBlueDists), min(redBlueDists), redAtomAvgDist, np.sign(blob.totalDensity), abs(blob.totalDensity / chainMedian), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.coord, minCoord, blob.centroid])
+                break
+            else:
+                for i in range(-n, n+1):
+                    for j in range(-n, n+1):
+                        for k in range(-n, n+1):
+                            if abs(i) == n or abs(j) == n or abs(k) == n:
+                                if densityObj.getPointDensityFromCrs([blobcrs[0] + i, blobcrs[1] + j, blobcrs[2] + k]) > densityCutoff:
+                                    cloudCoords = blob.header.crs2xyzCoord([blobcrs[0] + i, blobcrs[1] + j, blobcrs[2] + k])
+                                    redBlueAvgDist = np.linalg.norm([sum(j) for j in zip(*blobCoords - cloudCoords)]) / len(blobCoords)
+                                    #distance = np.linalg.norm(np.array(blob.centroid - np.array(blob.header.crs2xyzCoord([blobcrs[0] + i, blobcrs[1] + j, blobcrs[2] + k]))))
+                                    if redBlueAvgDist > densityCutoff and redBlueAvgDist < minRedBlueAvgDist:
+                                        if t == 100:
+                                            t = n
+                                        minRedBlueAvgDist = redBlueAvgDist
+                                        minCoord = blob.header.crs2xyzCoord([blobcrs[0] + i, blobcrs[1] + j, blobcrs[2] + k])
+
+
+    #diffMapStats.sort(key=lambda x: x[2], reverse=True)  # sort by number of electron
+    #diffMapStats.sort(key=lambda x: x[4])  # sort by distance
+
+    #dists = [row[4] for row in diffMapStats]
+    #plt.hist(dists, bins=200)
+
+    #dists = [row[6] for row in diffMapStats]
+    #plt.hist(dists, bins=200)
+    #plt.savefig('../' + pdbid + '.png')
+    #plt.close()
+
+    #print(len([i for i in dists if i <= 2]))
+    #print(len(dists))
+
+
+    dists = [i[1] for i in diffMapStats]
+    histogram = plt.hist(dists, bins=np.arange(min(dists), max(dists) + 0.02, 0.02))
+    plt.close()
+    mode = histogram[1][np.argmax(histogram[0][0:250]) + 1]  # maximum bin < 5A (5/0.02 = 250) distance
+    logmode = np.log(mode)
+
+    logdists = [np.log(i) for i in dists]
+    leftside = [i for i in logdists if i < logmode]
+    dev1 = np.sqrt(sum([(i - logmode) ** 2 for i in leftside]) / len(leftside))
+
+    bothside = [i for i in logdists if i < logmode + 2 * dev1]
+    cutoff = np.mean(bothside) + 2 * np.std(bothside)
+
+    '''
+    plt.hist(logdists, 200)
+    plt.axvline(x=logmode, color='red')
+    plt.axvline(x=logmode + dev1, color='orange')
+    plt.axvline(x=logmode + 2 * dev1, color='yellow')
+    plt.axvline(x=cutoff, color='green')
+    plt.savefig('../atom-blue-distance/' + pdbid + '.log.png')
+    plt.close()
+
+    model = [i for i in dists if i < 10]
+    plt.hist(model, 200)
+    plt.axvline(x=mode, color='red')
+    plt.axvline(x=np.exp(logmode + dev1), color='orange')
+    plt.axvline(x=np.exp(logmode + 2 * dev1), color='yellow')
+    plt.axvline(x=np.exp(cutoff), color='green')
+    plt.savefig('../atom-blue-distance/' + pdbid + '.original.png')
+    plt.close()
+
+    model = [i for i in diffMapStats if i[1] < np.exp(cutoff)]
+    plt.hist([i[2] for i in model], bins=100)
+    plt.savefig('../min-red-blue-distance/' + pdbid + '.1.png')
+    plt.close()
+
+    plt.hist([i[3] for i in model], bins=100)
+    plt.savefig('../red-atom-avg-distance/' + pdbid + '.1.png')
+    plt.close()
+    '''
 
 
 #print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
@@ -316,6 +404,6 @@ for pdbid in pdbids:
 #fileHandle = open("results/cen." + pdbid + ".txt", 'w') ## form print out centroid-coordinates difference
 #print(*atomList, sep='\n', file=fileHandle) ## for single atoms
 
-fileHandle.close()
+#fileHandle.close()
 #fileHandleB.close()
 
