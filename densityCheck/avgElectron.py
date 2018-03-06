@@ -323,8 +323,9 @@ for pdbid in pdbids:
 
                 redBlueDists = [np.linalg.norm(np.array(minCoord) - i) for i in blobCoords]
                 redAtomAvgDist = np.linalg.norm(sum(blobCoords - atom.coord)) / len(blobCoords)
+                redAtomDists = [np.linalg.norm(np.array(atom.coord) - i) for i in blobCoords]
 
-                diffMapStats.append([minRedBlueAvgDist, min(atomBlueDists), min(redBlueDists), redAtomAvgDist, np.sign(blob.totalDensity), abs(blob.totalDensity / chainMedian), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.coord, minCoord, blob.centroid])
+                diffMapStats.append([minRedBlueAvgDist, min(atomBlueDists), min(redBlueDists), redAtomAvgDist, min(redAtomDists), np.sign(blob.totalDensity), abs(blob.totalDensity / chainMedian), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.coord, minCoord, blob.centroid])
                 break
             else:
                 for i in range(-n, n+1):
@@ -387,16 +388,24 @@ for pdbid in pdbids:
     plt.axvline(x=np.exp(cutoff), color='green')
     plt.savefig('../atom-blue-distance/' + pdbid + '.original.png')
     plt.close()
+    '''
 
     model = [i for i in diffMapStats if i[1] < np.exp(cutoff)]
+
     plt.hist([i[2] for i in model], bins=100)
-    plt.savefig('../min-red-blue-distance/' + pdbid + '.1.png')
+    plt.axvline(x=np.exp(cutoff), color='green')
+    plt.savefig('../min-red-blue-distance/' + pdbid + '.2.png')
     plt.close()
 
     plt.hist([i[3] for i in model], bins=100)
-    plt.savefig('../red-atom-avg-distance/' + pdbid + '.1.png')
+    plt.axvline(x=np.exp(cutoff), color='green')
+    plt.savefig('../red-atom-avg-distance/' + pdbid + '.2.png')
     plt.close()
-    '''
+
+    plt.hist([i[4] for i in model], bins=100)
+    plt.axvline(x=np.exp(cutoff), color='green')
+    plt.savefig('../min-red-atom-distance/' + pdbid + '.2.png')
+    plt.close()
 
 
 #print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
