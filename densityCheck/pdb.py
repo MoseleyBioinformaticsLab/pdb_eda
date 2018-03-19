@@ -7,6 +7,7 @@ pdb.py
 """
 #import gzip
 import re
+import numpy as np
 
 
 def readPDBfile(filename, verbose=False):
@@ -15,30 +16,15 @@ def readPDBfile(filename, verbose=False):
         return parse(fileHandle, verbose)
 
 
-def parse(handle, verbose=False):
+def parse(handle, mode='lite', verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER file handle."""
     atoms = []
+    rotationMats = []
     modelCount = 0
     PDBid = date = method = resolution = rValue = rFree = program = spaceGroup = 0
     for record in handle.readlines():
-        if record.startswith('ATOM') or record.startswith('HETATM'):
-            keyValues = {'record': record,
-                         'recordType': record[0: 0+6],
-                         'serial': record[6: 6+5],
-                         'atomName': record[12: 12+4],
-                         'alternateLocation': record[16: 16+1],
-                         'residueName': record[17: 17+3],
-                         'chainID': record[21: 21+1],
-                         'residueNumber': record[22: 22+4],
-                         'x': record[30: 30+8],
-                         'y': record[38: 38+8],
-                         'z': record[46: 46+8],
-                         'occupancy': record[54: 54+6],
-                         'bFactor': record[60: 60+6],
-                         'element': record[76: 76+2]}
-
-            keyValues = {key: value.strip() for (key, value) in keyValues.items()}
-            atoms.append(Atom(keyValues))
+        if mode == 'lite' and record.startswith('ATOM'):
+            break
         elif record.startswith('HEADER'):
             date = record[57: 57+2].strip()
             PDBid = record[62: 62+4].strip()
@@ -68,8 +54,34 @@ def parse(handle, verbose=False):
             match = re.search('^REMARK 290 SYMMETRY OPERATORS FOR SPACE GROUP: (.+)$', record)
             if match:
                 spaceGroup = match.group(1).strip().replace(' ', '_')
+        elif record.startswith('REMARK 290   SMTRY'):
+            match = re.search('^REMARK 290   SMTRY(.+)$', record)
+            if match:
+                items = match.group(1).split()
+                if len(rotationMats) < int(items[1]):
+                    rotationMats.append(np.zeros((3, 4)))
+                rotationMats[int(items[1])-1][int(items[0])-1] = [float(i) for i in items[2:6]]
+        elif record.startswith('ATOM') or record.startswith('HETATM'):
+            keyValues = {'record': record,
+                         'recordType': record[0: 0+6],
+                         'serial': record[6: 6+5],
+                         'atomName': record[12: 12+4],
+                         'alternateLocation': record[16: 16+1],
+                         'residueName': record[17: 17+3],
+                         'chainID': record[21: 21+1],
+                         'residueNumber': record[22: 22+4],
+                         'x': record[30: 30+8],
+                         'y': record[38: 38+8],
+                         'z': record[46: 46+8],
+                         'occupancy': record[54: 54+6],
+                         'bFactor': record[60: 60+6],
+                         'element': record[76: 76+2]}
 
-    header = PDBheader(PDBid, date, method, resolution, rValue, rFree, program, spaceGroup)
+            keyValues = {key: value.strip() for (key, value) in keyValues.items()}
+            atoms.append(Atom(keyValues))
+
+
+    header = PDBheader(PDBid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats)
     return PDBentry(header, atoms)
 
 
@@ -80,7 +92,7 @@ class PDBentry:
 
 
 class PDBheader:
-    def __init__(self, PDBid, date, method, resolution, rValue, rFree, program, spaceGroup):
+    def __init__(self, PDBid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats):
         self.pdbid = PDBid
         self.date = date
         self.method = method
@@ -89,6 +101,7 @@ class PDBheader:
         self.rFree = rFree
         self.program = program
         self.spaceGroup = spaceGroup
+        self.rotationMats = rotationMats
 
 
 class Atom:
