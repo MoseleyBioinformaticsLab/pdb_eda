@@ -415,7 +415,7 @@ class DensityMatrix:
 
 
 class DensityBlob:
-    def __init__(self, centroid, totalDensity, volume, crsList, header, densityMatrix):
+    def __init__(self, centroid, coordCenter, totalDensity, volume, crsList, header, densityMatrix):
         """
         Initialize a DensityBlob object
         PARAMS
@@ -428,6 +428,7 @@ class DensityBlob:
             DensityBlob object
         """
         self.centroid = centroid
+        self.coordCenter = coordCenter
         self.totalDensity = totalDensity
         self.volume = volume
         self.crsList = crsList
@@ -456,7 +457,8 @@ class DensityBlob:
             totalDen += density
 
         centroidXYZ = [weight / totalDen for weight in weights]
-        return DensityBlob(centroidXYZ, totalDen, header.unitVolume * len(crsList), crsList, header, densityMatrix)
+        coordCenter = sum([header.crs2xyzCoord(i) for i in crsList]) / len(crsList)
+        return DensityBlob(centroidXYZ, coordCenter, header.unitVolume * len(crsList), crsList, header, densityMatrix)
 
 
     def __eq__(self, other):

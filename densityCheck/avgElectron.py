@@ -11,7 +11,8 @@ import os.path
 import Bio.PDB as pdb
 import matplotlib.pyplot as plt
 import scipy.spatial
-#import copy
+import copy
+#from scipy.sparse import coo_matrix
 #import crystalContacts
 
 n = 1
@@ -263,33 +264,74 @@ for pdbid in pdbids:
     ###########################
     # find all red/green blobs
     ###########################
-    greenBlobList = []
-    redBlobList = []
     sigma3 = np.mean(diffDensityObj.densityArray) + 3 * np.std(diffDensityObj.densityArray)
 
     ## only explore the non-repeating part (<= # xyz intervals) of the density map for blobs
     ncrs = [i for i in diffDensityObj.header.ncrs]
-    if diffDensityObj.header.xyzInterval[diffDensityObj.header.col2xyz-1] < ncrs[0]:
-        ncrs[0] = diffDensityObj.header.xyzInterval[diffDensityObj.header.col2xyz-1]
-    if diffDensityObj.header.xyzInterval[diffDensityObj.header.row2xyz-1] < ncrs[1]:
-        ncrs[1] = diffDensityObj.header.xyzInterval[diffDensityObj.header.row2xyz-1]
-    if diffDensityObj.header.xyzInterval[diffDensityObj.header.sec2xyz-1] < ncrs[2]:
-        ncrs[2] = diffDensityObj.header.xyzInterval[diffDensityObj.header.sec2xyz-1]
+    if diffDensityObj.header.xyzInterval[diffDensityObj.header.col2xyz - 1] < ncrs[0]:
+        ncrs[0] = diffDensityObj.header.xyzInterval[diffDensityObj.header.col2xyz - 1]
+    if diffDensityObj.header.xyzInterval[diffDensityObj.header.row2xyz - 1] < ncrs[1]:
+        ncrs[1] = diffDensityObj.header.xyzInterval[diffDensityObj.header.row2xyz - 1]
+    if diffDensityObj.header.xyzInterval[diffDensityObj.header.sec2xyz - 1] < ncrs[2]:
+        ncrs[2] = diffDensityObj.header.xyzInterval[diffDensityObj.header.sec2xyz - 1]
 
-    orginalDensityBox = [diffDensityObj.header.crs2xyzCoord(i) for i in [[c, r, s] for c in [0, ncrs[0]-1] for r in [0, ncrs[1]-1] for s in [0, ncrs[2]-1]]]
-    xs = sorted([i[0] for i in orginalDensityBox])
-    ys = sorted([i[1] for i in orginalDensityBox])
-    zs = sorted([i[2] for i in orginalDensityBox])
+    print(1, str(datetime.now()))
+    greenCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 > 0])
+    redCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) <= -sigma3 < 0])
 
-    ## https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
-    p1 = diffDensityObj.header.crs2xyzCoord([0,0,0])
-    p2 = diffDensityObj.header.crs2xyzCoord([ncrs[0]-1,0,0])
-    p4 = diffDensityObj.header.crs2xyzCoord([0,ncrs[1]-1,0])
-    p5 = diffDensityObj.header.crs2xyzCoord([0,0,ncrs[2]-1])
-    u = np.cross(p1 - p4, p1 - p5)
-    v = np.cross(p1 - p2, p1 - p5)
-    w = np.cross(p1 - p2, p1 - p4)
+    print(2, str(datetime.now()))
+    greenDists = scipy.spatial.distance.cdist(greenCrsList, greenCrsList)
+    redDists = scipy.spatial.distance.cdist(redCrsList, redCrsList)
 
+    print(3, str(datetime.now()))
+    greenBlobList2 = []
+    usedIdx = []
+    dcutoff = np.sqrt(3)
+    for i in range(len(greenCrsList)):
+        if i == 9664:
+            break
+        if i in usedIdx:
+            continue
+
+        currCluster = [i]
+        newCluster = [n for n, d in enumerate(greenDists[i]) if n not in currCluster and d <= dcutoff]
+        currCluster = currCluster + newCluster
+        while len(newCluster):
+            newCluster = {n for x in newCluster for n, d in enumerate(greenDists[x]) if n not in currCluster and d <= dcutoff}
+            currCluster = currCluster + list(newCluster)
+
+        usedIdx = usedIdx + currCluster
+        blob = ccp4.DensityBlob.fromCrsList([greenCrsList[x] for x in currCluster], diffDensityObj.header, diffDensityObj.density)
+        greenBlobList2.append(blob)
+
+    print(4, str(datetime.now()))
+    redBlobList1 = []
+    usedIdx = []
+    for i in range(len(redCrsList)):
+        if i in usedIdx:
+            continue
+
+        currCluster = [i]
+        newCluster = [n for n, d in enumerate(redDists[i]) if n not in currCluster and d <= dcutoff]
+        currCluster = currCluster + newCluster
+        while len(newCluster):
+            newCluster = {n for x in newCluster for n, d in enumerate(redDists[x]) if n not in currCluster and d <= dcutoff}
+            currCluster = currCluster + list(newCluster)
+
+        usedIdx = usedIdx + currCluster
+        blob = ccp4.DensityBlob.fromCrsList([redCrsList[x] for x in currCluster], diffDensityObj.header, diffDensityObj.density)
+        redBlobList1.append(blob)
+    print(5, str(datetime.now()))
+    #1 2018-03-26 14:31:13.401092
+    #5 2018-03-26 14:32:37.146410
+    #Out[1389]: 3663
+
+
+    #83 2018-03-22 14:27:57.467453
+    #83 2018-03-22 14:46:20.850737
+    greenBlobList = []
+    redBlobList = []
+    print(6, str(datetime.now()))
     for i in range(ncrs[0]):
         for j in range(ncrs[1]):
             for k in range(ncrs[2]):
@@ -317,11 +359,40 @@ for pdbid in pdbids:
                         else:
                             redBlobList.append(blob)
 
+    print(7, str(datetime.now()))
+
+    ix = []
+    jx = []
+    for i in range(len(greenBlobList)):
+        for j in range(len(greenBlobList1)):
+            if j in jx:
+                continue
+            if np.all([np.ndarray.tolist(x) in greenBlobList[i].crsList for x in greenBlobList1[j].crsList]):
+                ix.append(i)
+                jx.append(j)
+                break
+
+
+
     ## calculate all symmetry and nearby cells
     ## Biomolecular Crystallography: Principles, Practice, and Application to Structural Biology by Bernhard Rupp
     ## Orthogonalization matrix O and deororthogonalization matrix O' are from 'ccp4'
     ## Rotation Matrix is from 'myPDB'
     ## The neighbering cells can be calculated using formula, X' = O(O'(RX + T) + T') = OO'(RX+T) + OT' = RX+T + O[-1/0/1,-1/0/1,-1/0/1]
+    orginalDensityBox = [diffDensityObj.header.crs2xyzCoord(i) for i in [[c, r, s] for c in [0, ncrs[0]-1] for r in [0, ncrs[1]-1] for s in [0, ncrs[2]-1]]]
+    xs = sorted([i[0] for i in orginalDensityBox])
+    ys = sorted([i[1] for i in orginalDensityBox])
+    zs = sorted([i[2] for i in orginalDensityBox])
+
+    ## https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
+    p1 = diffDensityObj.header.crs2xyzCoord([0,0,0])
+    p2 = diffDensityObj.header.crs2xyzCoord([ncrs[0]-1,0,0])
+    p4 = diffDensityObj.header.crs2xyzCoord([0,ncrs[1]-1,0])
+    p5 = diffDensityObj.header.crs2xyzCoord([0,0,ncrs[2]-1])
+    u = np.cross(p1 - p4, p1 - p5)
+    v = np.cross(p1 - p2, p1 - p5)
+    w = np.cross(p1 - p2, p1 - p4)
+
     atomCoords = np.array([i.coord for i in structure.get_atoms()])
     allAtoms = []
     allAtoms.extend(atomCoords)
@@ -335,41 +406,41 @@ for pdbid in pdbids:
                         continue
 
                     rMat = pdbObj.header.rotationMats[r]
-                    symAtoms = [np.dot(rMat[:, 0:3], x) + rMat[:, 3] for x in atomCoords]
+                    otMat = np.dot(densityObj.header.orthoMat, [i, j, k])
+                    symAtoms = [np.dot(rMat[:, 0:3], x) + rMat[:, 3] + otMat for x in atomCoords]
 
                     ## test if the symmetry box overlap with the original
                     #inRangeAtoms = [i for i in symAtoms if xs[0] - 5 <= i[0] <= xs[len(xs)-1] + 5 and ys[0] - 5 <= i[1] <= ys[len(ys)-1] + 5 and zs[0] - 5 <= i[2] <= zs[len(zs)-1] + 5]
                     #inRangeAtoms = [i for i in symAtoms if np.dot(u, p1) >= np.dot(u, i) >= np.dot(u, p2) and np.dot(v, p1) >= np.dot(v, i) >= np.dot(v, p4) and np.dot(w, p1) >= np.dot(w, i) >= np.dot(w, p5)]
                     inRangeAtoms = [i for i in symAtoms if all([diffDensityObj.header.xyz2crsCoord(i)[j] < ncrs[j] for j in range(3)])]
                     print(len(inRangeAtoms))
-                    allAtoms.extend(inRangeAtoms)
+                    if len(inRangeAtoms):
+                        allAtoms.extend(inRangeAtoms)
                     print(len(allAtoms))
 
-
+    allAtoms = np.asarray(allAtoms)
 
     ## find nearby atoms to the red/green blobs
     diffMapStats = []
     isolatedBlobs = []
-    n = 1
-    for blob in (greenBlobList + redBlobList)[0:100]:
-        print(n, str(datetime.now())); n +=1
-
-        centroid = np.array(blob.centroid)
-        initialIndex = [i for i, j in enumerate(allAtoms) if j[0] - 10 < centroid[0] < j[0] + 10 and j[1] - 10 < centroid[1] < j[1] + 10 and j[2] - 10 < centroid[2] < j[2] + 10 and np.linalg.norm(centroid - j) < 10]
-        if len(initialIndex) == 0:
-            isolatedBlobs.append(blob)
-            continue
+    print(n, str(datetime.now()))
+    for blob in greenBlobList + redBlobList:
 
         ## distanct to the closest atoms
-        blobCoords = np.array([blob.header.crs2xyzCoord(i) for i in blob.crsList])
+        centroid = np.array(blob.centroid).reshape((1, 3))
+        dists = scipy.spatial.distance.cdist(centroid, allAtoms)
+
+        ## old calculation
+        #blobCoords = np.array([blob.header.crs2xyzCoord(i) for i in blob.crsList])
+        #dists = np.linalg.norm([np.sum(j, axis=0) for j in [blobCoords - allAtoms[i] for i in initialIndex]], axis=1) / len(blobCoords)  # Averge vector norm of all grid point in a blob to each atom
         #dists = scipy.spatial.distance.cdist(atomsCoords, blobCoords).min(axis=1)  # distance of each atom to its closest blob grid
-        dists = np.linalg.norm([np.sum(j, axis=0) for j in [blobCoords - allAtoms[i] for i in initialIndex]], axis=1) / len(blobCoords)  # Averge vector norm of all grid point in a blob to each atom
         #blob.nearbyAtoms = [j for i, j in enumerate(allAtoms) if i in initialIndex and dists[initialIndex.index(i)] <= 3]
 
-        ind = np.argmin(dists)
+        ind = np.argmin(dists[0])
         atom = list(allAtoms)[ind]
         diffMapStats.append([dists.min(), np.sign(blob.totalDensity), abs(blob.totalDensity / chainMedian), blob.volume, blob.centroid, atom])#atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.coord, blob.centroid])
 
+    print(n, str(datetime.now()))
 
         '''
         ## distance to the closest blue cloud
