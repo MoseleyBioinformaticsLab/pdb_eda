@@ -457,8 +457,9 @@ class DensityBlob:
             totalDen += density
 
         centroidXYZ = [weight / totalDen for weight in weights]
-        coordCenter = sum([header.crs2xyzCoord(i) for i in crsList]) / len(crsList)
-        return DensityBlob(centroidXYZ, coordCenter, header.unitVolume * len(crsList), crsList, header, densityMatrix)
+        npoints = len(crsList)
+        coordCenter = [sum(k) / npoints for k in zip(*[header.crs2xyzCoord(i) for i in crsList])]
+        return DensityBlob(centroidXYZ, coordCenter, totalDen, header.unitVolume * len(crsList), crsList, header, densityMatrix)
 
 
     def __eq__(self, other):

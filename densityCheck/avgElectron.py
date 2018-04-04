@@ -11,10 +11,10 @@ import os.path
 import Bio.PDB as pdb
 import matplotlib.pyplot as plt
 import scipy.spatial
-#import copy
+import copy
+import datetime  #; print(str(datetime.datetime.now()))
 #from scipy.sparse import coo_matrix
 #import crystalContacts
-#import datetime #; print(str(datetime.now())
 
 n = 1
 elementElectron = {'C': 6, 'N': 7, 'O': 8, 'P': 15, 'S': 16}
@@ -80,7 +80,7 @@ with open(pdbidfile, "r") as fileHandleIn:
 
 diff = []
 for pdbid in pdbids:
-    print("working on ", pdbid)
+    print("working on " + pdbid + ', ', str(datetime.datetime.now()))
     try:
         #atomTypeCount = dict.fromkeys(atomType, 0) ## for atom type composition calculation
         pdbid = pdbid.lower()
@@ -97,7 +97,6 @@ for pdbid in pdbids:
         # Bio Python PDB parser
         parser = pdb.PDBParser(QUIET=True)
         structure = parser.get_structure(pdbid, pdbfile)
-
 
         ## my own PDB parser
         pdbObj = myPDB.readPDBfile(pdbfile)
@@ -321,7 +320,7 @@ for pdbid in pdbids:
         redBlobList.append(blob)
 
 
-   '''
+    '''
     ## For inRangeAtoms0, the min/max range of xyz axes (the circumscribed box)
     orginalDensityBox = [diffDensityObj.header.crs2xyzCoord(i) for i in [[c, r, s] for c in [0, ncrs[0]-1] for r in [0, ncrs[1]-1] for s in [0, ncrs[2]-1]]]
     xs = sorted([i[0] for i in orginalDensityBox])
@@ -354,26 +353,35 @@ for pdbid in pdbids:
     allAtoms = []
     allAtoms.extend(atomCoords)
 
+    #print(str(datetime.now()))
+    allAtoms = []
     for i in [-1, 0, 1]:
         for j in [-1, 0, 1]:
             for k in [-1, 0, 1]:
                 for r in range(len(pdbObj.header.rotationMats)):
                     if i == 0 and j == 0 and k == 0 and r == 0:
-                        continue
+                        inRangeAtoms = list(structure.get_atoms())
+                    else:
+                        rMat = pdbObj.header.rotationMats[r]
+                        otMat = np.dot(densityObj.header.orthoMat, [i, j, k])
+                        atoms = copy.deepcopy(list(structure.get_atoms()))
+                        for x in atoms:
+                            x.coord = np.dot(rMat[:, 0:3], x.coord) + rMat[:, 3] + otMat
 
-                    rMat = pdbObj.header.rotationMats[r]
-                    otMat = np.dot(densityObj.header.orthoMat, [i, j, k])
-                    symAtoms = [np.dot(rMat[:, 0:3], x) + rMat[:, 3] + otMat for x in atomCoords]
+                        ## test if the symmetry atoms are within the range of the original
+                        ## convert atom xyz coordinates back to the crs space and check if they are within the original crs range
+                        inRangeAtoms = [x for x in atoms if all([-5 <= diffDensityObj.header.xyz2crsCoord(x.coord)[t] < ncrs[t] + 5 for t in range(3)])]
 
-                    ## test if the symmetry atoms are within the range of the original
-                    #inRangeAtoms0 = [x for x in symAtoms if xs[0] - 5 <= x[0] <= xs[-1] + 5 and ys[0] - 5 <= x[1] <= ys[-1] + 5 and zs[0] - 5 <= x[2] <= zs[-1] + 5]
-                    #inRangeAtoms00 = [x for x in symAtoms if (up1 >= round(np.dot(u, x),6) >= up2 or up1 <= round(np.dot(u, x),6) <= up2) and (vp1 >= round(np.dot(v, x),6) >= vp4 or vp1 <= round(np.dot(v, x),6) <= vp4) and (wp1 >= round(np.dot(w, x),6) >= wp5 or wp1 <= round(np.dot(w, x),6) <= wp5)]
-                    ## convert atom xyz coordinates back to the crs space and check if they are within the original crs range
-                    inRangeAtoms = [x for x in symAtoms if all([-5 <= diffDensityObj.header.xyz2crsCoord(x)[t] < ncrs[t] + 5 for t in range(3)])]
+                        ## other methods that can somewhat validate the above
+                        # inRangeAtomsBox = [x for x in symAtoms if xs[0] - 5 <= x[0] <= xs[-1] + 5 and ys[0] - 5 <= x[1] <= ys[-1] + 5 and zs[0] - 5 <= x[2] <= zs[-1] + 5]
+                        # inRangeAtomsMath = [x for x in symAtoms if (up1 >= round(np.dot(u, x),6) >= up2 or up1 <= round(np.dot(u, x),6) <= up2) and (vp1 >= round(np.dot(v, x),6) >= vp4 or vp1 <= round(np.dot(v, x),6) <= vp4) and (wp1 >= round(np.dot(w, x),6) >= wp5 or wp1 <= round(np.dot(w, x),6) <= wp5)]
+
                     if len(inRangeAtoms):
+                        for x in inRangeAtoms:
+                            x.symmetry = [i, j, k, r]
                         allAtoms.extend(inRangeAtoms)
 
-    allAtoms = np.asarray(allAtoms)
+    atomCoords = np.asarray([x.coord for x in allAtoms])
 
     ## find nearby atoms to the red/green blobs
     diffMapStats = []
@@ -381,12 +389,20 @@ for pdbid in pdbids:
     for blob in greenBlobList + redBlobList:
         ## distanct to the closest atoms
         centroid = np.array(blob.centroid).reshape((1, 3))
-        dists = scipy.spatial.distance.cdist(centroid, allAtoms)
+        dists = scipy.spatial.distance.cdist(centroid, atomCoords)
 
         ind = np.argmin(dists[0])
         atom = list(allAtoms)[ind]
-        diffMapStats.append([dists.min(), np.sign(blob.totalDensity), abs(blob.totalDensity / chainMedian), blob.volume, blob.centroid, atom]) #atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.coord, blob.centroid])
+        if blob.totalDensity >= 0:
+            sign = '+'
+        else: sign = '-'
+        diffMapStats.append([dists.min(), sign, abs(blob.totalDensity / chainMedian), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
 
+
+    dists = [i[0] for i in diffMapStats]
+    histogram = plt.hist(dists, 200)
+    plt.savefig('../atom-red-avg-distance/' + pdbid + '.png')
+    plt.close()
 
     #diffMapStats.sort(key=lambda x: x[2], reverse=True)  # sort by number of electron
     #diffMapStats.sort(key=lambda x: x[4])  # sort by distance
@@ -402,7 +418,7 @@ for pdbid in pdbids:
     #print(len([i for i in dists if i <= 2]))
     #print(len(dists))
 
-
+    '''
     dists = [i[1] for i in diffMapStats]
     histogram = plt.hist(dists, bins=np.arange(min(dists), max(dists) + 0.02, 0.02))
     plt.close()
@@ -416,7 +432,6 @@ for pdbid in pdbids:
     bothside = [i for i in logdists if i < logmode + 2 * dev1]
     cutoff = np.mean(bothside) + 2 * np.std(bothside)
 
-    '''
     plt.hist(logdists, 200)
     plt.axvline(x=logmode, color='red')
     plt.axvline(x=logmode + dev1, color='orange')
@@ -433,7 +448,6 @@ for pdbid in pdbids:
     plt.axvline(x=np.exp(cutoff), color='green')
     plt.savefig('../atom-blue-distance/' + pdbid + '.original.png')
     plt.close()
-    '''
 
     model = [i for i in diffMapStats if i[1] < np.exp(cutoff)]
 
@@ -451,7 +465,7 @@ for pdbid in pdbids:
     plt.axvline(x=np.exp(cutoff), color='green')
     plt.savefig('../min-red-atom-distance/' + pdbid + '.2.png')
     plt.close()
-
+    '''
 
 #print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
 
@@ -461,4 +475,5 @@ for pdbid in pdbids:
 #fileHandle.close()
 #fileHandleB.close()
 
+print('Done! ', str(datetime.datetime.now()))
 
