@@ -19,22 +19,26 @@ urlSuffix = ".ccp4"
 
 def readFromPDBID(pdbid, verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER pdbid."""
-    return readFromURL(urlPrefix + pdbid.lower() + urlSuffix, verbose)
+    return readFromURL(urlPrefix + pdbid.lower() + urlSuffix, pdbid, verbose)
 
 
-def readFromURL(url, verbose=False):
+def readFromURL(url, pdbid='', verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER url."""
+    if not pdbid:
+        pdbid = url
     with urllib.request.urlopen(url) as urlHandle:
-        return parse(urlHandle, verbose)
+        return parse(urlHandle, pdbid, verbose)
 
 
-def read(ccp4Filename, verbose=False):
+def read(ccp4Filename, pdbid='', verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER fileName."""
+    if not pdbid:
+        pdbid = ccp4Filename
     with open(ccp4Filename, "rb") as fileHandle:
-        return parse(fileHandle, verbose)
+        return parse(fileHandle, pdbid, verbose)
 
 
-def parse(handle, verbose=False):
+def parse(handle, pdbid, verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER file handle."""
     header = DensityHeader.fromFileHeader(handle.read(1024))
     endian = header.endian
@@ -80,7 +84,7 @@ def parse(handle, verbose=False):
     mode = 0  # statistics.mode(densities)
     #print('mean, median, mode, sigma, header rmsd, difference of the last two: ', mean, median, mode, sigma, header.rmsd, sigma - header.rmsd)
 
-    return DensityMatrix(header, origin, densities)
+    return DensityMatrix(header, origin, densities, pdbid)
 
 
 class DensityHeader(object):
@@ -258,7 +262,7 @@ class DensityHeader(object):
 
 
 class DensityMatrix:
-    def __init__(self, header, origin, density):
+    def __init__(self, header, origin, density, pdbid):
         """
         Initialize a DensityMatrix object
         PARAMS
@@ -268,6 +272,7 @@ class DensityMatrix:
         RETURNs
             DensityMatrix object
         """
+        self.pdbid = pdbid
         self.header = header
         self.origin = origin
         self.densityArray = density

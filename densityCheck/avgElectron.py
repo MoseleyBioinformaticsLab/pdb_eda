@@ -1,18 +1,19 @@
 # !/usr/bin/python3
 
 import ccp4
-import pdb as myPDB
+import pdb
 #import validationStats
 
 import pandas
 import numpy as np
 import sys
 import os.path
-import Bio.PDB as pdb
+import Bio.PDB as biopdb
 import matplotlib.pyplot as plt
 import scipy.spatial
 import copy
 import datetime  #; print(str(datetime.datetime.now()))
+import urllib.request
 #from scipy.sparse import coo_matrix
 #import crystalContacts
 
@@ -78,35 +79,40 @@ with open(pdbidfile, "r") as fileHandleIn:
 #radii[sys.argv[3]] = float(sys.argv[4])  # for radii optimization
 #fileHandleB = open(sys.argv[3], 'w') #for b factor print out
 
+ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
+ccp4urlSuffix = ".ccp4"
+
 diff = []
 for pdbid in pdbids:
+    pdbid = pdbid.lower()
     print("working on " + pdbid + ', ', str(datetime.datetime.now()))
     try:
-        #atomTypeCount = dict.fromkeys(atomType, 0) ## for atom type composition calculation
-        pdbid = pdbid.lower()
-        densityObj = ccp4.readFromPDBID(pdbid)
+        ## ccp4 parser
+        ccp4file = './ccp4/' + pdbid + '.ccp4'
+        if not os.path.isfile(ccp4file):
+            url = ccp4urlPrefix + pdbid + ccp4urlSuffix
+            urllib.request.urlretrieve(url, ccp4file)
+        densityObj = ccp4.read(ccp4file, pdbid)
         densityCutoff = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
 
-        pdbfile = './pdb/pdb' + pdbid + '.ent'
-        if os.path.isfile(pdbfile):
-            pass
-        else:
-            pdbl = pdb.PDBList()
-            pdbl.retrieve_pdb_file(pdbid, pdir='./pdb/', file_format="pdb")
+        ccp4diffFile = './ccp4/' + pdbid + '_diff.ccp4'
+        if not os.path.isfile(ccp4diffFile):
+            url = ccp4urlPrefix + pdbid + '_diff' + ccp4urlSuffix
+            urllib.request.urlretrieve(url, ccp4diffFile)
+        diffDensityObj = ccp4.read(ccp4diffFile, pdbid)
+        diffDensityCutoff = np.mean(densityObj.densityArray) + 3 * np.std(densityObj.densityArray)
 
         # Bio Python PDB parser
-        parser = pdb.PDBParser(QUIET=True)
+        pdbfile = './pdb/pdb' + pdbid + '.ent'
+        if not os.path.isfile(pdbfile):
+            pdbl = biopdb.PDBList()
+            pdbl.retrieve_pdb_file(pdbid, pdir='./pdb/', file_format="pdb")
+
+        parser = biopdb.PDBParser(QUIET=True)
         structure = parser.get_structure(pdbid, pdbfile)
 
         ## my own PDB parser
-        pdbObj = myPDB.readPDBfile(pdbfile)
-        #program = pdbObj.header.program
-        #spaceGroup = pdbObj.header.spaceGroup
-    except:
-        continue
-
-    try:
-        diffDensityObj = ccp4.readFromPDBID(pdbid + '_diff')
+        pdbObj = pdb.readPDBfile(pdbfile)
     except:
         continue
 
@@ -401,7 +407,7 @@ for pdbid in pdbids:
 
     dists = [i[0] for i in diffMapStats]
     histogram = plt.hist(dists, 200)
-    plt.savefig('../atom-red-avg-distance/' + pdbid + '.png')
+    plt.savefig('../' + pdbid + '.png')
     plt.close()
 
     #diffMapStats.sort(key=lambda x: x[2], reverse=True)  # sort by number of electron
