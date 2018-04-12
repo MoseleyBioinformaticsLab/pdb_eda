@@ -1,16 +1,16 @@
 # !/usr/bin/python3
 """
-ccpp4.py
+ccp4.py
     Reads and parses the CCP4 format binary files and returns DensityMatrix objects.
     Format details of ccp4 can be found in http://www.ccp4.ac.uk/html/maplib.html
 
 """
+import warnings
+import struct
+#import statistics
 
 import urllib.request
-import struct
 import numpy as np
-import statistics
-import warnings
 import scipy.spatial
 
 urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
@@ -22,7 +22,7 @@ def readFromPDBID(pdbid, verbose=False):
     return readFromURL(urlPrefix + pdbid.lower() + urlSuffix, pdbid, verbose)
 
 
-def readFromURL(url, pdbid='', verbose=False):
+def readFromURL(url, pdbid=None, verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER url."""
     if not pdbid:
         pdbid = url
@@ -30,7 +30,7 @@ def readFromURL(url, pdbid='', verbose=False):
         return parse(urlHandle, pdbid, verbose)
 
 
-def read(ccp4Filename, pdbid='', verbose=False):
+def read(ccp4Filename, pdbid=None, verbose=False):
     """RETURNS DensityMatrix object given the PARAMETER fileName."""
     if not pdbid:
         pdbid = ccp4Filename
@@ -70,7 +70,7 @@ def parse(handle, pdbid, verbose=False):
         header.sec2xyz = 3
         if verbose: warnings.warn("Mappings from column/row/section to xyz are all 0, set to 1, 2, 3 instead.")
 
-    symmetry = dataBuffer[0:header.symmetryBytes]
+    header.symmetry = dataBuffer[0:header.symmetryBytes]
     mapData = dataBuffer[header.symmetryBytes:len(dataBuffer)]
 
     numBytes = int(len(mapData) / 4)
@@ -78,10 +78,10 @@ def parse(handle, pdbid, verbose=False):
     origin = header.origin
 
     # Calculate some statistics
-    sigma = np.std(densities)
-    mean = np.mean(densities)
-    median = np.median(densities)
-    mode = 0  # statistics.mode(densities)
+    #sigma = np.std(densities)
+    #mean = np.mean(densities)
+    #median = np.median(densities)
+    #mode = 0  # statistics.mode(densities)
     #print('mean, median, mode, sigma, header rmsd, difference of the last two: ', mean, median, mode, sigma, header.rmsd, sigma - header.rmsd)
 
     return DensityMatrix(header, origin, densities, pdbid)
@@ -215,6 +215,15 @@ class DensityHeader(object):
                            [0, 0, np.sin(gamma) / self.zlength / temp]]
         """
         self.origin = self._calculateOrigin()
+
+        ncrs = [i for i in self.ncrs]
+        if self.xyzInterval[self.col2xyz - 1] < self.ncrs[0]:
+            ncrs[0] = self.xyzInterval[self.col2xyz - 1]
+        if self.xyzInterval[self.row2xyz - 1] < self.ncrs[1]:
+            ncrs[1] = self.xyzInterval[self.row2xyz - 1]
+        if self.xyzInterval[self.sec2xyz - 1] < self.ncrs[2]:
+            ncrs[2] = self.xyzInterval[self.sec2xyz - 1]
+        self.uniqueNcrs = ncrs
 
 
     def _calculateOrigin(self):

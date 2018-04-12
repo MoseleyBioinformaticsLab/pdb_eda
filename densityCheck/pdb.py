@@ -5,7 +5,6 @@ pdb.py
     Format details of PDB can be found in ftp://ftp.wwpdb.org/pub/pdb/doc/format_descriptions/Format_v33_Letter.pdf
 
 """
-#import gzip
 import re
 import numpy as np
 
@@ -21,13 +20,13 @@ def parse(handle, mode='lite', verbose=False):
     atoms = []
     rotationMats = []
     modelCount = 0
-    PDBid = date = method = resolution = rValue = rFree = program = spaceGroup = 0
+    pdbid = date = method = resolution = rValue = rFree = program = spaceGroup = 0
     for record in handle.readlines():
         if mode == 'lite' and record.startswith('ATOM'):
             break
         elif record.startswith('HEADER'):
             date = record[57: 57+2].strip()
-            PDBid = record[62: 62+4].strip()
+            pdbid = record[62: 62+4].strip()
         elif record.startswith('EXPDTA'):
             method = record[6: 6+30]
             method = method.strip().replace(' ', '_')
@@ -81,7 +80,7 @@ def parse(handle, mode='lite', verbose=False):
             atoms.append(Atom(keyValues))
 
 
-    header = PDBheader(PDBid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats)
+    header = PDBheader(pdbid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats)
     return PDBentry(header, atoms)
 
 
