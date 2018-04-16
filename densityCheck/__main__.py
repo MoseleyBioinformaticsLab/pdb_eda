@@ -1,4 +1,8 @@
 import sys
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy import stats
+
 from . import densityAnalysis
 
 
@@ -11,14 +15,50 @@ def main(pdbidfile):
     for pdbid in pdbids:
         analyser = densityAnalysis.fromPDBid(pdbid)
 
+        if not analyser:
+            continue
+
         #analyser.aggregateCloud(chainL=True)
         #print(*analyser.chainList, sep="\n")
         #analyser.getBlobList()
         #analyser.calcSymmetryAtoms()
 
         diffDenStats = analyser.calcAtomBlobDists()
-        print(diffDenStats[0])
+        dists = [i[0] for i in diffDenStats]
+        kernel = stats.gaussian_kde(dists)
 
+        x = np.linspace(min(dists), max(dists), 200)
+        mode = x[np.argmax(kernel(x))]
+
+        #original
+        leftside = [i for i in dists if i < mode]
+        dev = np.sqrt(sum([(i - mode) ** 2 for i in leftside]) / len(leftside))
+
+        #bothside = [i for i in dists if i < mode + 2 * dev1]
+        cutoff = mode + dev * 2
+        cutoff1 = mode + dev * 3
+
+        # log mode
+        logmode = np.log(mode)
+
+        logdists = [np.log(i) for i in dists]
+        logleftside = [i for i in logdists if i < logmode]
+        logdev = np.sqrt(sum([(i - logmode) ** 2 for i in logleftside]) / len(logleftside))
+
+        #bothside = [i for i in logdists if i < logmode + 2 * dev1]
+        logcutoff = logmode + logdev * 2
+        logcutoff1 = logmode + logdev * 3
+
+        # plot cutoff
+        plt.hist(dists, 200)
+        plt.axvline(x=mode, color='black')
+        plt.axvline(x=cutoff, color='red')
+        plt.axvline(x=cutoff1, color='red')
+        plt.axvline(x=np.exp(logcutoff), color='green')
+        plt.axvline(x=np.exp(logcutoff1), color='green')
+        plt.axvline(x=5, color='yellow')
+        plt.savefig('../isolated_blob_cutoff/' + pdbid + '.png')
+        plt.close()
 
 if __name__ == '__main__':
     _, filename = sys.argv
