@@ -233,7 +233,7 @@ class DensityAnalysis(object):
                     else:
                         resDict[residue.resname] = [cloud]
 
-                    resList.append(str(residue.id[1]) + ', ' + residue.resname + ', ' + str(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])) + ', ' + str(len(cloud.crsList)))
+                    resList.append(residue.parent.id + str(residue.id[1]) + ', ' + residue.resname + ', ' + str(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])) + ', ' + str(len(cloud.crsList)))
 
             ## Aggregate chain blobs
             for blob in resClouds:
