@@ -395,35 +395,54 @@ class DensityMatrix:
                     If cutoff > 0, include only points with density > cutoff.
         """
         crsCoordList = self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)
+        dists = scipy.spatial.distance.cdist(np.matrix(crsCoordList), np.matrix(crsCoordList))
 
-        adjSetList = []
-        usedIndex = set()
-        for ind in range(len(crsCoordList)):
-            if ind in usedIndex:
+        dcutoff = np.sqrt(3)  ## the points are considered to be adjacent if one is in the one-layer outer box with the other one in the center
+        blobs = []
+        usedIdx = []
+        for i in range(len(crsCoordList)):
+            if i in usedIdx:
                 continue
 
-            oldSet = set()
-            newSet = {ind}
-            while True:
-                diffSet = newSet - oldSet
-                adjacentSet = {x for x in range(len(crsCoordList)) for y in diffSet if -1 <= (crsCoordList[y][0] - crsCoordList[x][0]) <= 1 and -1 <= (crsCoordList[y][1] - crsCoordList[x][1]) <= 1 and -1 <= (crsCoordList[y][2] - crsCoordList[x][2]) <= 1}
+            currCluster = [i]
+            newCluster = [n for n, d in enumerate(dists[i]) if n not in currCluster and d <= dcutoff]
+            currCluster = currCluster + newCluster
+            while len(newCluster):
+                newCluster = {n for x in newCluster for n, d in enumerate(dists[x]) if n not in currCluster and d <= dcutoff}
+                currCluster = currCluster + list(newCluster)
 
-                oldSet = newSet.copy()
-                newSet.update(adjacentSet)
-                if oldSet == newSet:
-                    break
-
-            usedIndex.update(newSet)
-            adjSetList.append(newSet)
-
-        # print("New function: ", adjSetList)
-
-        blobs = []
-        for adjacentSet in adjSetList:
-            coords = [crsCoordList[x] for x in adjacentSet]
-
-            blob = DensityBlob.fromCrsList(coords, self.header, self.density)
+            usedIdx = usedIdx + currCluster
+            blob = DensityBlob.fromCrsList([crsCoordList[x] for x in currCluster], self.header, self.density)
             blobs.append(blob)
+
+        # adjSetList = []
+        # usedIndex = set()
+        # for ind in range(len(crsCoordList)):
+        #     if ind in usedIndex:
+        #         continue
+        #
+        #     oldSet = set()
+        #     newSet = {ind}
+        #     while True:
+        #         diffSet = newSet - oldSet
+        #         adjacentSet = {x for x in range(len(crsCoordList)) for y in diffSet if -1 <= (crsCoordList[y][0] - crsCoordList[x][0]) <= 1 and -1 <= (crsCoordList[y][1] - crsCoordList[x][1]) <= 1 and -1 <= (crsCoordList[y][2] - crsCoordList[x][2]) <= 1}
+        #
+        #         oldSet = newSet.copy()
+        #         newSet.update(adjacentSet)
+        #         if oldSet == newSet:
+        #             break
+        #
+        #     usedIndex.update(newSet)
+        #     adjSetList.append(newSet)
+        #
+        # # print("New function: ", adjSetList)
+        #
+        # blobs = []
+        # for adjacentSet in adjSetList:
+        #     coords = [crsCoordList[x] for x in adjacentSet]
+        #
+        #     blob = DensityBlob.fromCrsList(coords, self.header, self.density)
+        #     blobs.append(blob)
 
         return blobs
 
@@ -449,6 +468,7 @@ class DensityBlob:
         self.header = header
         self.densityMatrix = densityMatrix
         self.nearbyAtoms = []
+        self.atoms = []
 
 
     @staticmethod
@@ -512,6 +532,7 @@ class DensityBlob:
         self.crsList = newBlob.crsList
         self.header = newBlob.header
         self.densityMatrix = newBlob.densityMatrix
+        self.atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]
 
 
 

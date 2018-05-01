@@ -186,34 +186,110 @@ class DensityAnalysis(object):
             biopdbObj = self.biopdbObj
 
         chainClouds = []
+        chainPool = []
         chainAvgDensity = []
-        resDict = {}
+        residueDict = {}
         chainList = []
-        resList = []
+        residueList = []
         atomList = []
         for residue in biopdbObj.get_residues():
             if residue.id[0] != ' ':
                 continue
 
-            resClouds = []
+            residuePool = []
             for atom in residue.child_list:
                 resAtom = atom.parent.resname + '_' + atom.name
                 if resAtom not in atomType.keys():
                     continue
 
-                ## Calculate atom blobs
-                blobs = densityObj.findAberrantBlobs(atom.coord, radii[atomType[resAtom]], densityObj.densityCutoff)
-                if len(blobs) == 0:
+                ## Calculate atom clouds
+                atomClouds = densityObj.findAberrantBlobs(atom.coord, radii[atomType[resAtom]], densityObj.densityCutoff * 1.25 / 1.5)
+                if len(atomClouds) == 0:
                     continue
-                elif len(blobs) == 1:
-                    bestBlob = blobs[0]
+                elif len(atomClouds) == 1:
+                    bestAtomCloud = atomClouds[0]
                 else:
-                    diffs = [np.linalg.norm(atom.coord - i.centroid) for i in blobs]
+                    diffs = [np.linalg.norm(atom.coord - i.centroid) for i in atomClouds]
                     index = diffs.index(min(diffs))
-                    bestBlob = blobs[index]
+                    bestAtomCloud = atomClouds[index]
 
-                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestBlob.totalDensity / electrons[resAtom], len(bestBlob.crsList), atom.get_bfactor(), np.linalg.norm(atom.coord - bestBlob.centroid)])
+                for aCloud in atomClouds:
+                    aCloud.atoms = [atom]
 
+                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestAtomCloud.totalDensity / electrons[resAtom], len(bestAtomCloud.crsList), atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
+                residuePool = residuePool + atomClouds ## For aggregating residue clouds
+            ## End atom
+
+            overlap = np.zeros((len(residuePool), len(residuePool)))
+            for i in range(len(residuePool)):
+                for j in range(len(residuePool)):
+                    if j <= i:
+                        continue
+                    overlap[i][j] = overlap[j][i] = residuePool[i].testOverlap(residuePool[j])
+
+            resClouds = []
+            usedIdx = []
+            for i in range(len(residuePool)):
+                if i in usedIdx:
+                    continue
+
+                newCluster = [n for n, d in enumerate(overlap[i]) if d]
+                currCluster = [i] + newCluster
+                while len(newCluster):
+                    newCluster = {n for x in newCluster for n, d in enumerate(overlap[x]) if n not in currCluster and d}
+                    currCluster = currCluster + list(newCluster)
+
+                usedIdx = usedIdx + currCluster
+                for idx in currCluster:
+                    residuePool[i].merge(residuePool[idx])
+                resClouds.append(residuePool[i])
+
+            for cloud in resClouds:
+                if len(cloud.atoms) >= 4:
+                    if residue.resname in residueDict.keys():
+                        residueDict[residue.resname].append(cloud)
+                    else:
+                        residueDict[residue.resname] = [cloud]
+
+                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms]), len(cloud.crsList)])
+
+            chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
+        ## End residue
+
+        overlap = np.zeros((len(chainPool), len(chainPool)))
+        for i in range(len(chainPool)):
+            for j in range(len(chainPool)):
+                if j <= i:
+                    continue
+                overlap[i][j] = overlap[j][i] = chainPool[i].testOverlap(chainPool[j])
+
+        usedIdx = []
+        for i in range(len(chainPool)):
+            if i in usedIdx:
+                continue
+
+            newCluster = [n for n, d in enumerate(overlap[i]) if d]
+            currCluster = [i] + newCluster
+            while len(newCluster):
+                newCluster = {n for x in newCluster for n, d in enumerate(overlap[x]) if n not in currCluster and d}
+                currCluster = currCluster + list(newCluster)
+
+            usedIdx = usedIdx + currCluster
+            for idx in currCluster:
+                chainPool[i].merge(chainPool[idx])
+            chainClouds.append(chainPool[i])
+
+        for cloud in chainClouds:
+            if len(cloud.atoms) <= 50:
+                continue
+            atom = cloud.atoms[0]
+            totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])
+            chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList)])
+            chainAvgDensity.append(cloud.totalDensity / totalElectron)
+
+        chainMedian = np.median(chainAvgDensity)
+
+        '''
                 ## Aggregate residue blobs
                 for blob in blobs:
                     for cloud in resClouds:
@@ -228,12 +304,12 @@ class DensityAnalysis(object):
 
             for cloud in resClouds:
                 if len(cloud.atoms) >= 4:
-                    if residue.resname in resDict.keys():
-                        resDict[residue.resname].append(cloud)
+                    if residue.resname in residueDict.keys():
+                        residueDict[residue.resname].append(cloud)
                     else:
-                        resDict[residue.resname] = [cloud]
+                        residueDict[residue.resname] = [cloud]
 
-                    resList.append(residue.parent.id + str(residue.id[1]) + ', ' + residue.resname + ', ' + str(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])) + ', ' + str(len(cloud.crsList)))
+                    residueList.append(residue.parent.id + str(residue.id[1]) + ', ' + residue.resname + ', ' + str(cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])) + ', ' + str(len(cloud.crsList)))
 
             ## Aggregate chain blobs
             for blob in resClouds:
@@ -255,6 +331,7 @@ class DensityAnalysis(object):
             chainAvgDensity.append(cloud.totalDensity / totalElectron)
 
         chainMedian = np.median(chainAvgDensity)
+        '''
 
         # normalize the density by median volumn of given atom type
         def normVolumn(row):
@@ -291,7 +368,7 @@ class DensityAnalysis(object):
         if atomL:
             self.atomList = atomList
         if residueL:
-            self.residueList = resList
+            self.residueList = residueList
         if chainL:
             self.chainList = chainList
 
@@ -432,35 +509,35 @@ class DensityAnalysis(object):
 
             self.symmetryAtoms = allAtoms
 
-    def calcAtomBlobDists(self):
-        if not self.symmetryAtoms:
-            self.calcSymmetryAtoms()
-        symmetryAtoms = self.symmetryAtoms
+        def calcAtomBlobDists(self):
+            if not self.symmetryAtoms:
+                self.calcSymmetryAtoms()
+            symmetryAtoms = self.symmetryAtoms
 
-        if not self.greenBlobList or not self.redBlobList:
-            self.getBlobList()
-        greenBlobList = self.greenBlobList
-        redBlobList = self.redBlobList
+            if not self.greenBlobList or not self.redBlobList:
+                self.getBlobList()
+            greenBlobList = self.greenBlobList
+            redBlobList = self.redBlobList
 
-        if not self.chainMedian:
-            self.aggregateCloud()
-        chainMedian = self.chainMedian
+            if not self.chainMedian:
+                self.aggregateCloud()
+            chainMedian = self.chainMedian
 
-        ## find the closest atoms to the red/green blobs
-        diffMapStats = []
-        atomCoords = np.asarray([x.coord for x in symmetryAtoms])
-        for blob in greenBlobList + redBlobList:
-            ## distanct to the closest atoms
-            centroid = np.array(blob.centroid).reshape((1, 3))
-            dists = scipy.spatial.distance.cdist(centroid, atomCoords)
+            ## find the closest atoms to the red/green blobs
+            diffMapStats = []
+            atomCoords = np.asarray([x.coord for x in symmetryAtoms])
+            for blob in greenBlobList + redBlobList:
+                ## distanct to the closest atoms
+                centroid = np.array(blob.centroid).reshape((1, 3))
+                dists = scipy.spatial.distance.cdist(centroid, atomCoords)
 
-            ind = np.argmin(dists[0])
-            atom = list(symmetryAtoms)[ind]
-            if blob.totalDensity >= 0:
-                sign = '+'
-            else: sign = '-'
-            diffMapStats.append([dists.min(), sign, abs(blob.totalDensity / chainMedian), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
+                ind = np.argmin(dists[0])
+                atom = list(symmetryAtoms)[ind]
+                if blob.totalDensity >= 0:
+                    sign = '+'
+                else: sign = '-'
+                diffMapStats.append([dists.min(), sign, abs(blob.totalDensity / chainMedian), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
 
-        return diffMapStats
+            return diffMapStats
 
 
