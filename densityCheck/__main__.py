@@ -13,16 +13,83 @@ def main(pdbidfile):
         for pdbid in fileHandleIn:
             pdbids.append(pdbid.split(" ; ")[0])
 
-    fileHandle = open("results/densityCutoffs.2.txt", 'w')
+    #fileHandle = open("results/densityCutoffs.2.txt", 'w')
     for pdbid in pdbids:
         analyser = densityAnalysis.fromPDBid(pdbid)
 
         if not analyser:
             continue
 
-        print(*[pdbid, analyser.densityObj.densityCutoffFromHeader, analyser.densityObj.densityCutoff, analyser.densityObj.densityCutoffFromLeftSide, analyser.densityObj.densityCutoffFromLeftSide2, analyser.densityObj.densityCutoffFromLeftSide25, analyser.densityObj.densityCutoffFromLeftSide3], sep=', ', file=fileHandle)
-    fileHandle.close()
+        diffDenStats = analyser.calcAtomBlobDists()
+        if math.isnan(analyser.chainMedian) or analyser.chainMedian is None:
+            print(pdbid + ' has no aggregated chain clouds.')
+            continue
+        dists = [i[0] for i in diffDenStats]
+        electrons = [i[2] for i in diffDenStats]
+        npoints = [i[3] for i in diffDenStats]
 
+        # in log space
+        logdists = np.log(dists)
+        kernel = stats.gaussian_kde(logdists)
+        x = np.linspace(min(logdists), max(logdists), 200)
+        logmode = x[np.argmax(kernel(x))]
+        logleftside = [i for i in logdists if i < logmode]
+        logdev = np.sqrt(sum([(i - logmode) ** 2 for i in logleftside]) / len(logleftside))
+        logcutoff = logmode + logdev * 2
+
+        isolatedEcutoff = 5
+        if np.exp(logcutoff) < 5:
+            isolatedEcutoff = np.exp(logcutoff)
+        nonIsolatedElectrons = [e for i, e in enumerate(electrons) if dists[i] <= isolatedEcutoff]
+        isolatedElectrons = [e for i, e in enumerate(electrons) if dists[i] > isolatedEcutoff and diffDenStats[i][1] == '-']
+        randomElectrons = [e for i, e in enumerate(electrons) if dists[i] > isolatedEcutoff and diffDenStats[i][1] == '-' and npoints[i] == 1]
+        intrinsicElectrons = [e for i, e in enumerate(electrons) if dists[i] > isolatedEcutoff and diffDenStats[i][1] == '-' and npoints[i] > 1]
+
+
+        # if len(nonIsolatedElectrons)  == 0 or len(isolatedElectrons) == 0:
+        #     continue
+
+        plt.figure(figsize=(15, 10), dpi=80)
+        ax1 = plt.subplot(421)
+        ax2 = plt.subplot(423, sharex=ax1)
+        ax3 = plt.subplot(425, sharex=ax1)
+        ax4 = plt.subplot(427, sharex=ax1)
+        ax5 = plt.subplot(122)
+
+        ax1.hist(nonIsolatedElectrons, 100)
+        ax1.set_title('non-isolated electrons')
+        ax2.hist(isolatedElectrons, 50)
+        ax2.set_title('isolated red blob electrons')
+        ax3.hist(randomElectrons, 50)
+        ax3.set_title('random error electrons')
+        ax4.hist(intrinsicElectrons, 50)
+        ax4.set_title('intrinsicElectrons error electrons')
+        ax5.hist(dists, 200)
+        ax5.axvline(x=np.exp(logmode), color='black')
+        ax5.axvline(x=np.exp(logcutoff), color='green')
+        ax5.axvline(x=5, color='yellow')
+        ax5.set_title('distance to the closest atom')
+
+        plt.savefig('../error_properties/' + pdbid + '.png')
+        plt.close()
+
+
+        # plot cutoff
+        # plt.hist(dists, 200)
+        # plt.axvline(x=mode, color='black')
+        # plt.axvline(x=cutoff, color='red')
+        # plt.axvline(x=cutoff1, color='red')
+        # plt.axvline(x=np.exp(logcutoff), color='green')
+        # plt.axvline(x=np.exp(logcutoff1), color='green')
+        # plt.axvline(x=5, color='yellow')
+        # plt.savefig('../isolated_blob_cutoff/' + pdbid + '.png')
+        # plt.close()
+
+        # # testing different density cutoff
+        # print(*[pdbid, analyser.densityObj.densityCutoffFromHeader, analyser.densityObj.densityCutoff, analyser.densityObj.densityCutoffFromLeftSide, analyser.densityObj.densityCutoffFromLeftSide2, analyser.densityObj.densityCutoffFromLeftSide25, analyser.densityObj.densityCutoffFromLeftSide3], sep=', ', file=fileHandle)
+    # fileHandle.close()
+
+        # # validate the new aggregation method
         # analyser.aggregateCloud(atomL=True, residueL=True, chainL=True)
         #
         # fileHandle = open("results/aggregation/"+ pdbid + ".atomList.new.txt", 'w')
@@ -37,63 +104,6 @@ def main(pdbidfile):
         # print(*analyser.chainList, sep='\n', file=fileHandle)
         # fileHandle.close()
 
-
-        # diffDenStats = analyser.calcAtomBlobDists()
-        # if math.isnan(analyser.chainMedian) or analyser.chainMedian is None:
-        #     print('flag')
-        #     continue
-        # dists = [i[0] for i in diffDenStats]
-        #
-        # '''
-        # # in normal space
-        # kernel = stats.gaussian_kde(dists)
-        # x = np.linspace(min(dists), max(dists), 200)
-        # mode = x[np.argmax(kernel(x))]
-        # leftside = [i for i in dists if i < mode]
-        # dev = np.sqrt(sum([(i - mode) ** 2 for i in leftside]) / len(leftside))
-        # cutoff = mode + dev * 2
-        # cutoff1 = mode + dev * 3
-        # '''
-        #
-        # # in log space
-        # logdists = np.log(dists)
-        # kernel = stats.gaussian_kde(logdists)
-        # x = np.linspace(min(logdists), max(logdists), 200)
-        # logmode = x[np.argmax(kernel(x))]
-        # logleftside = [i for i in logdists if i < logmode]
-        # logdev = np.sqrt(sum([(i - logmode) ** 2 for i in logleftside]) / len(logleftside))
-        # logcutoff = logmode + logdev * 2
-        # #logcutoff1 = logmode + logdev * 3
-        #
-        # isolatedcutoff = 5
-        # if np.exp(logcutoff) < 5:
-        #     isolatedcutoff = np.exp(logcutoff)
-        # electrons = [i[2] for i in diffDenStats]
-        # nonIsolatedElectrons = [e for i, e in enumerate(electrons) if dists[i] <= isolatedcutoff]
-        # isolatedElectrons = [e for i, e in enumerate(electrons) if dists[i] > isolatedcutoff and diffDenStats[i][1] == '-']
-        #
-        # if len(nonIsolatedElectrons)  == 0 or len(isolatedElectrons) == 0:
-        #     continue
-        #
-        # f, axarr = plt.subplots(2, sharex=True)
-        # axarr[0].hist(nonIsolatedElectrons, 100)
-        # axarr[0].set_title('non-isolated electrons')
-        # axarr[1].hist(isolatedElectrons, 50)
-        # axarr[0].set_title('isolated red blob electrons')
-        # plt.savefig('../electrons/' + pdbid + '.png')
-        # plt.close()
-
-
-        # plot cutoff
-        # plt.hist(dists, 200)
-        # plt.axvline(x=mode, color='black')
-        # plt.axvline(x=cutoff, color='red')
-        # plt.axvline(x=cutoff1, color='red')
-        # plt.axvline(x=np.exp(logcutoff), color='green')
-        # plt.axvline(x=np.exp(logcutoff1), color='green')
-        # plt.axvline(x=5, color='yellow')
-        # plt.savefig('../isolated_blob_cutoff/' + pdbid + '.png')
-        # plt.close()
 
 if __name__ == '__main__':
     _, filename = sys.argv

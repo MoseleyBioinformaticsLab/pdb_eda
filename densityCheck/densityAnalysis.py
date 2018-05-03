@@ -479,35 +479,35 @@ class DensityAnalysis(object):
 
             self.symmetryAtoms = allAtoms
 
-        def calcAtomBlobDists(self):
-            if not self.symmetryAtoms:
-                self.calcSymmetryAtoms()
-            symmetryAtoms = self.symmetryAtoms
+    def calcAtomBlobDists(self):
+        if not self.symmetryAtoms:
+            self.calcSymmetryAtoms()
+        symmetryAtoms = self.symmetryAtoms
 
-            if not self.greenBlobList or not self.redBlobList:
-                self.getBlobList()
-            greenBlobList = self.greenBlobList
-            redBlobList = self.redBlobList
+        if not self.greenBlobList or not self.redBlobList:
+            self.getBlobList()
+        greenBlobList = self.greenBlobList
+        redBlobList = self.redBlobList
 
-            if not self.chainMedian:
-                self.aggregateCloud()
-            chainMedian = self.chainMedian
+        if not self.chainMedian:
+            self.aggregateCloud()
+        chainMedian = self.chainMedian
 
-            ## find the closest atoms to the red/green blobs
-            diffMapStats = []
-            atomCoords = np.asarray([x.coord for x in symmetryAtoms])
-            for blob in greenBlobList + redBlobList:
-                ## distanct to the closest atoms
-                centroid = np.array(blob.centroid).reshape((1, 3))
-                dists = scipy.spatial.distance.cdist(centroid, atomCoords)
+        ## find the closest atoms to the red/green blobs
+        diffMapStats = []
+        atomCoords = np.asarray([x.coord for x in symmetryAtoms])
+        for blob in greenBlobList + redBlobList:
+            ## distanct to the closest atoms
+            centroid = np.array(blob.centroid).reshape((1, 3))
+            dists = scipy.spatial.distance.cdist(centroid, atomCoords)
 
-                ind = np.argmin(dists[0])
-                atom = list(symmetryAtoms)[ind]
-                if blob.totalDensity >= 0:
-                    sign = '+'
-                else: sign = '-'
-                diffMapStats.append([dists.min(), sign, abs(blob.totalDensity / chainMedian), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
+            ind = np.argmin(dists[0])
+            atom = list(symmetryAtoms)[ind]
+            if blob.totalDensity >= 0:
+                sign = '+'
+            else: sign = '-'
+            diffMapStats.append([dists.min(), sign, abs(blob.totalDensity / chainMedian), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
 
-            return diffMapStats
+        return diffMapStats
 
 
