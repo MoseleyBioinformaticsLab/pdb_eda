@@ -184,6 +184,7 @@ class DensityAnalysis(object):
         valid = validationStats.validationStats(self.pdbid)
         fo = copy.deepcopy(densityObj)
         fc = copy.deepcopy(densityObj)
+
         fc.density = densityObj.density - diffDensityObj.density * 2
         sigma3 = 0
 
@@ -460,7 +461,8 @@ class DensityAnalysis(object):
                         else:
                             rMat = pdbObj.header.rotationMats[r]
                             otMat = np.dot(densityObj.header.orthoMat, [i, j, k])
-                            atoms = copy.deepcopy(list(biopdbObj.get_atoms()))
+                            #atoms = copy.deepcopy(list(biopdbObj.get_atoms()))
+                            atoms = [symAtom(atom) for atom in biopdbObj.get_atoms()]
                             for x in atoms:
                                 x.coord = np.dot(rMat[:, 0:3], x.coord) + rMat[:, 3] + otMat
 
@@ -510,4 +512,13 @@ class DensityAnalysis(object):
 
         return diffMapStats
 
+
+class symAtom:
+    def __init__(self, atom):
+        self.atom = atom
+        self.coord = atom.coord
+        self.symmetry = []
+
+    def __getattr__(self, attr):
+        return getattr(self.atom, attr)
 
