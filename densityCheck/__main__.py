@@ -31,7 +31,7 @@ def main(pdbidfile):
         # in log space
         logdists = np.log(dists)
         kernel = stats.gaussian_kde(logdists)
-        x = np.linspace(min(logdists), max(logdists), 200)
+        x = np.linspace(min(logdists), max(logdists), 200, dtype=np.float64)
         logmode = x[np.argmax(kernel(x))]
         logleftside = [i for i in logdists if i < logmode]
         logdev = np.sqrt(sum([(i - logmode) ** 2 for i in logleftside]) / len(logleftside))

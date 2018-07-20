@@ -16,9 +16,8 @@ import scipy.spatial
 from scipy import stats
 
 from . import ccp4
-from . import pdb
+from . import pdbParser
 from . import validationStats
-
 
 
 elementElectron = {'C': 6, 'N': 7, 'O': 8, 'P': 15, 'S': 16}
@@ -123,11 +122,8 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
             else:
                 diffDensityObj = ccp4.readFromPDBID(pdbid + '_diff')
             diffDensityObj.diffDensityCutoff = np.mean(diffDensityObj.densityArray) + 3 * np.std(diffDensityObj.densityArray)
-            # diffDensityObj.diffDensityCutoffFromHeader = diffDensityObj.header.densityMean + 3 * np.std(diffDensityObj.header.rmsd)
-
 
         if pdbbio or pdbi:
-        # Bio Python PDB parser
             pdbfile = pdbfolder + 'pdb' + pdbid + '.ent'
             if not os.path.isfile(pdbfile):
                 if not os.path.exists(pdbfolder):
@@ -137,11 +133,12 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
                 pdbl.retrieve_pdb_file(pdbid, pdir=pdbfolder, file_format="pdb")
 
             if pdbbio:
+                # Bio Python PDB parser
                 parser = biopdb.PDBParser(QUIET=True)
                 biopdbObj = parser.get_structure(pdbid, pdbfile)
             if pdbi:
                 ## my own PDB parser
-                pdbObj = pdb.readPDBfile(pdbfile)
+                pdbObj = pdbParser.readPDBfile(pdbfile)
 
         if not downloadFile and os.path.isfile(pdbfile):
             os.remove(pdbfile)
@@ -171,7 +168,15 @@ class DensityAnalysis(object):
 
 
     def validation(self, densityObj=None, diffDensityObj=None, biopdbObj=None, recalculate=False):
-        ## RSR and  RSCC calculation
+        """
+        RETURNS
+            validation statistics (RSR and RSCC) given,
+        PARAMS
+            densityObj: density object, use initialized data member if not provided
+            diffDensityObj: difference density object, use initialized data member if not provided
+            biopdbObj: BioPDB object, use initialized data member if not provided
+            recalculate: recalculate if already exist, default as False
+        """
         if self.statistics and not recalculate:
             return None
         if not densityObj:
@@ -192,7 +197,17 @@ class DensityAnalysis(object):
 
 
     def aggregateCloud(self, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False):
-        ## Aggregate by atom, residue, and chain
+        """
+        RETURNS
+            chainMedian and medians (by atom type) data member given,
+        PARAMS
+            densityObj: density object, use initialized data member if not provided
+            biopdbObj: BioPDB object, use initialized data member if not provided
+            atomL: whether or not return a full atom list, default as False
+            residueL: whether or not return a full residue list, default as False
+            chainL: whether or not return a full chain list, default as False
+            recalculate: recalculate if already exist, default as False
+        """
         if self.chainMedian and not recalculate:
             return None
         if not densityObj:
@@ -230,11 +245,12 @@ class DensityAnalysis(object):
 
                 for aCloud in atomClouds:
                     aCloud.atoms = [atom]
-                residuePool = residuePool + atomClouds ## For aggregating residue clouds
+                residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
 
                 atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestAtomCloud.totalDensity / electrons[resAtom], len(bestAtomCloud.crsList), atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
-            ## End atom
+            ## End atom loop
 
+            ## Group connected residue density clouds together from individual atom clouds
             overlap = np.zeros((len(residuePool), len(residuePool)))
             for i in range(len(residuePool)):
                 for j in range(len(residuePool)):
@@ -271,6 +287,7 @@ class DensityAnalysis(object):
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
         ## End residue
 
+        ## Group connected chain density clouds together from individual residue clouds
         overlap = np.zeros((len(chainPool), len(chainPool)))
         for i in range(len(chainPool)):
             for j in range(len(chainPool)):
@@ -345,6 +362,13 @@ class DensityAnalysis(object):
 
 
     def getBlobList(self, diffDensityObj=None, recalculate=False):
+        """
+        RETURNS
+            green and red blob lists as data member given,
+        PARAMS
+            diffDensityObj: difference density object, use initialized data member if not provided
+            recalculate: recalculate if already exist, default as False
+        """
         if self.greenBlobList and self.redBlobList and not recalculate:
             return None
         if not diffDensityObj:
@@ -404,37 +428,21 @@ class DensityAnalysis(object):
         self.redBlobList = redBlobList
 
     def calcSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
-        '''
+        """
+        RETURNS
+            symmetryAtoms as data member given,
+        PARAMS
+            densityObj: density object, use initialized data member if not provided
+            diffDensityObj: difference density object, use initialized data member if not provided
+            pdbObj: my pdb object, use initialized data member if not provided
+            recalculate: recalculate if already exist, default as False
+
         ## calculate all symmetry and nearby cells with in 5 grid points of the non-repeating crs boundary
         ## Biomolecular Crystallography: Principles, Practice, and Application to Structural Biology by Bernhard Rupp
         ## Orthogonalization matrix O and deororthogonalization matrix O' are from 'ccp4'
         ## Rotation Matrix is from 'myPDB'
         ## The neighbering cells can be calculated using formula, X' = O(O'(RX + T) + T') = OO'(RX+T) + OT' = RX + T + O[-1/0/1,-1/0/1,-1/0/1]
-        '''
-
-        '''
-        ## For inRangeAtoms0, the min/max range of xyz axes (the circumscribed box)
-        orginalDensityBox = [diffDensityObj.header.crs2xyzCoord(i) for i in [[c, r, s] for c in [0, ncrs[0]-1] for r in [0, ncrs[1]-1] for s in [0, ncrs[2]-1]]]
-        xs = sorted([i[0] for i in orginalDensityBox])
-        ys = sorted([i[1] for i in orginalDensityBox])
-        zs = sorted([i[2] for i in orginalDensityBox])
-
-        ## For inRangeAtoms00, the mathematical calculation of checking if a point is inside a parallelepiped box
-        ## https://math.stackexchange.com/questions/1472049/check-if-a-point-is-inside-a-rectangular-shaped-area-3d
-        p1 = diffDensityObj.header.crs2xyzCoord([0, 0, 0])
-        p2 = diffDensityObj.header.crs2xyzCoord([ncrs[0]-1, 0, 0])
-        p4 = diffDensityObj.header.crs2xyzCoord([0, ncrs[1]-1, 0])
-        p5 = diffDensityObj.header.crs2xyzCoord([0, 0, ncrs[2]-1])
-        u = np.cross(p1 - p4, p1 - p5)
-        v = np.cross(p1 - p2, p1 - p5)
-        w = np.cross(p1 - p2, p1 - p4)
-        up1 = round(np.dot(u, p1), 6)
-        up2 = round(np.dot(u, p2), 6)
-        vp1 = round(np.dot(v, p1), 6)
-        vp4 = round(np.dot(v, p4), 6)
-        wp1 = round(np.dot(w, p1), 6)
-        wp5 = round(np.dot(w, p5), 6)
-        '''
+        """
         if self.symmetryAtoms and not recalculate:
             return None
 
@@ -447,9 +455,6 @@ class DensityAnalysis(object):
 
         if not self.symmetryAtoms or recalculate:
             pass
-        atomCoords = np.array([i.coord for i in biopdbObj.get_atoms()])
-        allAtoms = []
-        allAtoms.extend(atomCoords)
 
         allAtoms = []
         for i in [-1, 0, 1]:
@@ -461,7 +466,6 @@ class DensityAnalysis(object):
                         else:
                             rMat = pdbObj.header.rotationMats[r]
                             otMat = np.dot(densityObj.header.orthoMat, [i, j, k])
-                            #atoms = copy.deepcopy(list(biopdbObj.get_atoms()))
                             atoms = [symAtom(atom) for atom in biopdbObj.get_atoms()]
                             for x in atoms:
                                 x.coord = np.dot(rMat[:, 0:3], x.coord) + rMat[:, 3] + otMat
@@ -469,10 +473,6 @@ class DensityAnalysis(object):
                             ## test if the symmetry atoms are within the range of the original
                             ## convert atom xyz coordinates back to the crs space and check if they are within the original crs range
                             inRangeAtoms = [x for x in atoms if all([-5 <= densityObj.header.xyz2crsCoord(x.coord)[t] < densityObj.header.uniqueNcrs[t] + 5 for t in range(3)])]
-
-                            ## other methods that can somewhat validate the above
-                            # inRangeAtomsBox = [x for x in symAtoms if xs[0] - 5 <= x[0] <= xs[-1] + 5 and ys[0] - 5 <= x[1] <= ys[-1] + 5 and zs[0] - 5 <= x[2] <= zs[-1] + 5]
-                            # inRangeAtomsMath = [x for x in symAtoms if (up1 >= round(np.dot(u, x),6) >= up2 or up1 <= round(np.dot(u, x),6) <= up2) and (vp1 >= round(np.dot(v, x),6) >= vp4 or vp1 <= round(np.dot(v, x),6) <= vp4) and (wp1 >= round(np.dot(w, x),6) >= wp5 or wp1 <= round(np.dot(w, x),6) <= wp5)]
 
                         if len(inRangeAtoms):
                             for x in inRangeAtoms:
@@ -482,6 +482,12 @@ class DensityAnalysis(object):
             self.symmetryAtoms = allAtoms
 
     def calcAtomBlobDists(self):
+        """
+        RETURNS
+            diffMapStats given,
+        PARAMS
+            symmetryAtoms, greenBlobList, redBlobList:, chainMedian: calculate not exist
+        """
         if not self.symmetryAtoms:
             self.calcSymmetryAtoms()
         symmetryAtoms = self.symmetryAtoms
@@ -514,6 +520,7 @@ class DensityAnalysis(object):
 
 
 class symAtom:
+    """ A wrapper class to the BioPDB atom class, delegate all BioPDB atom class method and data member except having its own symmetry and coordination """
     def __init__(self, atom):
         self.atom = atom
         self.coord = atom.coord

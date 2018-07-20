@@ -198,9 +198,8 @@ class DensityHeader(object):
         self.unitVolume = self.xlength * self.ylength * self.zlength / self.nintervalX / self.nintervalY / self.nintervalZ * \
                           np.sqrt(1 - np.cos(alpha) ** 2 - np.cos(beta) ** 2 - np.cos(gamma) ** 2 + 2 * np.cos(alpha) * np.cos(beta) * np.cos(gamma))
 
-        ## A resuable part in the cell volumn calculation
+        ## A reusable part in the cell volumn calculation
         temp = np.sqrt(1 - np.cos(alpha) ** 2 - np.cos(beta) ** 2 - np.cos(gamma) ** 2 + 2 * np.cos(alpha) * np.cos(beta) * np.cos(gamma))
-
         self.orthoMat = [[self.xlength, self.ylength * np.cos(gamma), self.zlength * np.cos(beta)],
                          [0, self.ylength * np.sin(gamma), self.zlength * (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma)],
                          [0, 0, self.zlength * temp / np.sin(gamma)]]
@@ -331,17 +330,7 @@ class DensityMatrix:
                     If cutoff > 0, include only points with density > cutoff.
         """
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
-
-        """
-        xyzRadius = [round(radius / self.header.gridLength[i]) for i in range(3)]
-        crsRadius = [int(x) for x in [xyzRadius[self.header.map2crs[y]] for y in range(3)]]
-        """
-
         crsRadius = self.header.xyz2crsCoord(self.origin + [radius, radius, radius])
-
-        # print('grid positions', crsCoord)
-        # print("crs radius:", crsRadius)
-        # print('cutoff: ', densityCutoff)
         crsCoordList = []
         for cInd in range(-crsRadius[0]-1, crsRadius[0]+1):
             for rInd in range(-crsRadius[1]-1, crsRadius[1]+1):
@@ -359,7 +348,6 @@ class DensityMatrix:
                         if dist <= radius:
                             crsCoordList.append(crs)
 
-        # print('crs grids: ', crsCoordList)
         return crsCoordList
 
     def getTotalDensityFromXyz(self, xyzCoord, radius, densityCutoff=0):

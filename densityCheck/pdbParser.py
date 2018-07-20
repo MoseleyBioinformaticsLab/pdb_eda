@@ -79,7 +79,6 @@ def parse(handle, mode='lite', verbose=False):
             keyValues = {key: value.strip() for (key, value) in keyValues.items()}
             atoms.append(Atom(keyValues))
 
-
     header = PDBheader(pdbid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats)
     return PDBentry(header, atoms)
 
