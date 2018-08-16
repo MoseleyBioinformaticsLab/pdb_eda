@@ -97,7 +97,9 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
             densityObj.densityCutoff = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
             densityObj.densityCutoffFromHeader = densityObj.header.densityMean + 1.5 * densityObj.header.rmsd
 
-            kernel = stats.gaussian_kde(densityObj.densityArray)
+            sample = np.random.choice(densityObj.densityArray, int(len(densityObj.densityArray) / 10))
+            kernel = stats.gaussian_kde(sample)
+            #kernel = stats.gaussian_kde(densityObj.densityArray)
             x = np.linspace(min(densityObj.densityArray), max(densityObj.densityArray), 200)
             mode = x[np.argmax(kernel(x))]
             leftside = [i for i in densityObj.densityArray if i < mode]
@@ -253,9 +255,10 @@ class DensityAnalysis(object):
             ## Group connected residue density clouds together from individual atom clouds
             overlap = np.zeros((len(residuePool), len(residuePool)))
             for i in range(len(residuePool)):
-                for j in range(len(residuePool)):
-                    if j <= i:
-                        continue
+                #for j in range(len(residuePool)):
+                #    if j <= i:
+                #        continue
+                for j in range(i+1, len(residuePool)):
                     overlap[i][j] = overlap[j][i] = residuePool[i].testOverlap(residuePool[j])
 
             resClouds = []
@@ -290,9 +293,10 @@ class DensityAnalysis(object):
         ## Group connected chain density clouds together from individual residue clouds
         overlap = np.zeros((len(chainPool), len(chainPool)))
         for i in range(len(chainPool)):
-            for j in range(len(chainPool)):
-                if j <= i:
-                    continue
+            #for j in range(len(chainPool)):
+            #    if j <= i:
+            #        continue
+            for j in range(i+1, len(chainPool)):
                 overlap[i][j] = overlap[j][i] = chainPool[i].testOverlap(chainPool[j])
 
         usedIdx = []
@@ -381,8 +385,8 @@ class DensityAnalysis(object):
         ncrs = diffDensityObj.header.uniqueNcrs
 
         ## crs points that are outside 3 sigma
-        greenCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 > 0])
-        redCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) <= -sigma3 < 0])
+        greenCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 ])
+        redCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) <= -sigma3 ])
 
         ## pairwise distances between all green/red points
         greenDists = scipy.spatial.distance.cdist(greenCrsList, greenCrsList)
@@ -456,6 +460,13 @@ class DensityAnalysis(object):
         if not self.symmetryAtoms or recalculate:
             pass
 
+        ## For inRangeAtoms, the min/max range of xyz axes (the circumscribed box)
+        ncrs = densityObj.header.ncrs
+        orginalDensityBox = [densityObj.header.crs2xyzCoord(i) for i in [[c, r, s] for c in [0, ncrs[0]-1] for r in [0, ncrs[1]-1] for s in [0, ncrs[2]-1]]]
+        xs = sorted([i[0] for i in orginalDensityBox])
+        ys = sorted([i[1] for i in orginalDensityBox])
+        zs = sorted([i[2] for i in orginalDensityBox])
+
         allAtoms = []
         for i in [-1, 0, 1]:
             for j in [-1, 0, 1]:
@@ -472,7 +483,9 @@ class DensityAnalysis(object):
 
                             ## test if the symmetry atoms are within the range of the original
                             ## convert atom xyz coordinates back to the crs space and check if they are within the original crs range
-                            inRangeAtoms = [x for x in atoms if all([-5 <= densityObj.header.xyz2crsCoord(x.coord)[t] < densityObj.header.uniqueNcrs[t] + 5 for t in range(3)])]
+                            #inRangeAtoms = [x for x in atoms if all([-5 <= densityObj.header.xyz2crsCoord(x.coord)[t] < densityObj.header.uniqueNcrs[t] + 5 for t in range(3)])]
+
+                            inRangeAtoms = [x for x in atoms if xs[0] - 5 <= x.coord[0] <= xs[-1] + 5 and ys[0] - 5 <= x.coord[1] <= ys[-1] + 5 and zs[0] - 5 <= x.coord[2] <= zs[-1] + 5]
 
                         if len(inRangeAtoms):
                             for x in inRangeAtoms:

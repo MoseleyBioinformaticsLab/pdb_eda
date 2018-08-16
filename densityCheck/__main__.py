@@ -7,20 +7,27 @@ from scipy import stats
 from . import densityAnalysis
 
 
-def main(pdbidfile):
+def main(pdbidfile, resultname):
     pdbids = []
     with open(pdbidfile, "r") as fileHandleIn:
         for pdbid in fileHandleIn:
             pdbids.append(pdbid.split(" ; ")[0])
 
-    #fileHandle = open("results/densityCutoffs.2.txt", 'w')
     for pdbid in pdbids:
         analyser = densityAnalysis.fromPDBid(pdbid)
 
         if not analyser:
             continue
 
-        diffDenStats = analyser.calcAtomBlobDists()
+        analyser.aggregateCloud(atomL=True)
+        fileHandle = open(resultname + pdbid + '.txt', 'w')
+        #print(*analyser.atomList, sep='\n', file=fileHandle)
+        for item in analyser.atomList:
+            print(', '.join(map(str, item)), file=fileHandle)
+        fileHandle.close()
+
+        continue
+
         if math.isnan(analyser.chainMedian) or analyser.chainMedian is None:
             print(pdbid + ' has no aggregated chain clouds.')
             continue
@@ -87,7 +94,6 @@ def main(pdbidfile):
 
         # # testing different density cutoff
         # print(*[pdbid, analyser.densityObj.densityCutoffFromHeader, analyser.densityObj.densityCutoff, analyser.densityObj.densityCutoffFromLeftSide, analyser.densityObj.densityCutoffFromLeftSide2, analyser.densityObj.densityCutoffFromLeftSide25, analyser.densityObj.densityCutoffFromLeftSide3], sep=', ', file=fileHandle)
-    # fileHandle.close()
 
         # # validate the new aggregation method
         # analyser.aggregateCloud(atomL=True, residueL=True, chainL=True)
@@ -103,12 +109,12 @@ def main(pdbidfile):
         # fileHandle = open("results/aggregation/" + pdbid + ".chainList.new.txt", 'w')
         # print(*analyser.chainList, sep='\n', file=fileHandle)
         # fileHandle.close()
-
+    #fileHandle.close()
 
 if __name__ == '__main__':
-    _, filename = sys.argv
+    _, filename, resultname = sys.argv
 
-    main(filename)
+    main(filename, resultname)
 
     #print(diffDenStats[111])
     #dists = [i[0] for i in diffDenStats]

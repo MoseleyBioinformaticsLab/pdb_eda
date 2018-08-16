@@ -336,7 +336,9 @@ class DensityMatrix:
             for rInd in range(-crsRadius[1]-1, crsRadius[1]+1):
                 for sInd in range(- crsRadius[2]-1, crsRadius[2]+1):
                     crs = [x + y for x, y in zip(crsCoord, [cInd, rInd, sInd])]
-                    if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
+                    density = self.getPointDensityFromCrs(crs)
+                    if 0 < densityCutoff < density or density < densityCutoff < 0 or densityCutoff == 0:
+                    #if 0 < densityCutoff < self.getPointDensityFromCrs(crs) or self.getPointDensityFromCrs(crs) < densityCutoff < 0 or densityCutoff == 0:
                         """
                         if self.header.alpha == self.header.beta == self.header.gamma == 90:
                             if cInd**2 / crsRadius[0]**2 + rInd**2 / crsRadius[1]**2 + sInd**2 / crsRadius[2]**2 <= 1:
@@ -472,8 +474,8 @@ class DensityBlob:
         """
         #if any(x in self.crsList for x in otherBlob.crsList):
         #    return True
-        #elif any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in self.crsList for y in otherBlob.crsList):
-        if np.any(scipy.spatial.distance.cdist(np.matrix(self.crsList), np.matrix(otherBlob.crsList)) <= np.sqrt(3)):
+        #if np.any(scipy.spatial.distance.cdist(np.matrix(self.crsList), np.matrix(otherBlob.crsList)) <= np.sqrt(3)):
+        if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in self.crsList for y in otherBlob.crsList):
             return True
         else:
             return False
@@ -483,15 +485,19 @@ class DensityBlob:
         UPDATE the original blob given PARAM another blob
         """
         combinedList = self.crsList + [x for x in otherBlob.crsList if x not in self.crsList]
+        atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]
         newBlob = DensityBlob.fromCrsList(combinedList, self.header, self.densityMatrix)
 
-        self.centroid = newBlob.centroid
-        self.totalDensity = newBlob.totalDensity
-        self.volume = newBlob.volume
-        self.crsList = newBlob.crsList
-        self.header = newBlob.header
-        self.densityMatrix = newBlob.densityMatrix
-        self.atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]
+        self.__dict__.update(newBlob.__dict__)
+        self.atoms = atoms
+
+        # self.centroid = newBlob.centroid
+        # self.totalDensity = newBlob.totalDensity
+        # self.volume = newBlob.volume
+        # self.crsList = newBlob.crsList
+        # self.header = newBlob.header
+        # self.densityMatrix = newBlob.densityMatrix
+        # self.atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]
 
 
 
