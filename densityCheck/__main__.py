@@ -13,20 +13,27 @@ def main(pdbidfile, resultname):
         for pdbid in fileHandleIn:
             pdbids.append(pdbid.split(" ; ")[0])
 
+    fileHandle = open(resultname, 'w')
+    n = 0
     for pdbid in pdbids:
         analyser = densityAnalysis.fromPDBid(pdbid)
 
         if not analyser:
             continue
 
-        analyser.aggregateCloud(atomL=True)
-        fileHandle = open(resultname + pdbid + '.txt', 'w')
-        #print(*analyser.atomList, sep='\n', file=fileHandle)
-        for item in analyser.atomList:
-            print(', '.join(map(str, item)), file=fileHandle)
-        fileHandle.close()
+        analyser.aggregateCloud()
+        if not analyser.chainMedian:
+            continue
+        if n == 0: 
+            n = 1
+            print("pdbid", "chainMedian", *list(analyser.medians.index), *list(analyser.medians.index), sep=', ', file=fileHandle)
+        print(pdbid, analyser.chainMedian, *analyser.medians['correctedDensity'], *analyser.medians['slopes'], sep=", ", file=fileHandle) 
 
-        continue
+        '''
+        for item in analyser.atomList:
+            print(', '.join(map(str, item + [analyser.chainMedian])), file=fileHandle)
+        #print(pdbid + ', ' + str(analyser.chainMedian), file=fileHandle)
+        fileHandle.close()
 
         if math.isnan(analyser.chainMedian) or analyser.chainMedian is None:
             print(pdbid + ' has no aggregated chain clouds.')
@@ -109,7 +116,8 @@ def main(pdbidfile, resultname):
         # fileHandle = open("results/aggregation/" + pdbid + ".chainList.new.txt", 'w')
         # print(*analyser.chainList, sep='\n', file=fileHandle)
         # fileHandle.close()
-    #fileHandle.close()
+    #fileHaddndle.close()
+        '''
 
 if __name__ == '__main__':
     _, filename, resultname = sys.argv

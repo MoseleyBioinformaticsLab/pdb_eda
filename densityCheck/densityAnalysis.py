@@ -64,10 +64,10 @@ atomType = {'GLY_N': 'N_single_bb', 'GLY_CA': 'C_single_bb', 'GLY_C': 'C_double_
             'HIS_N': 'N_single_bb', 'HIS_CA': 'C_single_bb', 'HIS_C': 'C_double_bb', 'HIS_O': 'O_double_bb', 'HIS_CB': 'C_single', 'HIS_CG': 'C_intermediate', 'HIS_ND1': 'N_intermediate', 'HIS_CD2': 'C_intermediate', 'HIS_CE1': 'C_intermediate', 'HIS_NE2': 'N_intermediate', 'HIS_OXT': 'O_intermediate'}
 
 ## Data originally from https://arxiv.org/pdf/0804.2488.pdf
-radii = {'C_single': 0.91, 'C_double': 0.71, 'C_intermediate': 0.76, 'C_single_bb': 0.74, 'C_double_bb': 0.64,
-         'O_single': 0.88, 'O_double': 0.83, 'O_intermediate': 0.91, 'O_double_bb': 0.75,
-         'N_single': 1.03, 'N_intermediate': 0.83, 'N_single_bb': 0.73, #'N_double': 0.74,
-         'S_single': 0.80}
+radii = {'C_single': 0.77, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_bb': 0.77, 'C_double_bb': 0.67,
+         'O_single': 0.67, 'O_double': 0.60, 'O_intermediate': 0.64, 'O_double_bb': 0.60,
+         'N_single': 0.70, 'N_intermediate': 0.66, 'N_single_bb': 0.70, #'N_double': 0.74,
+         'S_single': 1.04}
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4urlSuffix = ".ccp4"
@@ -97,6 +97,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
             densityObj.densityCutoff = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
             densityObj.densityCutoffFromHeader = densityObj.header.densityMean + 1.5 * densityObj.header.rmsd
 
+            '''
             sample = np.random.choice(densityObj.densityArray, int(len(densityObj.densityArray) / 10))
             kernel = stats.gaussian_kde(sample)
             #kernel = stats.gaussian_kde(densityObj.densityArray)
@@ -108,6 +109,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
             densityObj.densityCutoffFromLeftSide2 = mode + dev * 2
             densityObj.densityCutoffFromLeftSide25 = mode + dev * 2.5
             densityObj.densityCutoffFromLeftSide3 = mode + dev * 3
+            '''
 
         if ccp4diff:
             ## ccp4 Fo - Fc map parser
@@ -249,7 +251,7 @@ class DensityAnalysis(object):
                     aCloud.atoms = [atom]
                 residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
 
-                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestAtomCloud.totalDensity / electrons[resAtom], len(bestAtomCloud.crsList), atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
+                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestAtomCloud.totalDensity / electrons[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
             ## End atom loop
 
             ## Group connected residue density clouds together from individual atom clouds
@@ -285,7 +287,8 @@ class DensityAnalysis(object):
                     else:
                         residueDict[residue.resname] = [cloud]
 
-                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms]), len(cloud.crsList)])
+                    totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectron, len(cloud.crsList)])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
         ## End residue
@@ -319,7 +322,7 @@ class DensityAnalysis(object):
             if len(cloud.atoms) <= 50:
                 continue
             atom = cloud.atoms[0]
-            totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] for atom in cloud.atoms])
+            totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
             chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList)])
             chainAvgDensity.append(cloud.totalDensity / totalElectron)
 
@@ -328,6 +331,19 @@ class DensityAnalysis(object):
         # normalize the density by median volumn of given atom type
         def normVolumn(row):
             return float(row['density']) / float(row['volumn']) * float(medians['volumn'][row['atomType']])
+
+        def calcSlope(data):
+            if data['chain'].count() <= 2:
+                return 0
+            slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adjDensity']-chainMedian)/chainMedian)
+            if p_value > 0.05:
+                return 0
+            else:
+                return slope
+
+        def correctFraction(row, slopes, medianBfactor, chainMedian):
+            return ((row['adjDensity'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[
+                medianBfactor.index == row['atomType']])).values * slopes.loc[slopes.index == row['atomType']].values)[0,0]
 
         try:
             atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density', 'volumn', 'bfactor', 'centroidDist'])
@@ -338,9 +354,18 @@ class DensityAnalysis(object):
             atoms['adjDensity'] = atoms.apply(lambda row: normVolumn(row), axis=1)
             medians = atoms.groupby(['atomType']).median()
             #medianAdjDen = medians.sort_index()['adjDensity']
+
+            slopes = atoms.groupby('atomType').apply(calcSlope)
+            medianBfactor = atoms.groupby('atomType')[['bfactor']].median()
+
+            atoms['correctedFraction'] = atoms.apply(lambda row: correctFraction(row, slopes, medianBfactor, chainMedian), axis=1)
+            atoms['correctedDensity'] = atoms['correctedFraction'] * chainMedian + chainMedian
+            medians = atoms.groupby(['atomType']).median()
+            medians['slopes'] = slopes
         except:
             return 0
 
+        '''
         medianAdjDen = []
         bfactors = []
         for key in sorted(radii.keys()):
@@ -354,6 +379,7 @@ class DensityAnalysis(object):
                 bfactors.append(medians['bfactor'][key])
             except:
                 bfactors.append(np.nan)
+        '''
 
         self.chainMedian = chainMedian
         self.medians = medians
