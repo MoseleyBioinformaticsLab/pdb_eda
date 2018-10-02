@@ -7,27 +7,30 @@ from scipy import stats
 from . import densityAnalysis
 
 
-def main(pdbidfile, resultname):
+def main(pdbidfile, resultname, atomType, radius):
     pdbids = []
     with open(pdbidfile, "r") as fileHandleIn:
         for pdbid in fileHandleIn:
-            pdbids.append(pdbid.split(" ; ")[0])
+            pdbids.append(pdbid[0:4])
 
     fileHandle = open(resultname, 'w')
     n = 0
+    diff = []
     for pdbid in pdbids:
         analyser = densityAnalysis.fromPDBid(pdbid)
 
         if not analyser:
             continue
 
-        analyser.aggregateCloud()
+        analyser.aggregateCloud(atomType, radius)
         if not analyser.chainMedian:
             continue
         if n == 0: 
             n = 1
             print("pdbid", "chainMedian", *list(analyser.medians.index), *list(analyser.medians.index), sep=', ', file=fileHandle)
         print(pdbid, analyser.chainMedian, *analyser.medians['correctedDensity'], *analyser.medians['slopes'], sep=", ", file=fileHandle) 
+        if atomType in analyser.medians.index:
+            diff.append((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian)  ## for radii optimization
 
         '''
         for item in analyser.atomList:
@@ -119,10 +122,12 @@ def main(pdbidfile, resultname):
     #fileHaddndle.close()
         '''
 
-if __name__ == '__main__':
-    _, filename, resultname = sys.argv
+    print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
 
-    main(filename, resultname)
+if __name__ == '__main__':
+    _, filename, resultname, atomType, radius = sys.argv
+
+    main(filename, resultname, atomType, radius)
 
     #print(diffDenStats[111])
     #dists = [i[0] for i in diffDenStats]

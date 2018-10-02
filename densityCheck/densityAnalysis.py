@@ -68,6 +68,18 @@ radii = {'C_single': 0.77, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_b
          'O_single': 0.67, 'O_double': 0.60, 'O_intermediate': 0.64, 'O_double_bb': 0.60,
          'N_single': 0.70, 'N_intermediate': 0.66, 'N_single_bb': 0.70, #'N_double': 0.74,
          'S_single': 1.04}
+'''
+## optimized one round with changing slope
+radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.61,
+         'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
+         'N_single': 0.90, 'N_intermediate': 0.75, 'N_single_bb': 0.69, #'N_double': 0.74,
+         'S_single': 0.75}
+'''
+
+slopesOriginal = {'C_double': -0.7809919, 'C_double_bb': -0.5935737, 'C_intermediate': -0.4963821, 'C_single': -0.3014555, 'C_single_bb': -0.4728899,
+          'N_intermediate': -0.4965879, 'N_single': -0.4197054, 'N_single_bb': -0.5109727,
+          'O_double': -0.4767602, 'O_double_bb': -0.4838077, 'O_intermediate': -0.5290146, 'O_single': -0.5524641,
+          'S_single': -1.5076363}
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4urlSuffix = ".ccp4"
@@ -200,7 +212,7 @@ class DensityAnalysis(object):
         self.statistics = valid.getStats(biopdbObj, fc, fo, sigma3)
 
 
-    def aggregateCloud(self, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False):
+    def aggregateCloud(self, atomtype, radius, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False):
         """
         RETURNS
             chainMedian and medians (by atom type) data member given,
@@ -226,6 +238,7 @@ class DensityAnalysis(object):
         chainList = []
         residueList = []
         atomList = []
+        radii[atomtype] = float(radius)
         for residue in biopdbObj.get_residues():
             if residue.id[0] != ' ':
                 continue
@@ -233,7 +246,7 @@ class DensityAnalysis(object):
             residuePool = []
             for atom in residue.child_list:
                 resAtom = atom.parent.resname + '_' + atom.name
-                if resAtom not in atomType.keys():
+                if resAtom not in atomType.keys() or atom.get_occupancy() == 0:
                     continue
 
                 ## Calculate atom clouds
@@ -326,20 +339,34 @@ class DensityAnalysis(object):
             chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList)])
             chainAvgDensity.append(cloud.totalDensity / totalElectron)
 
-        chainMedian = np.median(chainAvgDensity)
+        if len(chainAvgDensity) == 0:
+            if len(residueList) == 0:
+                if len(atomList) == 0:
+                    return 0
+                else:
+                    chainMedian = np.median([x[5] for x in atomList])
+            else:
+                chainMedian = np.median([x[3] for x in residueList])
+        else:
+            chainMedian = np.median(chainAvgDensity)
 
         # normalize the density by median volumn of given atom type
         def normVolumn(row):
             return float(row['density']) / float(row['volumn']) * float(medians['volumn'][row['atomType']])
 
         def calcSlope(data):
-            if data['chain'].count() <= 2:
-                return 0
-            slope, intercept, r_value, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adjDensity']-chainMedian)/chainMedian)
+            ## Less than three data points or all b factors are the same
+            if data['chain'].count() <= 2 or all(x == data.iloc[0]['bfactor'] for x in data['bfactor']): 
+                return slopesOriginal[data.iloc[0]['atomType']]
+
+            slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adjDensity']-chainMedian)/chainMedian)
             if p_value > 0.05:
-                return 0
+                return slopesOriginal[data.iloc[0]['atomType']]
             else:
                 return slope
+
+        def getSlope(data):
+            return slopesOriginal[data.iloc[0]['atomType']]
 
         def correctFraction(row, slopes, medianBfactor, chainMedian):
             return ((row['adjDensity'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[
@@ -354,8 +381,10 @@ class DensityAnalysis(object):
             atoms['adjDensity'] = atoms.apply(lambda row: normVolumn(row), axis=1)
             medians = atoms.groupby(['atomType']).median()
             #medianAdjDen = medians.sort_index()['adjDensity']
+            atoms.loc[atoms.bfactor == 0, 'bfactor'] = np.nan
+            atoms['bfactor'] = atoms.groupby('atomType')['bfactor'].transform(lambda x: x.fillna(x.median()))
 
-            slopes = atoms.groupby('atomType').apply(calcSlope)
+            slopes = atoms.groupby('atomType').apply(getSlope)
             medianBfactor = atoms.groupby('atomType')[['bfactor']].median()
 
             atoms['correctedFraction'] = atoms.apply(lambda row: correctFraction(row, slopes, medianBfactor, chainMedian), axis=1)
