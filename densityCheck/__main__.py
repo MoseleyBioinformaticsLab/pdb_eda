@@ -3,8 +3,25 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
+import multiprocessing
 
 from . import densityAnalysis
+
+
+def processFunction(pdbid, atomType, radius):
+    analyser = densityAnalysis.fromPDBid(pdbid)
+
+    if not analyser:
+        return 0 
+
+    analyser.aggregateCloud(atomType, radius)
+    if not analyser.chainMedian:
+        return 0
+
+    ## for radii optimization
+    diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
+    result = [pdbid, analyser.chainMedian] + analyser.medians['correctedDensity'].tolist() + analyser.medians['slopes'].tolist() 
+    return result, diff, analyser.medians.index.tolist()
 
 
 def main(pdbidfile, resultname, atomType, radius):
@@ -13,10 +30,27 @@ def main(pdbidfile, resultname, atomType, radius):
         for pdbid in fileHandleIn:
             pdbids.append(pdbid[0:4])
 
+    data = []
+    diffs = []
+    colnames = []
+    with multiprocessing.Pool() as pool:
+        results = pool.starmap(processFunction, ((pdbid, atomType, radius) for pdbid in pdbids))
+    
     fileHandle = open(resultname, 'w')
-    n = 0
-    diff = []
-    for pdbid in pdbids:
+    for i in range(len(results)):
+        if results[i] and len(results[i][2]) == 13:
+            print("pdbid", "chainMedian", *results[i][2], *results[i][2], sep=', ', file=fileHandle)
+            break
+    for result in results:
+        if result:
+            print(*result[0], sep=", ", file=fileHandle)
+            if result[1]: diffs.append(result[1])
+    if len(diffs):
+        print(np.nanmean(diffs), np.nanmedian(diffs), file=fileHandle) ## for radii optimization
+
+
+    '''
+        for pdbid in pdbids:
         analyser = densityAnalysis.fromPDBid(pdbid)
 
         if not analyser:
@@ -32,7 +66,6 @@ def main(pdbidfile, resultname, atomType, radius):
         if atomType in analyser.medians.index:
             diff.append((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian)  ## for radii optimization
 
-        '''
         for item in analyser.atomList:
             print(', '.join(map(str, item + [analyser.chainMedian])), file=fileHandle)
         #print(pdbid + ', ' + str(analyser.chainMedian), file=fileHandle)
@@ -122,7 +155,6 @@ def main(pdbidfile, resultname, atomType, radius):
     #fileHaddndle.close()
         '''
 
-    print(np.nanmean(diff), np.nanmedian(diff), file=fileHandle) ## for radii optimization
 
 if __name__ == '__main__':
     _, filename, resultname, atomType, radius = sys.argv

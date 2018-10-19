@@ -63,23 +63,69 @@ atomType = {'GLY_N': 'N_single_bb', 'GLY_CA': 'C_single_bb', 'GLY_C': 'C_double_
             'ARG_N': 'N_single_bb', 'ARG_CA': 'C_single_bb', 'ARG_C': 'C_double_bb', 'ARG_O': 'O_double_bb', 'ARG_CB': 'C_single', 'ARG_CG': 'C_single', 'ARG_CD': 'C_single', 'ARG_NE': 'N_intermediate', 'ARG_CZ': 'C_double', 'ARG_NH1': 'N_intermediate', 'ARG_NH2': 'N_intermediate', 'ARG_OXT': 'O_intermediate',
             'HIS_N': 'N_single_bb', 'HIS_CA': 'C_single_bb', 'HIS_C': 'C_double_bb', 'HIS_O': 'O_double_bb', 'HIS_CB': 'C_single', 'HIS_CG': 'C_intermediate', 'HIS_ND1': 'N_intermediate', 'HIS_CD2': 'C_intermediate', 'HIS_CE1': 'C_intermediate', 'HIS_NE2': 'N_intermediate', 'HIS_OXT': 'O_intermediate'}
 
+'''
 ## Data originally from https://arxiv.org/pdf/0804.2488.pdf
 radii = {'C_single': 0.77, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_bb': 0.77, 'C_double_bb': 0.67,
          'O_single': 0.67, 'O_double': 0.60, 'O_intermediate': 0.64, 'O_double_bb': 0.60,
          'N_single': 0.70, 'N_intermediate': 0.66, 'N_single_bb': 0.70, #'N_double': 0.74,
          'S_single': 1.04}
-'''
-## optimized one round with changing slope
-radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.61,
-         'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
-         'N_single': 0.90, 'N_intermediate': 0.75, 'N_single_bb': 0.69, #'N_double': 0.74,
-         'S_single': 0.75}
-'''
 
 slopesOriginal = {'C_double': -0.7809919, 'C_double_bb': -0.5935737, 'C_intermediate': -0.4963821, 'C_single': -0.3014555, 'C_single_bb': -0.4728899,
           'N_intermediate': -0.4965879, 'N_single': -0.4197054, 'N_single_bb': -0.5109727,
           'O_double': -0.4767602, 'O_double_bb': -0.4838077, 'O_intermediate': -0.5290146, 'O_single': -0.5524641,
           'S_single': -1.5076363}
+
+## optimization after the first round with constant slope
+radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.60,
+         'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
+         'N_single': 0.90, 'N_intermediate': 0.76, 'N_single_bb': 0.69, 
+         'S_single': 0.75}
+
+## optimization after the first round with changing slope
+radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.61,
+         'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
+         'N_single': 0.90, 'N_intermediate': 0.75, 'N_single_bb': 0.69,
+         'S_single': 0.75}
+
+slopesDefault = {'C_double': -0.6538044, 'C_double_bb': -0.4626215, 'C_intermediate': -0.4494971, 'C_single': -0.3387809, 'C_single_bb': -0.3808402,
+          'N_intermediate': -0.5541342, 'N_single': -0.4889789, 'N_single_bb': -0.5110914,
+          'O_double': -0.7432083, 'O_double_bb': -0.6818212, 'O_intermediate': -0.7026091, 'O_single': -0.7070469,
+          'S_single': -0.8644369}
+
+## optimization after the second round with changing slope
+radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.72, 'C_single_bb': 0.71, 'C_double_bb': 0.61,
+         'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
+         'N_single': 0.94, 'N_intermediate': 0.78, 'N_single_bb': 0.69, 
+         'S_single': 0.75}
+
+slopesDefault = {'C_double': -0.6438806, 'C_double_bb': -0.4815307, 'C_intermediate': -0.4850620, 'C_single': -0.3436473, 'C_single_bb': -0.4247104,
+          'N_intermediate': -0.5236500, 'N_single': -0.4917572, 'N_single_bb': -0.5112921,
+          'O_double': -0.7283629, 'O_double_bb': -0.6684291, 'O_intermediate': -0.6871715, 'O_single': -0.6965353,
+          'S_single': -0.8484084}
+
+## optimization after the third round with changing slope
+radii = {'C_single': 0.84, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_bb': 0.71, 'C_double_bb': 0.61,
+         'O_single': 0.80, 'O_double': 0.79, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
+         'N_single': 0.94, 'N_intermediate': 0.78, 'N_single_bb': 0.71,
+         'S_single': 0.76}
+
+slopesDefault = {'C_double': -0.6591041, 'C_double_bb': -0.4883229, 'C_intermediate': -0.4813072, 'C_single': -0.3457445, 'C_single_bb': -0.3857329,
+          'N_intermediate': -0.5245307, 'N_single': -0.4795850, 'N_single_bb': -0.5307469,
+          'O_double': -0.7275337, 'O_double_bb': -0.6728735, 'O_intermediate': -0.6810919, 'O_single': -0.6941733,
+          'S_single': -0.8539581}
+'''
+
+## optimization after the fourth round with changing slope
+radii = {'C_single': 0.84, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_bb': 0.71, 'C_double_bb': 0.61,
+         'O_single': 0.80, 'O_double': 0.79, 'O_intermediate': 0.84, 'O_double_bb': 0.71,
+         'N_single': 0.94, 'N_intermediate': 0.78, 'N_single_bb': 0.71,
+         'S_single': 0.76}
+
+slopesDefault = {'C_double': -0.6793590, 'C_double_bb': -0.4365049, 'C_intermediate': -0.4490974, 'C_single': -0.3445135, 'C_single_bb': -0.3853687,
+          'N_intermediate': -0.5535951, 'N_single': -0.4856401, 'N_single_bb': -0.5365064,
+          'O_double': -0.7397136, 'O_double_bb': -0.6727108, 'O_intermediate': -0.6768914, 'O_single': -0.6880682,
+          'S_single': -0.8293871}
+
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4urlSuffix = ".ccp4"
@@ -357,16 +403,16 @@ class DensityAnalysis(object):
         def calcSlope(data):
             ## Less than three data points or all b factors are the same
             if data['chain'].count() <= 2 or all(x == data.iloc[0]['bfactor'] for x in data['bfactor']): 
-                return slopesOriginal[data.iloc[0]['atomType']]
+                return slopesDefault[data.iloc[0]['atomType']]
 
             slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adjDensity']-chainMedian)/chainMedian)
             if p_value > 0.05:
-                return slopesOriginal[data.iloc[0]['atomType']]
+                return slopesDefault[data.iloc[0]['atomType']]
             else:
                 return slope
 
         def getSlope(data):
-            return slopesOriginal[data.iloc[0]['atomType']]
+            return slopesDefault[data.iloc[0]['atomType']]
 
         def correctFraction(row, slopes, medianBfactor, chainMedian):
             return ((row['adjDensity'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[
@@ -384,7 +430,7 @@ class DensityAnalysis(object):
             atoms.loc[atoms.bfactor == 0, 'bfactor'] = np.nan
             atoms['bfactor'] = atoms.groupby('atomType')['bfactor'].transform(lambda x: x.fillna(x.median()))
 
-            slopes = atoms.groupby('atomType').apply(getSlope)
+            slopes = atoms.groupby('atomType').apply(calcSlope)
             medianBfactor = atoms.groupby('atomType')[['bfactor']].median()
 
             atoms['correctedFraction'] = atoms.apply(lambda row: correctFraction(row, slopes, medianBfactor, chainMedian), axis=1)
