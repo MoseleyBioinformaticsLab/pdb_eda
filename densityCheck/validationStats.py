@@ -4,7 +4,7 @@ validationStats.py
     Calculate real space correlation coefficients (RSCC) and real space R value (RSR) via different methods.
 """
 import os.path
-import requests
+#import requests
 import numpy as np
 from scipy.stats.stats import pearsonr
 

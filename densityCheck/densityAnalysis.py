@@ -80,7 +80,7 @@ radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_b
          'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
          'N_single': 0.90, 'N_intermediate': 0.76, 'N_single_bb': 0.69, 
          'S_single': 0.75}
-
+'''
 ## optimization after the first round with changing slope
 radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.61,
          'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
@@ -91,7 +91,7 @@ slopesDefault = {'C_double': -0.6538044, 'C_double_bb': -0.4626215, 'C_intermedi
           'N_intermediate': -0.5541342, 'N_single': -0.4889789, 'N_single_bb': -0.5110914,
           'O_double': -0.7432083, 'O_double_bb': -0.6818212, 'O_intermediate': -0.7026091, 'O_single': -0.7070469,
           'S_single': -0.8644369}
-
+'''
 ## optimization after the second round with changing slope
 radii = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.72, 'C_single_bb': 0.71, 'C_double_bb': 0.61,
          'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
@@ -113,7 +113,6 @@ slopesDefault = {'C_double': -0.6591041, 'C_double_bb': -0.4883229, 'C_intermedi
           'N_intermediate': -0.5245307, 'N_single': -0.4795850, 'N_single_bb': -0.5307469,
           'O_double': -0.7275337, 'O_double_bb': -0.6728735, 'O_intermediate': -0.6810919, 'O_single': -0.6941733,
           'S_single': -0.8539581}
-'''
 
 ## optimization after the fourth round with changing slope
 radii = {'C_single': 0.84, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_bb': 0.71, 'C_double_bb': 0.61,
@@ -125,6 +124,7 @@ slopesDefault = {'C_double': -0.6793590, 'C_double_bb': -0.4365049, 'C_intermedi
           'N_intermediate': -0.5535951, 'N_single': -0.4856401, 'N_single_bb': -0.5365064,
           'O_double': -0.7397136, 'O_double_bb': -0.6727108, 'O_intermediate': -0.6768914, 'O_single': -0.6880682,
           'S_single': -0.8293871}
+'''
 
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
@@ -136,7 +136,7 @@ pdbfolder = './pdb_data/'
 def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, downloadFile=True):
     """RETURNS DensityAnalysis object given the PARAMETER pdbid."""
     pdbid = pdbid.lower()
-    print("working on " + pdbid + ', ', str(datetime.datetime.now()))
+    #print("working on " + pdbid + ', ', str(datetime.datetime.now()))
 
     try:
         if ccp4density:
@@ -258,7 +258,7 @@ class DensityAnalysis(object):
         self.statistics = valid.getStats(biopdbObj, fc, fo, sigma3)
 
 
-    def aggregateCloud(self, atomtype, radius, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False):
+    def aggregateCloud(self, radiiUpdate, slopesUpdate, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False):
         """
         RETURNS
             chainMedian and medians (by atom type) data member given,
@@ -284,7 +284,9 @@ class DensityAnalysis(object):
         chainList = []
         residueList = []
         atomList = []
-        radii[atomtype] = float(radius)
+
+        currentRadii = {**radii, **radiiUpdate}
+        currentSlopes = {**slopesDefault, **slopesUpdate}
         for residue in biopdbObj.get_residues():
             if residue.id[0] != ' ':
                 continue
@@ -296,7 +298,7 @@ class DensityAnalysis(object):
                     continue
 
                 ## Calculate atom clouds
-                atomClouds = densityObj.findAberrantBlobs(atom.coord, radii[atomType[resAtom]], densityObj.densityCutoff)
+                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[atomType[resAtom]], densityObj.densityCutoff)
                 if len(atomClouds) == 0:
                     continue
                 elif len(atomClouds) == 1:
@@ -403,16 +405,16 @@ class DensityAnalysis(object):
         def calcSlope(data):
             ## Less than three data points or all b factors are the same
             if data['chain'].count() <= 2 or all(x == data.iloc[0]['bfactor'] for x in data['bfactor']): 
-                return slopesDefault[data.iloc[0]['atomType']]
+                return currentSlopes[data.iloc[0]['atomType']]
 
             slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adjDensity']-chainMedian)/chainMedian)
             if p_value > 0.05:
-                return slopesDefault[data.iloc[0]['atomType']]
+                return currentSlopes[data.iloc[0]['atomType']]
             else:
                 return slope
 
         def getSlope(data):
-            return slopesDefault[data.iloc[0]['atomType']]
+            return currentSlopes[data.iloc[0]['atomType']]
 
         def correctFraction(row, slopes, medianBfactor, chainMedian):
             return ((row['adjDensity'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[
@@ -427,7 +429,7 @@ class DensityAnalysis(object):
             atoms['adjDensity'] = atoms.apply(lambda row: normVolumn(row), axis=1)
             medians = atoms.groupby(['atomType']).median()
             #medianAdjDen = medians.sort_index()['adjDensity']
-            atoms.loc[atoms.bfactor == 0, 'bfactor'] = np.nan
+            atoms.loc[atoms.bfactor <= 0, 'bfactor'] = np.nan
             atoms['bfactor'] = atoms.groupby('atomType')['bfactor'].transform(lambda x: x.fillna(x.median()))
 
             slopes = atoms.groupby('atomType').apply(calcSlope)
