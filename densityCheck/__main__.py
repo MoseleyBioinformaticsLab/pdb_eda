@@ -8,15 +8,16 @@ import datetime
 
 from . import densityAnalysis
 
-radiiDefault = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.61, 
-                'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
-                'N_single': 0.90, 'N_intermediate': 0.75, 'N_single_bb': 0.69,
+## Final set of radii derived from optimization
+radiiDefault = {'C_single': 0.84, 'C_double': 0.67, 'C_intermediate': 0.72, 'C_single_bb': 0.72, 'C_double_bb': 0.61, 
+                'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71, 
+                'N_single': 0.95, 'N_intermediate': 0.77, 'N_single_bb': 0.7, 
                 'S_single': 0.75}
 
-slopesDefault = {'C_double': -0.6538044, 'C_double_bb': -0.4626215, 'C_intermediate': -0.4494971, 'C_single': -0.3387809, 'C_single_bb': -0.3808402,
-                'N_intermediate': -0.5541342, 'N_single': -0.4889789, 'N_single_bb': -0.5110914,
-                'O_double': -0.7432083, 'O_double_bb': -0.6818212, 'O_intermediate': -0.7026091, 'O_single': -0.7070469,
-                'S_single': -0.8644369}
+slopesDefault = {'C_single': -0.33373359301010996, 'C_double': -0.79742538209281033, 'C_intermediate': -0.46605044936397311, 'C_single_bb': -0.44626029983492604, 'C_double_bb': -0.53313491315106321, 
+                'O_single': -0.61612691527685515, 'O_double': -0.69081386892018048, 'O_intermediate': -0.64900152439990022, 'O_double_bb': -0.59780395867126568, 
+                'N_single': -0.50069328952200343, 'N_intermediate': -0.5791543104296577, 'N_single_bb': -0.4905830761073553, 
+                'S_single': -0.82192528851026947}
 
 def processFunction(pdbid, radii, slopes):
     analyser = densityAnalysis.fromPDBid(pdbid)
@@ -28,104 +29,40 @@ def processFunction(pdbid, radii, slopes):
     if not analyser.chainMedian:
         return 0
 
-    ## for radii optimization
-    #diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
-    #result = [pdbid, analyser.chainMedian] + analyser.medians['correctedDensity'].tolist() + analyser.medians['slopes'].tolist() 
-    #return result, diff, analyser.medians.index.tolist()
     diffs = []
-    slopes = []
+    stats = []
     for atomType in sorted(radiiDefault):
         diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
-        if atomType in analyser.medians.index:
-            diffs.append((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian)
-            slopes.append(analyser.medians.loc[atomType]['slopes'])
-        else:
-            diffs.append(0)
-            slopes.append(0)
-    return diffs, slopes
+        diffs.append(diff)
+    stats = [analyser.pdbid, analyser.chainMedian, analyser.pdbObj.header.resolution, analyser.pdbObj.header.spaceGroup]
+    return diffs, stats
 
-def main(pdbidfile, resultname, atomType, radius):
+def main(pdbidfile, resultname, mode):
+    '''
+    Mode: 0 - use optimized radii
+          1 - use original radii
+    '''
     pdbids = []
     with open(pdbidfile, "r") as fileHandleIn:
         for pdbid in fileHandleIn:
             pdbids.append(pdbid[0:4])
 
+    radii = radiiDefault
+    slopes = slopesDefault
+    if int(mode) == 0:
+        radii = {}
+        slopes = {}
+
+    with multiprocessing.Pool() as pool:
+        results = pool.starmap(processFunction, ((pdbid, radii, slopes) for pdbid in pdbids))
+
     fileHandle = open(resultname, 'w')
-    currentAtomType = atomType
-    currentRadius = float(radius)
-    currentRadii = radiiDefault
-    currentRadii[currentAtomType] = currentRadius
-    currentSlopes = slopesDefault 
-    while True:
-        bestMedianDiffs = {}
-        bestDiff = bestMedianDiffs[currentAtomType] if bestMedianDiffs else 100 
-        while True:
-            print("working on", currentAtomType, "with radius", currentRadius, ",", str(datetime.datetime.now()))
-            print(currentAtomType, currentRadius, file=fileHandle)
-            with multiprocessing.Pool() as pool:
-                results = pool.starmap(processFunction, ((pdbid, currentRadii, currentSlopes) for pdbid in pdbids))
+    for result in results:
+        if result:
+            print(*result[1], *result[0], sep=", ", file=fileHandle)
 
-            slopes = {}
-            diffs = {}
-            for atomType in radiiDefault:
-                slopes[atomType] = []
-                diffs[atomType] = []
-
-            for result in results:
-                if result:
-                    for i, diff in enumerate(result[0]):
-                        if diff: 
-                            diffs[sorted(radiiDefault)[i]].append(diff)
-                    for i, slope in enumerate(result[1]):
-                        if slope != slopesDefault[sorted(slopesDefault)[i]]:
-                            slopes[sorted(slopesDefault)[i]].append(slope)
-
-            for key in diffs:
-                diffs[key] = np.nanmedian(diffs[key])
-            for key in slopes:
-                slopes[key] = np.nanmedian(slopes[key])
-
-            print(currentRadii, file=fileHandle)
-            print(diffs, file=fileHandle)
-            print(slopes, file=fileHandle)
-            medianDiff = diffs[currentAtomType]    
-            if abs(medianDiff) < abs(bestDiff):
-                bestDiff = medianDiff
-                bestMedianDiffs = diffs
-                bestSlopes = slopes
-                bestRadius = currentRadius
-                currentRadius = currentRadius + 0.01 if medianDiff < 0 else currentRadius - 0.01
-                currentRadii[currentAtomType] = currentRadius
-            else: 
-                break
-
-        if max(map(abs, bestMedianDiffs.values())) < 0.05:
-            break
-        else:
-            currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y])) 
-            currentRadius = currentRadii[currentAtomType]
-            medianDiff = bestMedianDiffs[currentAtomType]
-            currentRadius = currentRadius + 0.01 if medianDiff < 0 else currentRadius - 0.01
-            currentRadii[currentAtomType] = currentRadius
-            currentSlopes = bestSlopes
-
-    fileHandle.close()
-    print("Final radii:", currentRadii)
 
     '''
-            fileHandle = open(resultname, 'w')
-            for i in range(len(results)):
-                if results[i] and len(results[i][2]) == 13:
-                    print("pdbid", "chainMedian", *results[i][2], *results[i][2], sep=', ', file=fileHandle)
-                    break
-            for result in results:
-                if result:
-                    print(*result[0], sep=", ", file=fileHandle)
-                    if result[1]: diffs.append(result[1])
-            if len(diffs):
-                print(np.nanmean(diffs), np.nanmedian(diffs), file=fileHandle) ## for radii optimization
-
-
         for pdbid in pdbids:
         analyser = densityAnalysis.fromPDBid(pdbid)
 
@@ -231,16 +168,44 @@ def main(pdbidfile, resultname, atomType, radius):
     #fileHaddndle.close()
         '''
 
+def singleCalc(pdbid, resultDir, mode):
+    '''
+    Mode: 0 - use optimized radii
+          1 - use original radii
+    '''
+    radii = radiiDefault
+    slopes = slopesDefault
+    if int(mode) == 0:
+        radii = {}
+        slopes = {}
+
+    analyser = densityAnalysis.fromPDBid(pdbid)
+    analyser.aggregateCloud(radii, slopes, atomL=True, residueL=True, chainL=True)
+
+    analyser.atomList.to_csv(resultDir + pdbid + '.atom.txt', sep=',')
+    
+    fileHandle = open(resultDir + pdbid + '.residue.txt', 'w')
+    for item in analyser.residueList:
+        print(', '.join(map(str, item)), file=fileHandle)
+    fileHandle.close()
+    
+    fileHandle = open(resultDir + pdbid + ".chain.txt", 'w')
+    #print(*analyser.chainList, sep='\n', file=fileHandle)
+    for item in analyser.chainList:
+        print(', '.join(map(str, item)), file=fileHandle)
+    fileHandle.close()
 
 if __name__ == '__main__':
-    _, filename, resultname, atomType, radius = sys.argv
-
-    main(filename, resultname, atomType, radius)
-
-    #print(diffDenStats[111])
-    #dists = [i[0] for i in diffDenStats]
-    #plt.hist(dists, 200)
-
+    if len(sys.argv) == 5:
+        _, runMode, radiiMode, filename, resultname = sys.argv
+        if runMode == 's' or runMode == 'single':
+            singleCalc(filename, resultname, radiiMode)
+        elif runMode == 'm' or runMode == 'multiple':
+            main(filename, resultname, radiiMode)
+        else:
+            print("Wrong options")
+    else:
+        print("Wrong number of arguments!")
 
 
 

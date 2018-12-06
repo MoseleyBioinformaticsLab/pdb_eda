@@ -7,6 +7,7 @@ from scipy import stats
 
 from . import densityAnalysis
 
+## Radii and slopes from an intial analysis on 100 structures
 radiiDefault = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.61, 
                 'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
                 'N_single': 0.90, 'N_intermediate': 0.75, 'N_single_bb': 0.69,
@@ -30,7 +31,7 @@ def processFunction(pdbid, radii, slopes):
     diffs = []
     slopes = []
     for atomType in sorted(radiiDefault):
-        diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
+        #diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
         if atomType in analyser.medians.index:
             diffs.append((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian)
             slopes.append(analyser.medians.loc[atomType]['slopes'])
