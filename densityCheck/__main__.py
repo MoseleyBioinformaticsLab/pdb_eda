@@ -1,10 +1,12 @@
+import os
 import sys
 import math
 import numpy as np
-#import matplotlib.pyplot as plt
+
 from scipy import stats
 import multiprocessing
 import datetime
+import tempfile
 
 from . import densityAnalysis
 
@@ -20,27 +22,35 @@ slopesDefault = {'C_single': -0.33373359301010996, 'C_double': -0.79742538209281
                 'S_single': -0.82192528851026947}
 
 def processFunction(pdbid, radii, slopes):
-    analyser = densityAnalysis.fromPDBid(pdbid)
+    dirname = os.getcwd()
+    with tempfile.NamedTemporaryFile(mode='w', dir=dirname, prefix="tempPDB_", delete=False) as tempFile:
 
-    if not analyser:
-        return 0 
+        analyser = densityAnalysis.fromPDBid(pdbid)
 
-    analyser.aggregateCloud(radii, slopes)
-    if not analyser.chainMedian:
-        return 0
+        if not analyser:
+            return 0 
 
-    diffs = []
-    stats = []
-    for atomType in sorted(radiiDefault):
-        diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
-        diffs.append(diff)
-    stats = [analyser.pdbid, analyser.chainMedian, analyser.pdbObj.header.resolution, analyser.pdbObj.header.spaceGroup]
-    return diffs, stats
+        analyser.aggregateCloud(radii, slopes)
+        if not analyser.chainMedian:
+            return 0
+
+        diffs = []
+        stats = []
+        for atomType in sorted(radiiDefault):
+            diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
+            diffs.append(diff)
+        stats = [analyser.pdbid, analyser.chainMedian, analyser.pdbObj.header.resolution, analyser.pdbObj.header.spaceGroup]
+        #return diffs, stats
+
+        tempFile.write("%s\n" % ', '.join([str(i) for i in stats + diffs]))
+        return tempFile.name
+
 
 def main(pdbidfile, resultname, mode):
     '''
-    Mode: 0 - use optimized radii
-          1 - use original radii
+    Mode: 
+        0 - use optimized radii
+        1 - use original radii
     '''
     pdbids = []
     with open(pdbidfile, "r") as fileHandleIn:
@@ -56,11 +66,16 @@ def main(pdbidfile, resultname, mode):
     with multiprocessing.Pool() as pool:
         results = pool.starmap(processFunction, ((pdbid, radii, slopes) for pdbid in pdbids))
 
-    fileHandle = open(resultname, 'w')
-    for result in results:
-        if result:
-            print(*result[1], *result[0], sep=", ", file=fileHandle)
-
+    #fileHandle = open(resultname, 'w')
+    #for result in results:
+    #    if result:
+    #        print(*result[1], *result[0], sep=", ", file=fileHandle)
+    with open(resultname, "w") as outfile:
+        for f in results:
+            if f:
+                with open(f, "r") as infile:
+                    outfile.write(infile.read())
+                os.remove(f) # remove the file
 
     '''
         for pdbid in pdbids:
@@ -196,6 +211,15 @@ def singleCalc(pdbid, resultDir, mode):
     fileHandle.close()
 
 if __name__ == '__main__':
+    """
+    runMode:
+        s - single structure
+        m - multiple structures
+    radiiMode: 
+        0 - use optimized radii
+        1 - use original radii
+    """
+
     if len(sys.argv) == 5:
         _, runMode, radiiMode, filename, resultname = sys.argv
         if runMode == 's' or runMode == 'single':
