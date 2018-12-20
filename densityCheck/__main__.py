@@ -46,7 +46,7 @@ def processFunction(pdbid, radii, slopes):
 def openTemporaryFile(temp):
     dirname = os.getcwd()
     global globalTempFile
-    globalTempFile = tempfile.NamedTemporaryFile(mode='w', dir=dirname, prefix="tempPDB_", delete=False)
+    globalTempFile = tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix="tempPDB_", delete=False)
     time.sleep(0.01) # sleep 0.01 seconds to prevent the same worker from calling this twice.
     return globalTempFile.name
 
