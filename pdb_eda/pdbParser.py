@@ -1,22 +1,32 @@
 # !/usr/bin/python3
 """
-pdb.py
-    Reads and parses the PDB format files and returns PDB objects.
-    Format details of PDB can be found in ftp://ftp.wwpdb.org/pub/pdb/doc/format_descriptions/Format_v33_Letter.pdf
+PDB Parser (pdb_eda.pdbParser)
+-------------------------------------------------------
 
+This module provides methods to read and parse the PDB format files and returns PDB objects.
+Format details of PDB can be found in ftp://ftp.wwpdb.org/pub/pdb/doc/format_descriptions/Format_v33_Letter.pdf
 """
 import re
 import numpy as np
 
 
-def readPDBfile(filename, verbose=False):
-    """RETURNS DensityMatrix object given the PARAMETER fileName."""
+def readPDBfile(filename):
+    """
+    Creates :class:`pdb_eda.pdbParser.PDBentry` object from file name.
+
+    :param str filename: The name of a PDB formated file.
+    """
     with open(filename, "r") as fileHandle:
-        return parse(fileHandle, verbose)
+        return parse(fileHandle)
 
 
-def parse(handle, mode='lite', verbose=False):
-    """RETURNS DensityMatrix object given the PARAMETER file handle."""
+def parse(handle, mode='lite'):
+    """
+    Creates :class:`pdb_eda.pdbParser.PDBentry` object from file handle.
+
+    :param handle: The file handle of a PDB formated file.
+    :param str mode: Whether of not to parse all the atoms, default as 'lite' (not parse)
+    """
     atoms = []
     rotationMats = []
     modelCount = 0
@@ -84,13 +94,31 @@ def parse(handle, mode='lite', verbose=False):
 
 
 class PDBentry:
+    """:class:`pdb_eda.pdbParser.PDBentry` class that stores the :class:'pdb_eda.pdbParser.PDBheader' and/or :class:'pdb_eda.pdbParser.Atom' class."""
+
     def __init__(self, header, atoms):
+        """:class:`pdb_eda.pdbParser.PDBentry` initializer. """
         self.header = header
         self.atoms = atoms
 
 
 class PDBheader:
+    """:class:`pdb_eda.pdbParser.PDBheader` that stores information about PDB header."""
+
     def __init__(self, PDBid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats):
+        """:class:`pdb_eda.pdbParser.PDBheader` initializer.
+
+        :param str pdbid: PDB id.
+        :param str date: PDB structure publish date.
+        :param str method: Experiment method, i.e. X-ray, NMR, etc.
+        :param float resolution: Structure resolution if applicable.
+        :param float rValue: Structure's R value.
+        :param float rFree: Structure's R free value.
+        :param str program: Software for acquiring the structure.
+        :param str spaceGroup: Structure's space group if applicable.
+        :param list rotationMats: Structure's rotation matrix and translation matrix if applicable.
+
+        """
         self.pdbid = PDBid
         self.date = date
         self.method = method
@@ -103,7 +131,14 @@ class PDBheader:
 
 
 class Atom:
+    """:class:`pdb_eda.pdbParser.Atom` that stores information about PDB atoms."""
+
     def __init__(self, keyValues):
+        """
+        :class:`pdb_eda.pdbParser.Atom` initializer.
+
+        :param dict keyValues: Key value pairs for atom information.
+        """
         self.record = keyValues['record']
         self.recordType = keyValues['recordType']
         self.serial = keyValues['serial']

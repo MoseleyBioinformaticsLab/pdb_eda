@@ -18,7 +18,10 @@ urlSuffix = ".ccp4"
 
 
 def readFromPDBID(pdbid, verbose=False):
-    """RETURNS DensityMatrix object given the PARAMETER pdbid."""
+    """RETURNS DensityMatrix object given the PARAMETER pdbid.
+
+    :param str pdbid: PDB id.
+    """
     return readFromURL(urlPrefix + pdbid.lower() + urlSuffix, pdbid, verbose)
 
 
@@ -273,12 +276,13 @@ class DensityMatrix:
     def __init__(self, header, origin, density, pdbid):
         """
         Initialize a DensityMatrix object
-        PARAMS
-            :param header: the DensityHeader object of the density matrix
-            :param origin: the xyz coordinates of the origin of the first number of the density data
-            :param density: the density data as a 1-d list
-        RETURNs
-            DensityMatrix object
+
+        :param str header: the DensityHeader object of the density matrix
+        :param origin: the xyz coordinates of the origin of the first number of the density data
+        :param density: the density data as a 1-d list
+        :return: DensityMatrix object
+        :rtype: :py:class:`str`
+
         """
         self.pdbid = pdbid
         self.header = header

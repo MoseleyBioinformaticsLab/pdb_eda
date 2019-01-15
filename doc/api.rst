@@ -1,27 +1,35 @@
-The electronDensityAnalysis API Reference
-=========================================
+The pdb_eda API Reference
+=========================
 
-.. automodule:: densityCheck
+.. automodule:: pdb_eda
 
-.. automodule:: densityCheck.densityAnalysis
+Electron Density Analysis
+-------------------------
+.. automodule:: pdb_eda.densityAnalysis
    :member-order: bysource
    :members:
    :special-members:
    :private-members:
 
-.. automodule:: densityCheck.ccp4
+CCP4 Parser
+-----------
+.. automodule:: pdb_eda.ccp4
    :member-order: bysource
    :members:
    :special-members:
    :private-members:
 
-.. automodule:: densityCheck.pdbParser
+PDB Parser
+----------
+.. automodule:: pdb_eda.pdbParser
    :member-order: bysource
    :members:
    :special-members:
    :private-members:
 
-.. automodule:: densityCheck.validationStats
+Structure Validation Statistics
+-------------------------------
+.. automodule:: pdb_eda.validationStats
    :member-order: bysource
    :members:
    :special-members:

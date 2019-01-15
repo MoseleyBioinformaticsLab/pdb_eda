@@ -1,3 +1,3 @@
-The electronDensityAnalysis Tutorial
-====================================
+The pdb_eda Tutorial
+====================
 

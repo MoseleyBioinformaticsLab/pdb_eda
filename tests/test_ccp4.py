@@ -1,4 +1,4 @@
-from densityCheck import ccp4
+from pdb_eda import ccp4
 import numpy as np
 from pytest import approx
 
