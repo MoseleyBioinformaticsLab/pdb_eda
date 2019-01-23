@@ -1,10 +1,33 @@
-import sys
-import math
-import numpy as np
-from scipy import stats
-import multiprocessing
-import datetime
+# !/usr/bin/python3
 
+"""
+pdb_eda command-line interface
+
+Usage:
+    pdb_eda -h | --help
+    pdb_eda --version
+    pdb_eda (<pdbid> <out-file>) [--radii-param=<paramfile>] [--atom] [--residue] [--chain] [--out-format=<format>]
+    pdb_eda (<pdbid> <out-file>) [--radii-param=<paramfile>] [--green | --red | --all] [--stats] [--out-format=<format>]
+    pdb_eda (<pdbid> <out-file>) [--radii-param=<paramfile>] [--symmetry-atoms]
+
+Options:
+    -h, --help                      Show this screen.
+    --version                       Show version.
+    <pdbid>                         The PDB id
+    <out-file>                      Output file name
+    --radii-param=<paramfile>       Radii parameters. [default: ../conf/optimized_radii_slope_param.json]
+    --atom                          Aggregate and print results by atom
+    --residue                       Aggregate and print results by residue
+    --chain                         Aggregate and print results by chain
+    --green                         Calculate and print results of all green blobs (positive difference electron density)
+    --red                           Calculate and print results of all red blobs (negative difference electron density)
+    --all                           Calculate and print results of both green and red blobs (positive and negative difference electron density)
+    --stats                         If set true, return green or red blobs' statistics instead of blob object lists.
+    --out-format=<format>           Onput file format, available formats: csv, json [default: json].
+    --symmetry-atoms                Calculate and print results of all symmetry atoms. (Only available in jason format)
+"""
+
+import jsonpickle
 from . import densityAnalysis
 
 ## Final set of radii derived from optimization
@@ -19,22 +42,46 @@ slopesDefault = {'C_single': -0.33373359301010996, 'C_double': -0.79742538209281
                 'S_single': -0.82192528851026947}
 
 
-def main(pdbidfile, pdbid, resultname):
-    '''
-    Mode: 0 - use optimized radii
-          1 - use original radii
-    '''
+def fromPDBid(args):
+    pdbid = args["<pdbid>"]
+    filename = args["<out-file>"]
+    #if not args["<radii-param>"]:
+    #    pass
+
     analyser = densityAnalysis.fromPDBid(pdbid)
-    analyser.aggregateCloud(radiiDefault, slopesDefault, atomList=True)
+    result = []
+    if args["--atom"] or args["--residue"] or args["--chain"]:
+        analyser.aggregateCloud(radiiDefault, slopesDefault, atomL=True, residueL=True, chainL=True)
+        if args["--atom"]:
+            for item in analyser.atomList.values.tolist():
+                result.append(','.join(map(str, item + [analyser.chainMedian])))
+        if args["--residue"]:
+            for item in analyser.residueList:
+                result.append(','.join(map(str, item + [analyser.chainMedian])))
+        if args["--chain"]:
+            for item in analyser.chainList:
+                result.append(','.join(map(str, item + [analyser.chainMedian])))
 
-    fileHandle = open(resultname, 'w')
-    for item in analyser.atomList:
-        print(', '.join(map(str, item + [analyser.chainMedian])), file=fileHandle)
+    if args["--green"] or args["--red"] or args["--all"]:
+        if args["--stats"]:
+            result = analyser.calcAtomBlobDists()
+        else:
+            analyser.getBlobList()
+            if args["--green"]:
+                result = analyser.greenBlobList
+            if args["--red"]:
+                result = analyser.redBlobList
+            if args["--all"]:
+                result = analyser.greenBlobList + analyser.redBlobList
 
-if __name__ == '__main__':
-    if len(sys.argv) == 3:
-        _, pdbid, resultname = sys.argv
-        main(filename, pdbid, resultname)
-    else:
-        print("Wrong number of arguments!")
 
+    if args["--symmetry-atoms"]:
+        analyser.calcSymmetryAtoms()
+        result = analyser.symmetryAtoms
+
+    with open(filename, 'w') as fh:
+        if args["--out-format"] == 'json':
+            result = jsonpickle.encode(result)
+            fh.write(result)
+        else:
+            print(*result, sep='\n', file=fh)
