@@ -46,7 +46,7 @@ pdbfolder = './pdb_data/'
 
 def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, downloadFile=True):
     """
-    Creates :class:'pdb_eda.densityAnalysis.DensityAnalysis' object given the PDB id if the id is valid
+    Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
     and the structure has electron density file available
 
     :param str pdbid: PDB id
@@ -428,7 +428,7 @@ class DensityAnalysis(object):
 
     def getBlobList(self, diffDensityObj=None, recalculate=False):
         """
-        Aggregate and calculate all positive (green) and negative (red) difference density blobs,
+        Aggregate the difference density map into positive (green) and negative (red) blobs,
         and assign to `densityAnalysis.redBlobList` and `densityAnalysis.greenBlobList`
 
         :param diffDensityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object

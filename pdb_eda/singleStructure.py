@@ -18,6 +18,12 @@ def main(args):
 
     analyser = densityAnalysis.fromPDBid(pdbid)
     result = []
+    if args["--density-map"]:
+        result = analyser.densityObj
+    elif args["--diff-density-map"]:
+        result = analyser.diffDensityObj
+
+
     if args["--atom"] or args["--residue"] or args["--chain"]:
         analyser.aggregateCloud(radii, slopes, atomL=True, residueL=True, chainL=True)
         if args["--atom"]:

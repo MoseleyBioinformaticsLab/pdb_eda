@@ -6,6 +6,7 @@ pdb_eda command-line interface
 Usage:
     pdb_eda -h | --help
     pdb_eda --version
+    pdb_eda single <pdbid> <out-file> [--density-map | --diff-density-map]
     pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--atom] [--residue] [--chain] [--out-format=<format>]
     pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--green | --red | --all] [--stats] [--out-format=<format>]
     pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--symmetry-atoms]
@@ -47,5 +48,4 @@ def main(args):
 
 if __name__ == "__main__":
     args = docopt.docopt(__doc__, version=__version__)
-    print(args)
     main(args)
