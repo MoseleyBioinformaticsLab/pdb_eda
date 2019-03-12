@@ -108,7 +108,7 @@ class PDBheader:
     def __init__(self, PDBid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats):
         """:class:`pdb_eda.pdbParser.PDBheader` initializer.
 
-        :param str pdbid: PDB id.
+        :param str pdbid: PDB id.:param str pdbid: PDB id.
         :param str date: PDB structure publish date.
         :param str method: Experiment method, i.e. X-ray, NMR, etc.
         :param float resolution: Structure resolution if applicable.

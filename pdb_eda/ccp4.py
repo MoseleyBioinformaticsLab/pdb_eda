@@ -1,10 +1,12 @@
 # !/usr/bin/python3
 """
-ccp4.py
-    Reads and parses the CCP4 format binary files and returns DensityMatrix objects.
-    Format details of ccp4 can be found in http://www.ccp4.ac.uk/html/maplib.html
+CCP4 Parser (pdb_eda.ccp4)
+-------------------------------------------------------
 
+This module provides methods to read and parse the CCP4 format files and returns ccp4 objects.
+Format details of ccp4 can be found in http://www.ccp4.ac.uk/html/maplib.html
 """
+
 import warnings
 import struct
 #import statistics
@@ -18,7 +20,8 @@ urlSuffix = ".ccp4"
 
 
 def readFromPDBID(pdbid, verbose=False):
-    """RETURNS DensityMatrix object given the PARAMETER pdbid.
+    """
+    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
 
     :param str pdbid: PDB id.
     """
@@ -26,7 +29,11 @@ def readFromPDBID(pdbid, verbose=False):
 
 
 def readFromURL(url, pdbid=None, verbose=False):
-    """RETURNS DensityMatrix object given the PARAMETER url."""
+    """
+    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
+
+    :param str url: url.
+    """
     if not pdbid:
         pdbid = url
     with urllib.request.urlopen(url) as urlHandle:
@@ -34,7 +41,11 @@ def readFromURL(url, pdbid=None, verbose=False):
 
 
 def read(ccp4Filename, pdbid=None, verbose=False):
-    """RETURNS DensityMatrix object given the PARAMETER fileName."""
+    """
+    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
+
+    :param str ccp4Filename: .ccp4 filename including path.
+    """
     if not pdbid:
         pdbid = ccp4Filename
     with open(ccp4Filename, "rb") as fileHandle:
@@ -42,7 +53,11 @@ def read(ccp4Filename, pdbid=None, verbose=False):
 
 
 def parse(handle, pdbid, verbose=False):
-    """RETURNS DensityMatrix object given the PARAMETER file handle."""
+    """
+    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
+
+    :param handle: a file handle of .ccp4 file.
+    """
     header = DensityHeader.fromFileHeader(handle.read(1024))
     endian = header.endian
     dataBuffer = handle.read()
@@ -91,9 +106,15 @@ def parse(handle, pdbid, verbose=False):
 
 
 class DensityHeader(object):
+    """:class:`pdb_eda.ccp4.DensityHeader` that stores information about ccp4 header."""
+
     @classmethod
     def fromFileHeader(cls, fileHeader):
-        """RETURNS DensityHeader object given the PARAMETER fileHeader."""
+        """RETURNS :class:`pdb_eda.ccp4.DensityHeader` object given the fileHeader.
+
+        :param fileHeader: ccp4 file header.
+        :type fileHeader: binary header section of a ccp4 file
+        """
 
         # Test for endianness
         mode = int.from_bytes(fileHeader[12:16], byteorder='little')
@@ -111,34 +132,30 @@ class DensityHeader(object):
 
     def __init__(self, headerTuple, labels, endian):
         """
-        Initialize the DensityHeader object, name data members accordingly and calculate some metric that will be used frequently
-        PARAMS
-            :param headerTuple: The ccp4 header information (excluding labels) in a tuple
-            :param labels: The labels field in a ccp4 header.
-            :param endian: the endianness of the file
-        RETURNS
-            DensityHeader object
+        Initialize the :class:`pdb_eda.ccp4.DensityHeader` object, assign values to data members accordingly and calculate some metrics that will be used frequently
+
+        :param headerTuple: The ccp4 header information (excluding labels) in a tuple
+        :param labels: The labels field in a ccp4 header.
+        :param endian: the endianness of the file
         """
         self.ncrs = headerTuple[0:3]
-        """
-        Number of Columns    (fastest changing in map)
-        Number of Rows
-        Number of Sections   (slowest changing in map)
-        """
+        #Number of Columns    (fastest changing in map)
+        #Number of Rows
+        #Number of Sections   (slowest changing in map)
+
         self.mode = headerTuple[3]
         self.endian = endian
-        """
-        Data type
-            0 = envelope stored as signed bytes (from -128 lowest to 127 highest)
-            1 = Image     stored as Integer*2
-            2 = Image     stored as Reals
-            3 = Transform stored as Complex Integer*2
-            4 = Transform stored as Complex Reals
-            5 == 0
+        #Data type
+        #    0 = envelope stored as signed bytes (from -128 lowest to 127 highest)
+        #    1 = Image     stored as Integer*2
+        #    2 = Image     stored as Reals
+        #    3 = Transform stored as Complex Integer*2
+        #    4 = Transform stored as Complex Reals
+        #    5 == 0
 
-            Note: Mode 2 is the normal mode used in the CCP4 programs. Other modes than 2 and 0
-                may NOT WORK
-        """
+        #    Note: Mode 2 is the normal mode used in the CCP4 programs. Other modes than 2 and 0
+        #        may NOT WORK
+
         self.crsStart = headerTuple[4:7]  # Number of first COLUMN, ROW, and SECTION in map
         self.nintervalX = headerTuple[7]  # Number of intervals along X
         self.nintervalY = headerTuple[8]  # Number of intervals along Y
@@ -160,23 +177,18 @@ class DensityHeader(object):
         self.skewFlag = headerTuple[24]  # Flag for skew transformation, =0 none, =1 if foll
         self.skewMat = headerTuple[25:34]  # Skew matrix S (in order S11, S12, S13, S21 etc) if LSKFLG .ne. 0.
         self.skewTrans = headerTuple[34:37]
-        """
-        Skew translation t if LSKFLG .ne. 0.
-                    Skew transformation is from standard orthogonal
-                    coordinate frame (as used for atoms) to orthogonal
-                    map frame, as: Xo(map) = S * (Xo(atoms) - t)
-        """
+        #Skew translation t if LSKFLG .ne. 0.
+        #            Skew transformation is from standard orthogonal
+        #            coordinate frame (as used for atoms) to orthogonal
+        #            map frame, as: Xo(map) = S * (Xo(atoms) - t)
+
         self.futureUse = headerTuple[37:49]
-        """
-        (some of these are used by the MSUBSX routines in MAPBRICK, MAPCONT and
-        FRODO) (all set to zero by default)
-        """
+        #(some of these are used by the MSUBSX routines in MAPBRICK, MAPCONT and FRODO) (all set to zero by default)
         self.originEM = headerTuple[49:52]
-        """
-        Use ORIGIN records rather than old crsStart records as in http://www2.mrc-lmb.cam.ac.uk/image2000.html
-        The ORIGIN field is only used by the EM community, and has undefined meaning for non-orthogonal maps and/or
-        non-cubic voxels, etc.
-        """
+        #Use ORIGIN records rather than old crsStart records as in http://www2.mrc-lmb.cam.ac.uk/image2000.html
+        #The ORIGIN field is only used by the EM community, and has undefined meaning for non-orthogonal maps and/or
+        #non-cubic voxels, etc.
+
         self.mapChar = headerTuple[52:56]  # Character string 'MAP ' to identify file type
         self.machineStamp = headerTuple[56]  # Machine stamp indicating the machine type which wrote file
         self.rmsd = headerTuple[57]  # Rms deviation of map from mean density
@@ -210,12 +222,11 @@ class DensityHeader(object):
         self.deOrthoMat = np.linalg.inv(self.orthoMat)
         self.deOrthoMat[abs(self.deOrthoMat) < 1e-10] = 0.0
 
-        """
-        self.deOrthoMat = [[1/self.xlength, - np.cos(gamma) / np.sin(gamma) / self.xlength,
-                            (np.cos(gamma) * (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma) - np.cos(beta) * np.sin(gamma)) / self.xlength / temp],
-                           [0, 1/np.sin(gamma)/self.ylength, - (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma) / self.ylength / temp],
-                           [0, 0, np.sin(gamma) / self.zlength / temp]]
-        """
+        #self.deOrthoMat = [[1/self.xlength, - np.cos(gamma) / np.sin(gamma) / self.xlength,
+        #                    (np.cos(gamma) * (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma) - np.cos(beta) * np.sin(gamma)) / self.xlength / temp],
+        #                   [0, 1/np.sin(gamma)/self.ylength, - (np.cos(alpha) - np.cos(beta) * np.cos(gamma)) / np.sin(gamma) / self.ylength / temp],
+        #                   [0, 0, np.sin(gamma) / self.zlength / temp]]
+
         self.origin = self._calculateOrigin()
 
         ncrs = [i for i in self.ncrs]
@@ -230,7 +241,10 @@ class DensityHeader(object):
 
     def _calculateOrigin(self):
         """
-        Calculate and RETURNS the xyz coordinates from the header information with no extra PARAMETER
+        Calculate the xyz coordinates from the header information.
+
+        :return: xyz coordinates
+        :rtype: A :py:obj:`list` of :py:obj:`float`
         """
         # Orthogonalization matrix for calculation between fractional coordinates and orthogonal coordinates
         # Formula based on 'Biomolecular Crystallography' by Bernhard Rupp, p233
@@ -245,11 +259,14 @@ class DensityHeader(object):
 
     def xyz2crsCoord(self, xyzCoord):
         """
-        Convert the xyz coordinates into crs coordinates
-        PARAMS
-            xyzCoord: xyz coordinates
-        RETURNS
-            crs coordinates
+        Convert the xyz coordinates into crs coordinates.
+
+
+        :param xyzCoord: xyz coordinates
+        :type xyzCoord: A :py:obj:`list` of :py:obj:`float`
+
+        :return: crs coordinates
+        :rtype: A :py:obj:`list` of :py:obj:`int`
         """
         if self.alpha == self.beta == self.gamma == 90:
             crsGridPos = [int(round((xyzCoord[i] - self.origin[i]) / self.gridLength[i])) for i in range(3)]
@@ -260,11 +277,13 @@ class DensityHeader(object):
 
     def crs2xyzCoord(self, crsCoord):
         """
-        Convert the crs coordinates into xyz coordinates
-        PARAMS
-            crsCoord: crs coordinates
-        RETURNS
-            xyz coordinates
+        Convert the crs coordinates into xyz coordinates.
+
+        :param crsCoord: crs coordinates
+        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
+
+        :return: xyz coordinates
+        :rtype: A :py:obj:`list` of :py:obj:`float`
         """
         if self.alpha == self.beta == self.gamma == 90:
             return [crsCoord[self.map2xyz[i]] * self.gridLength[i] + self.origin[i] for i in range(3)]
@@ -273,16 +292,16 @@ class DensityHeader(object):
 
 
 class DensityMatrix:
+    """:class:`pdb_eda.ccp4.DensityMatrix` that stores data and methods of a ccp4 file."""
+
     def __init__(self, header, origin, density, pdbid):
         """
-        Initialize a DensityMatrix object
+        Initialize the :class:`pdb_eda.ccp4.DensityMatrix` object.
 
-        :param str header: the DensityHeader object of the density matrix
+        :param header: the :class:`pdb_eda.ccp4.DensityHeader` object of the density matrix
         :param origin: the xyz coordinates of the origin of the first number of the density data
         :param density: the density data as a 1-d list
-        :return: DensityMatrix object
-        :rtype: :py:class:`str`
-
+        :return: :class:`pdb_eda.ccp4.DensityMatrix` object
         """
         self.pdbid = pdbid
         self.header = header
@@ -292,7 +311,12 @@ class DensityMatrix:
 
 
     def validCRS(self, crsCoord):
-        """Check if the crs coordinate is valid (within the range of data) given PARAMETER crs coordinate"""
+        """
+        Check if the crs coordinate is valid (within the range of data).
+
+        :param crsCoord: crs coordinates
+        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
+        """
         for ind in range(3):
             crsInterval = self.header.xyzInterval[self.header.map2crs[ind]]
 
@@ -306,7 +330,12 @@ class DensityMatrix:
         return True
 
     def getPointDensityFromCrs(self, crsCoord):
-        """RETURNS the density of a point given PARAMETER crs coordinate"""
+        """
+        Get the density of a point
+
+        :param crsCoord: crs coordinates
+        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
+        """
         if not self.validCRS(crsCoord):
             # message = "No data available in " + str(ind + 1) + " axis"
             # warnings.warn(message)
@@ -315,7 +344,12 @@ class DensityMatrix:
         return self.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
     def getPointDensityFromXyz(self, xyzCoord):
-        """RETURNS the density of a point given PARAMETER xyz coordinate"""
+        """
+        Get the density of a point
+
+        :param xyzCoord: xyz coordinates
+        :type xyzCoord: A :py:obj:`list` of :py:obj:`float`
+        """
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
         # print("crs grid: ", crsCoord)
 
@@ -323,15 +357,17 @@ class DensityMatrix:
 
     def getSphereCrsFromXyz(self, xyzCoord, radius, densityCutoff=0):
         """
-        RETURNS
-            A list of crs coordinates that meet all criteria given
-        PARAMS
-            xyzCoord: xyz coordinates
-            radius: the radius
-            densityCutoff: a density cutoff for all the points wants to be included.
-                    Default 0 means include every point within the radius.
-                    If cutoff < 0, include only points with density < cutoff.
-                    If cutoff > 0, include only points with density > cutoff.
+        Calculate a list of crs coordinates that within a given distance of a point.
+
+        :param xyzCoord: xyz coordinates
+        :type xyzCoord: A :py:obj:`list` of :py:obj:`float`
+        :param float radius: the radius
+        :param  float densityCutoff: a density cutoff for all the points wants to be included.
+                Default 0 means include every point within the radius.
+                If cutoff < 0, include only points with density < cutoff.
+                If cutoff > 0, include only points with density > cutoff.
+
+        :return: A :py:obj:`list` of crs coordinates
         """
         crsCoord = self.header.xyz2crsCoord(xyzCoord)
         crsRadius = self.header.xyz2crsCoord(self.origin + [radius, radius, radius])
@@ -358,14 +394,15 @@ class DensityMatrix:
 
     def getTotalDensityFromXyz(self, xyzCoord, radius, densityCutoff=0):
         """
-        RETURNS a total density given
-        PARAMS
-            xyzCoord: xyz coordinates
-            radius: the radius
-            densityCutoff: a density cutoff for all the points wants to be included.
-                    Default 0 means include every point within the radius.
-                    If cutoff < 0, include only points with density < cutoff.
-                    If cutoff > 0, include only points with density > cutoff.
+        Calculate the total density of a sphere.
+
+        :param xyzCoord: xyz coordinates
+        :type xyzCoord: A :py:obj:`list` of xyz coordinates
+        :param float radius: the radius
+        :param float densityCutoff: a density cutoff for all the points wants to be included.
+                Default 0 means include every point within the radius.
+                If cutoff < 0, include only points with density < cutoff.
+                If cutoff > 0, include only points with density > cutoff.
         """
         crsCoordList = self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)
 
@@ -377,16 +414,18 @@ class DensityMatrix:
 
     def findAberrantBlobs(self, xyzCoord, radius, densityCutoff=0):
         """
-        Within given range, find and aggregates all neighbouring aberrant points into blobs (red/green meshes) and
-        RETURNS
-            a list of aberrant blobs described by their xyz centroid, total density, and volume.
-        PARAMS
-             xyzCoord: the xyz coordinates of a center
-             radius: the radius
-             densityCutoff: a density cutoff for all the points wants to be included.
-                    Default 0 means include every point within the radius.
-                    If cutoff < 0, include only points with density < cutoff.
-                    If cutoff > 0, include only points with density > cutoff.
+        Within a given range, find and aggregate all neighbouring aberrant points into blobs (red/green meshes) and
+
+        :param xyzCoord: xyz coordinates
+        :type xyzCoord: A :py:obj:`list` of xyz coordinates
+        :param float radius: the radius
+        :param float densityCutoff: A density cutoff for all the points wants to be included.
+                Default 0 means include every point within the radius.
+                If cutoff < 0, include only points with density < cutoff.
+                If cutoff > 0, include only points with density > cutoff.
+
+        :return: A list of aberrant blobs described by their xyz centroid, total density, and volume.
+        :rtype: A :py:obj:`list` of :class:`pdb_eda.ccp4.DensityBlob` object
         """
         crsCoordList = self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)
 
@@ -413,17 +452,19 @@ class DensityMatrix:
 
 
 class DensityBlob:
+    """:class:`pdb_eda.ccp4.DensityBlob` that stores data and methods of a electron density blob."""
+
     def __init__(self, centroid, coordCenter, totalDensity, volume, crsList, header, densityMatrix):
         """
-        Initialize a DensityBlob object
-        PARAMS
-            :param centroid: the centroid of the blob
-            :param totalDensity: the totalDensity of the blob
-            :param volume: the volume of the blob, number of density units * unit volumes
-            :param crsList: the crs list of the blob
-            :param header: the header of the ccp4 file
-        RETURNs
-            DensityBlob object
+        Initialize a :class:`pdb_eda.ccp4.DensityBlob` object
+
+        :param centroid: the centroid of the blob
+        :param totalDensity: the totalDensity of the blob
+        :param volume: the volume of the blob, number of density units * unit volumes
+        :param crsList: the crs list of the blob
+        :param header: the header of the ccp4 file
+
+        :return: A :class:`pdb_eda.ccp4.DensityBlob` object
         """
         self.centroid = centroid
         self.coordCenter = coordCenter
@@ -439,13 +480,13 @@ class DensityBlob:
     @staticmethod
     def fromCrsList(crsList, header, densityMatrix):
         """
-        The creator of a DensityBlob object
-        PARAMS
-            crsList: the crs list of the blob
-            header: the header of the ccp4 file
-            densityMat: the 3-d density matrix that just passed in for calculating centroid etc, so the object does not have to have a density list data member
-        RETURNS
-            DensityBlob object
+        The creator of a A :class:`pdb_eda.ccp4.DensityBlob` object.
+
+        :param crsList: the crs list of the blob
+        :param header: the header of the ccp4 file
+        :param densityMat: the 3-d density matrix that just passed in for calculating centroid etc, so the object does not have to have a density list data member
+
+        :return: A :class:`pdb_eda.ccp4.DensityBlob` object
         """
         weights = [0, 0, 0]
         totalDen = 0
@@ -461,20 +502,24 @@ class DensityBlob:
         return DensityBlob(centroidXYZ, coordCenter, totalDen, header.unitVolume * len(crsList), crsList, header, densityMatrix)
 
 
-    def __eq__(self, other):
+    def __eq__(self, otherBlob):
         """
-        OVERRIDE the '==' operator of DensityBlob object
+        Check if two blobs are the same, and overwrite the '==' operator for the :class:`pdb_eda.ccp4.DensityBlob` object.
+
+        :param otherBlob: A :class:`pdb_eda.ccp4.DensityBlob` object
         """
-        if abs(self.volume - other.volume) >= 1e-6: return False
-        if abs(self.totalDensity - other.totalDensity) >= 1e-6: return False
+        if abs(self.volume - otherBlob.volume) >= 1e-6: return False
+        if abs(self.totalDensity - otherBlob.totalDensity) >= 1e-6: return False
         for i in range(0, 3):
-            if abs(self.centroid[i] - other.centroid[i]) >= 1e-6: return False
+            if abs(self.centroid[i] - otherBlob.centroid[i]) >= 1e-6: return False
 
         return True
 
     def testOverlap(self, otherBlob):
         """
-        RETURN true if two blobs overlaps or right next to each other
+        Check if two blobs overlaps or right next to each other
+
+        :return: :py:obj:`True` or :py:obj:`False`
         """
         #if any(x in self.crsList for x in otherBlob.crsList):
         #    return True
@@ -486,7 +531,10 @@ class DensityBlob:
 
     def merge(self, otherBlob):
         """
-        UPDATE the original blob given PARAM another blob
+        Merge the given blob into the original blob
+
+        :param otherBlob: A :class:`pdb_eda.ccp4.DensityBlob` object
+        :return: :py:obj:`None`
         """
         combinedList = self.crsList + [x for x in otherBlob.crsList if x not in self.crsList]
         atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]

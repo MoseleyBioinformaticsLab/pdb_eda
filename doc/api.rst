@@ -27,10 +27,3 @@ PDB Parser
    :special-members:
    :private-members:
 
-Structure Validation Statistics
--------------------------------
-.. automodule:: pdb_eda.validationStats
-   :member-order: bysource
-   :members:
-   :special-members:
-   :private-members:

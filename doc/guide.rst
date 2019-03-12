@@ -59,25 +59,29 @@ Basic usage
 -----------
 The :mod:`pdb_eda` package can be used in several ways:
 
-   * As a library for accessing and manipulating data in PDB or CCP4 format files.
+    * As a library for accessing and manipulating data in PDB and CCP4 format files.
 
-      * Create the :class:`~pdb_eda.densityAnalysis.fromPDBid` generator function that will generate
-        (yield) single :class:`~pdb_eda.densityAnalysis` instance at a time.
+        * Use the :class:`~pdb_eda.densityAnalysis.fromPDBid` generator function that will generate
+          (yield) single :class:`~pdb_eda.densityAnalysis` instance at a time.
 
-      * Process each :class:`~pdb_eda.densityAnalysis` instance:
+        * Process each :class:`~pdb_eda.densityAnalysis` instance:
 
-         * Generate symmetry atoms.
-         * Generate red (negative density) or green (positive density) blob lists.
-         * Process PDB structures to aggregate cloud.
-         * Calculate atom blob list and statistics.
+        * Generate symmetry atoms.
+        * Generate red (negative density) or green (positive density) blob lists.
+        * Process PDB structures to aggregate cloud.
+        * Calculate atom blob list and statistics.
 
-   * As a command-line tool:
+    * As a command-line tool:
 
-      * Calculate statistics of a single PDB structure.
-      * Calculate aggregated statistics of multiple PDB structures.
+        * For single-structure mode:
+            * Convert electron density map CCP4 files into its equivalent JSON file format.
+            * Aggregate electron density map by atom, residue, and chain, and return the results in either JSON or csv format.
+            * Aggregate difference electron density map into green (positive) or red (negative) blobs,
+              and return the object or statistics results in either JSON or csv format.
+            * Return a list of all symmetry atom from PDB files
 
-
-
+        * For multiple-structure mode:
+            * Return the statistics of a given pdb id list
 
 
 .. _PDB: https://www.wwpdb.org/

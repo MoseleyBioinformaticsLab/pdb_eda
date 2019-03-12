@@ -1,22 +1,19 @@
+import os
 import sys
-import math
+import json
 import numpy as np
 import multiprocessing
 import datetime
-from scipy import stats
 
 from . import densityAnalysis
 
 ## Radii and slopes from an intial analysis on 100 structures
-radiiDefault = {'C_single': 0.84, 'C_double': 0.66, 'C_intermediate': 0.70, 'C_single_bb': 0.69, 'C_double_bb': 0.61, 
-                'O_single': 0.80, 'O_double': 0.77, 'O_intermediate': 0.82, 'O_double_bb': 0.71,
-                'N_single': 0.90, 'N_intermediate': 0.75, 'N_single_bb': 0.69,
-                'S_single': 0.75}
+radiiParamPath = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')
+with open(radiiParamPath, 'r') as fh:
+    radiiParams = json.load(fh)
 
-slopesDefault = {'C_double': -0.6538044, 'C_double_bb': -0.4626215, 'C_intermediate': -0.4494971, 'C_single': -0.3387809, 'C_single_bb': -0.3808402,
-                'N_intermediate': -0.5541342, 'N_single': -0.4889789, 'N_single_bb': -0.5110914,
-                'O_double': -0.7432083, 'O_double_bb': -0.6818212, 'O_intermediate': -0.7026091, 'O_single': -0.7070469,
-                'S_single': -0.8644369}
+radiiDefault = radiiParams['radii']
+slopesDefault = radiiParams['slopes']
 
 def processFunction(pdbid, radii, slopes):
     analyser = densityAnalysis.fromPDBid(pdbid)
