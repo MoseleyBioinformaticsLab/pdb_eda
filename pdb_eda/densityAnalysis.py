@@ -25,17 +25,18 @@ from . import validationStats
 
 ## Data originally from https://arxiv.org/pdf/0804.2488.pdf
 radiiParamPath = os.path.join(os.path.dirname(__file__), 'conf/original_radii_slope_param.json')
-electParamPath = os.path.join(os.path.dirname(__file__), 'conf/atom_type_electron_param.json')
+electronParamPath = os.path.join(os.path.dirname(__file__), 'conf/atom_type_electron_param.json')
 
 with open(radiiParamPath, 'r') as fh:
     radiiParams = json.load(fh)
-with open(electParamPath, 'r') as fh:
+with open(electronParamPath, 'r') as fh:
     electronParams = json.load(fh)
 
 radiiDefault = radiiParams['radii']
 slopesDefault = radiiParams['slopes']
-elementElectron = electronParams['elementElectron']
-electrons = electronParams['electrons']
+elementElectrons = electronParams['elementElectrons']
+aaElectrons = electronParams['aaElectrons']
+electrons = electronParams['atomTypeElectrons']
 atomType = electronParams['atomType']
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
@@ -168,6 +169,9 @@ class DensityAnalysis(object):
         self.residueList = None
         self.chainList = None
         self.statistics = None
+        self.f000 = None
+        self.chainNvoxel = None
+        self.chainTotalE = None
 
 
     def validation(self, densityObj=None, diffDensityObj=None, biopdbObj=None, recalculate=False):
@@ -268,7 +272,7 @@ class DensityAnalysis(object):
                     aCloud.atoms = [atom]
                 residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
 
-                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestAtomCloud.totalDensity / electrons[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
+                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestAtomCloud.totalDensity / electrons[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), electrons[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
             ## End atom loop
 
             ## Group connected residue density clouds together from individual atom clouds
@@ -305,7 +309,7 @@ class DensityAnalysis(object):
                         residueDict[residue.resname] = [cloud]
 
                     totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
-                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectron, len(cloud.crsList)])
+                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
         ## End residue
@@ -340,7 +344,7 @@ class DensityAnalysis(object):
                 continue
             atom = cloud.atoms[0]
             totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
-            chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList)])
+            chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron])
             chainAvgDensity.append(cloud.totalDensity / totalElectron)
 
         if len(chainAvgDensity) == 0:
@@ -348,10 +352,19 @@ class DensityAnalysis(object):
                 if len(atomList) == 0:
                     return 0
                 else:
+                    atomList.sort(key=lambda x: x[5])
+                    nVoxel = atomList[len(atomList) // 2][6]
+                    totalE = atomList[len(atomList) // 2][7]
                     chainMedian = np.median([x[5] for x in atomList])
             else:
+                residueList.sort(key=lambda x: x[3])
+                nVoxel = residueList[len(residueList) // 2][4]
+                totalE = residueList[len(residueList) // 2][5]
                 chainMedian = np.median([x[3] for x in residueList])
         else:
+            chainList.sort(key=lambda x: x[3])
+            nVoxel = chainList[len(chainList)//2][4]
+            totalE = chainList[len(chainList)//2][5]
             chainMedian = np.median(chainAvgDensity)
 
         # normalize the density by median volume of given atom type
@@ -377,7 +390,7 @@ class DensityAnalysis(object):
                 medianBfactor.index == row['atomType']])).values * slopes.loc[slopes.index == row['atomType']].values)[0,0]
 
         try:
-            atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density', 'volume', 'bfactor', 'centroidDist'])
+            atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density', 'volume', 'electrons', 'bfactor', 'centroidDist'])
             centroidCutoff = atoms['centroidDist'].median() + atoms['centroidDist'].std() * 2
             atoms = atoms[atoms['centroidDist'] < centroidCutoff]  # leave out the atoms that the centroid and atom coordinates are too far away
             medians = atoms.groupby(['atomType']).median()
@@ -400,23 +413,9 @@ class DensityAnalysis(object):
         except:
             return 0
 
-        '''
-        medianAdjDen = []
-        bfactors = []
-        for key in sorted(radii.keys()):
-            try:
-                medianAdjDen.append(medians['adjDensity'][key])
-            except:
-                medianAdjDen.append(np.nan)
-
-            ## b factors calculation
-            try:
-                bfactors.append(medians['bfactor'][key])
-            except:
-                bfactors.append(np.nan)
-        '''
-
         self.chainMedian = chainMedian
+        self.chainNvoxel = nVoxel
+        self.chainTotalE = totalE
         self.medians = medians
         if atomL:
             self.atomList = atoms
@@ -597,6 +596,48 @@ class DensityAnalysis(object):
             diffMapStats.append([dists.min(), sign, abs(blob.totalDensity / chainMedian), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
 
         return diffMapStats
+
+
+    def estimateF000(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
+        """
+        Estimate the F000 term as sum of all electrons over the unit cell volume
+
+        :param densityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object
+        :param biopdbObj: :py:obj:`None` in default unless passed in of `bio.PDB` object
+        :param pdbObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.pdbParser.PDBentry` object
+        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist, default as False
+        :type recalculate: :py:obj:`True` or :py:obj:`False`
+
+        :return: :py:obj:`None`
+        """
+
+        if self.f000 and not recalculate:
+            return None
+
+        if not densityObj:
+            densityObj = self.densityObj
+        if not biopdbObj:
+            biopdbObj = self.biopdbObj
+        if not pdbObj:
+            pdbObj = self.pdbObj
+
+        if not self.f000 or recalculate:
+            pass
+
+        totalElectrons = 0
+        for residue in list(biopdbObj.get_residues()):
+            if residue.resname in aaElectrons.keys():
+                totalElectrons += aaElectrons[residue.resname]
+            else:
+                for atom in list(residue.get_atoms()):
+                    if atom.name in elementElectrons.keys():
+                        totalElectrons += elementElectrons[atom.name]
+                totalElectrons += len(list(residue.get_atoms()))  # Add an estimate number of H
+
+        totalElectrons *= len(pdbObj.header.rotationMats)
+        asuVolume = densityObj.header.unitVolume * densityObj.header.nintervalX * densityObj.header.nintervalY * densityObj.header.nintervalZ
+
+        self.f000 = totalElectrons/asuVolume
 
 
 class symAtom:

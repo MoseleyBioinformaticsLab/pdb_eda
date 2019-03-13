@@ -24,6 +24,7 @@ def processFunction(pdbid, radii, slopes):
             return 0 
 
     analyser.aggregateCloud(radii, slopes)
+    analyser.estimateF000()
     if not analyser.chainMedian:
         return 0
 
@@ -31,9 +32,10 @@ def processFunction(pdbid, radii, slopes):
     for atomType in sorted(radiiDefault):
         diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
         diffs.append(diff)
-    stats = [analyser.pdbid, analyser.chainMedian, analyser.pdbObj.header.resolution, analyser.pdbObj.header.spaceGroup]
+    stats = [analyser.pdbid, analyser.chainMedian, analyser.densityObj.header.unitVolume, analyser.f000, analyser.chainNvoxel, analyser.chainTotalE,
+             analyser.densityObj.header.densityMean, analyser.diffDensityObj.header.densityMean, analyser.pdbObj.header.resolution, analyser.pdbObj.header.spaceGroup]
 
-    globalTempFile.write("%s\n" % ', '.join([str(i) for i in stats + diffs]))
+    globalTempFile.write("%s\n" % ','.join([str(i) for i in stats + diffs]))
     return globalTempFile.name
 
 def openTemporaryFile(temp):
@@ -79,6 +81,7 @@ def main(args):
         print("Unclosed Files: ", unclosed_filenames)
 
     with open(resultFile, "w") as outfile:
+        print(*['pdbid', 'chainMedian', 'voxelVolume', 'f000', 'chainNvoxel', 'chainTotalE', 'densityMean', 'diffDensityMean', 'resolution', 'spaceGroup'] + sorted(radiiDefault), sep=',', file =outfile)
         for f in result_filenames:
             if f:
                 with open(f, "r") as infile:
