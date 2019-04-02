@@ -27,6 +27,7 @@ def main(args):
     if args["--atom"] or args["--residue"] or args["--chain"]:
         analyser.aggregateCloud(radii, slopes, atomL=True, residueL=True, chainL=True)
         if args["--atom"]:
+            result.append(','.join(map(str, list(analyser.atomList) + ['chainMedian'])))
             for item in analyser.atomList.values.tolist():
                 result.append(','.join(map(str, item + [analyser.chainMedian])))
         if args["--residue"]:
