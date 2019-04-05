@@ -1,7 +1,6 @@
-numpy
-scipy
-pandas
-Bio.PDB
-docopt
-json
-jsonpickle
+biopython >= 1.73
+docopt >= 0.6.2
+jsonpickle >= 1.1
+numpy >= 1.16.2
+pandas >= 0.24.1
+scipy >= 1.2.1
