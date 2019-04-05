@@ -1,6 +1,11 @@
 pdb-eda
 ==========
 
+.. image:: https://raw.githubusercontent.com/MoseleyBioinformaticsLab/pdb_eda/master/docs/_static/images/pdb_eda_logo.png
+   :width: 50%
+   :align: center
+   :target: https://pdb-eda.readthedocs.io/
+
 Description
 -----------
 The `pdb_eda` package provides a simple Python tool for parsing and analyzing electron density maps data
@@ -12,6 +17,7 @@ The `pdb_eda` package currently provides facilities that can:
     * Analyze the electron density maps on atom/residue/chain level and
       interpret the electron densities in terms of number of electrons.
 
+Full API documentation, user guide, and tutorial can be found on readthedocs_
 
 Installation
 ------------
@@ -79,7 +85,7 @@ The `pdb_eda` package can be used in several ways:
 
 
 
-
+.. _readthedocs: https://pdb-eda.readthedocs.io/en/latest/
 .. _PDB: https://www.wwpdb.org/
 .. _BioPython: https://biopython.org/
 .. _git: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git/
