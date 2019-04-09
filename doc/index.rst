@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to electronDensityAnalysis's documentation!
-===================================================
+Welcome to Protein Data Bank Electron Density Analysis (pdb-eda) documentation!
+===============================================================================
 
 .. toctree::
    :maxdepth: 3

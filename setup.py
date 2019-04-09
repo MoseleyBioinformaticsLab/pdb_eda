@@ -28,12 +28,11 @@ def find_version():
 
 REQUIRES = [
     "docopt",
-    "json",
     "jsonpickle",
     "numpy",
     "scipy",
     "pandas",
-    "Bio.PDB"
+    "biopython"
 ]
 
 
@@ -44,7 +43,7 @@ setup(
     author_email='yaosen1313@gmail.com',
     description='Methods for analyzing electron density maps in wwPDB',
     keywords='PDB, electron densiy map',
-    license='Modified Clear BSD',
+    license='Modified Clear BSD License',
     url='https://github.com/MoseleyBioinformaticsLab/pdb_eda',
     packages=find_packages(),
     platforms='any',
@@ -55,7 +54,7 @@ setup(
         'Environment :: Console',
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: Modified Clear BSD License',
+        'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
