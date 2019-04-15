@@ -2,4 +2,7 @@ include README.rst LICENSE
 include requirements.txt
 include docs/Makefile
 recursive-include docs *.rst *.txt *.py *.png
-recursive-include pdb_eda __init__.py __main__.py multipleStructures.py singleStructure.py radiiOptimize.py densityAnalysis.py pdbParser.py ccp4.py
+recursive-include pdb_eda *.py
+exclude pdb_eda/test*.py pdb_eda/calcDensity.py pdb_eda/crystalContacts.py
+include pdb_data/pdb1cbs.ent
+include ccp4_data/1cbs.ccp4 ccp4_data/1cbs_diff.ccp4

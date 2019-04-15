@@ -38,7 +38,6 @@ Make sure you have git_ installed:
 
 .. code:: bash
 
-   cd ~/
    git clone https://github.com/MoseleyBioinformaticsLab/pdb_eda.git
 
 Dependencies
