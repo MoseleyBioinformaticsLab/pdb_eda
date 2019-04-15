@@ -46,6 +46,7 @@ setup(
     license='Modified Clear BSD License',
     url='https://github.com/MoseleyBioinformaticsLab/pdb_eda',
     packages=find_packages(),
+    package_data={'pdb_eda': ['conf/*.json']},
     platforms='any',
     long_description=readme(),
     install_requires=REQUIRES,

@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to Protein Data Bank Electron Density Analysis (pdb-eda) documentation!
-===============================================================================
+===================================================
 
 .. toctree::
    :maxdepth: 3
