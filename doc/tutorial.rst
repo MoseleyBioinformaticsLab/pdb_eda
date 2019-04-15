@@ -18,9 +18,9 @@ If the :class:`pdb_eda` is installed, it can be imported::
 Constructing densityAnalsis generator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The densityAnalysis module provide the :func:`~pdb_eda.densityAnalysis.fromPDBid` generator function that
-yields :class:`~pdb_eda.densityAnalysis` instances.
-Constructing a :class:`~pdb_eda.densityAnalysis` generator is simply specify a PDB id::
+The densityAnalysis module provides the :func:`~pdb_eda.densityAnalysis.fromPDBid` generator function that
+returns :class:`~pdb_eda.densityAnalysis` instance.
+Constructing a :class:`~pdb_eda.densityAnalysis` instance only requires a PDB id::
 
     pdbid = '1cbs'
     analyser = densityAnalysis.fromPDBid(pdbid)
@@ -36,11 +36,11 @@ The PDB data can be accessed through the **biopdbObj** and **pdbObj**::
     analyser.biopdbObj
     analyser.pdbObj
 
-The **biopdbObj** contains a Biopython_ object,
-and the **pdbObj** contains a :class:`pdb_eda.pdbParser.PDBentry` object that includes some information
-that is not available in the Biopython_ object, such as space group, or rotational matrices.
+The **biopdbObj** is a Biopython_ data member instance,
+and the **pdbObj** is a :class:`pdb_eda.pdbParser.PDBentry` instance that includes some information
+that is not available in the Biopython_ instance, such as space group, or rotational matrices.
 
-The information about how to use and access data from **biopdbObj** found at Biopython_.
+The information about how to use and access data from the **biopdbObj** instance can be found at Biopython_.
 
 The header information in **pdbObj** can be accessed through *header* attribute as a data member::
 
@@ -48,12 +48,12 @@ The header information in **pdbObj** can be accessed through *header* attribute 
    spaceGroup = analyser.pdbObj.header.spaceGroup
 
 The available keys include date, method, pdbid, rFree, rValue, resolution, rotationMats, and spaceGroup.
-Atom information is optional if not running as a *lite* mode
+Atom information is optional if  running in *lite* mode.
 
 Accessing the CCP4 data
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The CCP4 data can be accessed through the **densityObj** and **diffDensityObj**::
+The CCP4 data can be accessed through the **densityObj** and **diffDensityObj** data members::
 
     analyser.densityObj
     analyser.diffDensityObj
@@ -147,7 +147,14 @@ Some of the above functionalities can be accessed as command line interface::
         --symmetry-atoms                Calculate and print results of all symmetry atoms. (Only available in jason format)
 
 The single mode will process a single PDB structure and return the desired result file default in json format.
-The multiple mode will process multiple PDB structures and return the summary statistics of difference density blobs
+The multiple mode will process multiple PDB structures and return the summary statistics of difference density blobs.
+
+A couple of examples of using the command line interface::
+   python3 -m pdb_eda single 3UBK 3ubk.txt --atom --out-format=csv
+   python3 -m pdb_eda single 3UBK 3ubk.org.txt --atom --out-format=csv --radii-param='conf/original_radii_slope_param.json'
+   python3 -m pdb_eda multiple pdbids.txt results/result.txt
+
+
 
 
 .. _PDB: https://www.wwpdb.org/

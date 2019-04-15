@@ -8,8 +8,8 @@ available from the world wide Protein Data Bank (PDB_).
 
 The :mod:`pdb_eda` package currently provides facilities that can:
     * Parse .ccp4 format file into their object representation.
-    * Parse .pdb format file to get information that complimentary to the Bio.PDB module in BioPython_ package.
-    * Analyze the electron density maps on atom/residue/chain level and
+    * Parse .pdb format file to get information that is complimentary to the Bio.PDB module in BioPython_ package.
+    * Analyze the electron density maps at the atom/residue/chain level and
       interpret the electron densities in terms of number of electrons.
 
 
@@ -32,7 +32,6 @@ Make sure you have git_ installed:
 
 .. code:: bash
 
-   cd ~/
    git clone https://github.com/MoseleyBioinformaticsLab/pdb_eda.git
 
 Dependencies
@@ -64,7 +63,7 @@ The :mod:`pdb_eda` package can be used in several ways:
     * As a library for accessing and manipulating data in PDB and CCP4 format files.
 
         * Use the :class:`~pdb_eda.densityAnalysis.fromPDBid` generator function that will generate
-          (yield) single :class:`~pdb_eda.densityAnalysis` instance at a time.
+          (yield) a single :class:`~pdb_eda.densityAnalysis` instance at a time.
 
         * Process each :class:`~pdb_eda.densityAnalysis` instance:
 
@@ -80,10 +79,10 @@ The :mod:`pdb_eda` package can be used in several ways:
             * Aggregate electron density map by atom, residue, and chain, and return the results in either JSON or csv format.
             * Aggregate difference electron density map into green (positive) or red (negative) blobs,
               and return the object or statistics results in either JSON or csv format.
-            * Return a list of all symmetry atom from PDB files
+            * Return a list of all symmetry atoms from PDB files
 
         * For multiple-structure mode:
-            * Return the statistics of a given pdb id list
+            * Return the statistics of a given pdb id list.
 
 
 .. _PDB: https://www.wwpdb.org/

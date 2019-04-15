@@ -10,9 +10,9 @@ Welcome to Protein Data Bank Electron Density Analysis (pdb-eda) documentation!
    :maxdepth: 3
    :caption: Contents:
 
-   api
    guide
    tutorial
+   api
 
 
 Indices and tables

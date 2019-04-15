@@ -22,10 +22,10 @@ def readPDBfile(filename):
 
 def parse(handle, mode='lite'):
     """
-    Creates :class:`pdb_eda.pdbParser.PDBentry` object from file handle.
+    Creates :class:`pdb_eda.pdbParser.PDBentry` object from file handle object.
 
     :param handle: The file handle of a PDB formated file.
-    :param str mode: Whether of not to parse all the atoms, default as 'lite' (not parse)
+    :param str mode: Whether of not to parse all the atoms, default as 'lite' (not parse).
     """
     atoms = []
     rotationMats = []
@@ -94,7 +94,7 @@ def parse(handle, mode='lite'):
 
 
 class PDBentry:
-    """:class:`pdb_eda.pdbParser.PDBentry` class that stores the :class:'pdb_eda.pdbParser.PDBheader' and/or :class:'pdb_eda.pdbParser.Atom' class."""
+    """:class:`pdb_eda.pdbParser.PDBentry` class that stores the :class:`pdb_eda.pdbParser.PDBheader` and/or :class:`pdb_eda.pdbParser.Atom` class."""
 
     def __init__(self, header, atoms):
         """:class:`pdb_eda.pdbParser.PDBentry` initializer. """

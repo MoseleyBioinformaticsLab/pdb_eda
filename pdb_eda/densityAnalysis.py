@@ -4,7 +4,7 @@
 PDB Electron Density Analysis (pdb_eda.densityAnalysis)
 -------------------------------------------------------
 
-This module provides methods for the creation of the :class:`pdb_eda.densityAnalysis` class from PDB id,
+This module provides methods for the creation of the :class:`pdb_eda.densityAnalysis` class given a PDB id,
 along with methods to analyze its electron density.
 """
 
@@ -48,14 +48,14 @@ pdbfolder = './pdb_data/'
 def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, downloadFile=True):
     """
     Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
-    and the structure has electron density file available
+    and the structure has electron density file available.
 
     :param str pdbid: PDB id
-    :param ccp4density: Generate in default of ccp4 density object
-    :param ccp4diff: Generate in default of ccp4 difference density object
-    :param pdbbio: Generate in default of bio.PDB object
-    :param pdbi: Generate in default of PDB object
-    :param downloadFile: Download in default of the ccp4 density, ccp4 difference density, and PDB file
+    :param ccp4density: Whether to generate ccp4 density object. Default is true.
+    :param ccp4diff: Whether to generate in default of ccp4 difference density object. Default is true.
+    :param pdbbio: Whether to generate in default of bio.PDB object. Default is true.
+    :param pdbi: Whether to generate in default of PDB object. Default is true.
+    :param downloadFile: Whether to save the downloaded ccp4 density, ccp4 difference density, and PDB file. Default is true.
 
     :return: :class:`pdb_eda.densityAnalysis`
 
@@ -149,10 +149,10 @@ class DensityAnalysis(object):
         to be created. They are not required for initialization but could be required for some methods.
 
         :param str pdbid: PDB id.
-        :param densityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object.
-        :param diffDensityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object.
-        :param biopdbObj: :py:obj:`None` in default unless passed in of `bio.PDB` object.
-        :param pdbObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.pdbParser.PDBentry` object.
+        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param diffDensityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param biopdbObj: Optional `bio.PDB` object.
+        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
         """
         self.pdbid = pdbid
         self.densityObj = densityObj
@@ -181,11 +181,11 @@ class DensityAnalysis(object):
         and it will use its own data member.
 
         :param str pdbid: PDB id
-        :param densityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object
-        :param diffDensityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object
-        :param biopdbObj: :py:obj:`None` in default unless passed in of `bio.PDB` object
-        :param pdbObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.pdbParser.PDBentry` object
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist, default as False
+        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param diffDensityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param biopdbObj: Optional `bio.PDB` object.
+        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
+        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
         :type recalculate: :py:obj:`True` or :py:obj:`False`
 
         :return: :py:obj:`None`
@@ -212,16 +212,16 @@ class DensityAnalysis(object):
     def aggregateCloud(self, radiiUpdate={}, slopesUpdate={}, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False):
         """
         Aggregate the electron density map clouds by atom, residue, and chain.
-        Calculate and populate `densityAnalysis.chainMedian` and `densityAnalysis.medians` data member
+        Calculate and populate `densityAnalysis.chainMedian` and `densityAnalysis.medians` data member.
 
-        :param dict radiiUpdate: radii for all atom types
-        :param dict slopesUpdate: slopes of chain median deviation fraction vs. log b-factor for all atom types
-        :param densityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object
-        :param biopdbObj: :py:obj:`None` in default unless passed in of `bio.PDB` object
-        :param atomL: Whether or not to calculate statistics for all atoms and assign to `densityAnalysis.atomList`, default as False
-        :param residueL: Whether or not to calculate statistics for all residues and assign to `densityAnalysis.residueList`, default as False
-        :param chainL: Whether or not to calculate statistics for all chains and assign to `densityAnalysis.chainList`, default as False
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist, default as False
+        :param dict radiiUpdate: Radii for all atom types.
+        :param dict slopesUpdate: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
+        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param biopdbObj: Optional `bio.PDB` object.
+        :param atomL: Whether or not to calculate statistics for all atoms and assign to `densityAnalysis.atomList`, default as False.
+        :param residueL: Whether or not to calculate statistics for all residues and assign to `densityAnalysis.residueList`, default as False.
+        :param chainL: Whether or not to calculate statistics for all chains and assign to `densityAnalysis.chainList`, default as False.
+        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
 
         :type atomL: :py:obj:`True` or :py:obj:`False`
         :type residueL: :py:obj:`True` or :py:obj:`False`
@@ -430,8 +430,8 @@ class DensityAnalysis(object):
         Aggregate the difference density map into positive (green) and negative (red) blobs,
         and assign to `densityAnalysis.redBlobList` and `densityAnalysis.greenBlobList`
 
-        :param diffDensityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist, default as False
+        :param diffDensityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
         :type recalculate: :py:obj:`True` or :py:obj:`False`
 
         :return: :py:obj:`None`
@@ -504,10 +504,10 @@ class DensityAnalysis(object):
         X' = O(O'(RX + T) + T') = OO'(RX+T) + OT' = RX + T + O[-1/0/1,-1/0/1,-1/0/1].
         Assign the list of :class:`pdb_eda.densityAnalysis.symAtom` instances to `densityAnalysis.symmetryAtoms` data member
 
-        :param densityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object
-        :param biopdbObj: :py:obj:`None` in default unless passed in of `bio.PDB` object
-        :param pdbObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.pdbParser.PDBentry` object
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist, default as False
+        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param biopdbObj: Optional `bio.PDB` object.
+        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
+        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
         :type recalculate: :py:obj:`True` or :py:obj:`False`
 
         :return: :py:obj:`None`
@@ -564,7 +564,7 @@ class DensityAnalysis(object):
         Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
         if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs.
 
-        :return diffMapStats: Difference density map statistics
+        :return diffMapStats: Difference density map statistics.
         :rtype: :py:obj:`dict`
         """
         if not self.symmetryAtoms:
@@ -602,10 +602,10 @@ class DensityAnalysis(object):
         """
         Estimate the F000 term as sum of all electrons over the unit cell volume
 
-        :param densityObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.ccp4` object
-        :param biopdbObj: :py:obj:`None` in default unless passed in of `bio.PDB` object
-        :param pdbObj: :py:obj:`None` in default unless passed in of :class:`pdb_eda.pdbParser.PDBentry` object
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist, default as False
+        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
+        :param biopdbObj: Optional `bio.PDB` object.
+        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
+        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
         :type recalculate: :py:obj:`True` or :py:obj:`False`
 
         :return: :py:obj:`None`
@@ -642,7 +642,7 @@ class DensityAnalysis(object):
 
 class symAtom:
     """A wrapper class to the `BioPDB.atom` class,
-    delegate all BioPDB atom class method and data member except having its own symmetry and coordination """
+    delegating all BioPDB atom class methods and data members except having its own symmetry and coordination. """
 
     def __init__(self, atom):
         """
