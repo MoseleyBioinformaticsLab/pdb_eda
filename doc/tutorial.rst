@@ -15,10 +15,10 @@ If the :class:`pdb_eda` is installed, it can be imported::
 
     import pdb_eda
 
-Constructing densityAnalsis generator
+Constructing densityAnalysis instance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The densityAnalysis module provides the :func:`~pdb_eda.densityAnalysis.fromPDBid` generator function that
+The densityAnalysis module provides the :func:`~pdb_eda.densityAnalysis.fromPDBid` function that
 returns :class:`~pdb_eda.densityAnalysis` instance.
 Constructing a :class:`~pdb_eda.densityAnalysis` instance only requires a PDB id::
 
@@ -150,11 +150,10 @@ The single mode will process a single PDB structure and return the desired resul
 The multiple mode will process multiple PDB structures and return the summary statistics of difference density blobs.
 
 A couple of examples of using the command line interface::
+
    python3 -m pdb_eda single 3UBK 3ubk.txt --atom --out-format=csv
    python3 -m pdb_eda single 3UBK 3ubk.org.txt --atom --out-format=csv --radii-param='conf/original_radii_slope_param.json'
    python3 -m pdb_eda multiple pdbids.txt results/result.txt
-
-
 
 
 .. _PDB: https://www.wwpdb.org/

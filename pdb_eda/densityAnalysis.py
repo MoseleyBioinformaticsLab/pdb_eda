@@ -50,7 +50,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
     Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
     and the structure has electron density file available.
 
-    :param str pdbid: PDB id
+    :param str pdbid: PDB id.
     :param ccp4density: Whether to generate ccp4 density object. Default is true.
     :param ccp4diff: Whether to generate in default of ccp4 difference density object. Default is true.
     :param pdbbio: Whether to generate in default of bio.PDB object. Default is true.

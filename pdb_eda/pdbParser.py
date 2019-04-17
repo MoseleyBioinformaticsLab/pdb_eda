@@ -4,7 +4,7 @@ PDB Parser (pdb_eda.pdbParser)
 -------------------------------------------------------
 
 This module provides methods to read and parse the PDB format files and returns PDB objects.
-Format details of PDB can be found in ftp://ftp.wwpdb.org/pub/pdb/doc/format_descriptions/Format_v33_Letter.pdf
+Format details of PDB can be found in ftp://ftp.wwpdb.org/pub/pdb/doc/format_descriptions/Format_v33_Letter.pdf.
 """
 import re
 import numpy as np

@@ -5,7 +5,7 @@ import numpy as np
 import multiprocessing
 import datetime
 
-from . import densityAnalysis
+from pdb_eda import densityAnalysis
 
 ## Radii and slopes from an intial analysis on 100 structures
 radiiParamPath = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')

@@ -48,6 +48,8 @@ Dependencies
    * Biopython_ for creating and analyzing the `pdb_eda` atom objects.
    * pandas_ for calculating aggregated results.
    * numpy_ and scipy_ for mathmatical calculations.
+   * docopt_ for better command line interface.
+   * jsonpickle_ for formatted and reusable output.
 
 To install dependencies manually:
 
@@ -92,3 +94,5 @@ The `pdb_eda` package can be used in several ways:
 .. _pandas: http://pandas.pydata.org/
 .. _numpy: http://www.numpy.org/
 .. _scipy: https://scipy.org/scipylib/index.html
+.. _docopt: http://docopt.org/
+.. _jsonpickle: https://github.com/jsonpickle/jsonpickle

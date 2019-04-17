@@ -10,6 +10,7 @@ Electron Density Analysis
    :members:
    :special-members:
    :private-members:
+   :exclude-members: __weakref__
 
 CCP4 Parser
 -----------
@@ -18,6 +19,7 @@ CCP4 Parser
    :members:
    :special-members:
    :private-members:
+   :exclude-members: __weakref__
 
 PDB Parser
 ----------
@@ -26,4 +28,5 @@ PDB Parser
    :members:
    :special-members:
    :private-members:
+   :exclude-members: __weakref__
 
