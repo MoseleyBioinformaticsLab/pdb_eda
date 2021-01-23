@@ -1,6 +1,7 @@
 # !/usr/bin/python3
 
 import os
+import sys
 import json
 import jsonpickle
 from . import densityAnalysis
@@ -16,7 +17,11 @@ def main(args):
     radii = params['radii']
     slopes = params['slopes']
 
+
     analyser = densityAnalysis.fromPDBid(pdbid)
+    if not analyser:
+        sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
+
     result = []
     if args["--density-map"]:
         result = analyser.densityObj
