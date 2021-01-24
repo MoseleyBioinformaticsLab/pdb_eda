@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 
-"""crystal_contacts.py
-Python3 script for identifying 'crystal contact' atoms in a PDB entry.  If run as a script, saves a jsonpickled list of Biopython Atom objects.
-
-If imported as a module, simply use the get_contact_atoms(mmcif_file) function for any PDB entry.
+"""
+crystal_contacts.py
+  Identifies 'crystal contact' atoms in a PDB entry.
+    If run as a script, it saves a jsonpickled list of Biopython Atom objects.
+    If imported as a module, simply use the get_contact_atoms(mmcif_file) function for any PDB entry.
 
 Usage:
 	crystal_contacts.py <pdb_mmcif_file>

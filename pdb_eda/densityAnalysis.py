@@ -1,5 +1,3 @@
-# !/usr/bin/python3
-
 """
 PDB Electron Density Analysis (pdb_eda.densityAnalysis)
 -------------------------------------------------------

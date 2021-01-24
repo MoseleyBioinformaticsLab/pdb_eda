@@ -1,4 +1,3 @@
-# !/usr/bin/python3
 """
 validationStats.py
     Calculate real space correlation coefficients (RSCC) and real space R value (RSR) via different methods.

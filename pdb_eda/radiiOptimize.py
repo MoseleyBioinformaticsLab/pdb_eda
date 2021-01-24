@@ -1,23 +1,42 @@
+#!/usr/bin/python3
+"""
+optimizeParams.py
+  Optimizes radii and b-factor slopes using a given set of PDB IDs.
+
+Usage:
+    optimizeParams -h | --help
+    optimizeParams <pdbid-file> <log-file> <final-params-file> <start-atom-type> [options]
+
+Options:
+    -h, --help                          Show this screen.
+    --params=<start-params-file>        Starting params file. [default: ""]
+    --radius=<start-radius>             Starting radius for the starting atom-type. [default: 0]
+    --change=<radius-change>            How much to change the radius at each incremental optimization. [default: 0.01]
+    --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0.05]
+"""
 import os
 import sys
 import json
 import numpy as np
 import multiprocessing
 import datetime
+import tempfile
+import docopt
 
 from pdb_eda import densityAnalysis
 
-## Radii and slopes from an intial analysis on 100 structures
-radiiParamPath = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')
-with open(radiiParamPath, 'r') as fh:
-    radiiParams = json.load(fh)
+defaultParamsFilename = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')
 
-radiiDefault = radiiParams['radii']
-slopesDefault = radiiParams['slopes']
+def processFunction(pdbid, paramsPath):
+    try:
+        with open(paramsPath, 'r') as jsonFile:
+            params = json.load(jsonFile)
+            radii = params['radii']
+            slopes = params['slopes']
+    except:
+        return 0
 
-def processFunction(pdbid, radii, slopes):
     analyser = densityAnalysis.fromPDBid(pdbid)
-
     if not analyser:
         return 0 
 
@@ -26,88 +45,128 @@ def processFunction(pdbid, radii, slopes):
         return 0
 
     diffs = []
-    slopes = []
-    for atomType in sorted(radiiDefault):
-        #diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
+    newSlopes = []
+    for atomType in sorted(radii):
         if atomType in analyser.medians.index:
             diffs.append((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian)
-            slopes.append(analyser.medians.loc[atomType]['slopes'])
+            newSlopes.append(analyser.medians.loc[atomType]['slopes'])
         else:
             diffs.append(0)
-            slopes.append(0)
-    return diffs, slopes
+            newSlopes.append(0)
 
-def main(pdbidfile, resultname, atomType, radius):
-    pdbids = []
-    with open(pdbidfile, "r") as fileHandleIn:
-        for pdbid in fileHandleIn:
-            pdbids.append(pdbid[0:4])
+    resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes }, "tempResults_")
+    return resultFilename
 
-    fileHandle = open(resultname, 'w')
-    currentAtomType = atomType
-    currentRadius = float(radius)
-    currentRadii = radiiDefault
-    currentRadii[currentAtomType] = currentRadius
-    currentSlopes = slopesDefault 
-    while True:
-        bestMedianDiffs = {}
-        bestDiff = bestMedianDiffs[currentAtomType] if bestMedianDiffs else 100 
-        while True:
-            print("working on", currentAtomType, "with radius", currentRadius, ",", str(datetime.datetime.now()))
-            print(currentAtomType, currentRadius, file=fileHandle)
-            with multiprocessing.Pool() as pool:
-                results = pool.starmap(processFunction, ((pdbid, currentRadii, currentSlopes) for pdbid in pdbids))
+def createTempJSONFile(data, filenamePrefix):
+    dirname = os.getcwd()
+    filename = 0
+    with tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix=filenamePrefix, delete=False) as tempFile:
+        json.dump(data,tempFile)
+        filename = tempFile.name
+    return filename
 
-            slopes = {}
-            diffs = {}
-            for atomType in radiiDefault:
-                slopes[atomType] = []
-                diffs[atomType] = []
 
-            for result in results:
-                if result:
-                    for i, diff in enumerate(result[0]):
-                        if diff: 
-                            diffs[sorted(radiiDefault)[i]].append(diff)
-                    for i, slope in enumerate(result[1]):
-                        if slope != slopesDefault[sorted(slopesDefault)[i]]:
-                            slopes[sorted(slopesDefault)[i]].append(slope)
+def main(args):
+    radiusIncrement = float(args["--change"])
+    stoppingFractionalDifference = float(args["--stop"])
+    args["--radius"] = float(args["--radius"])
 
-            for key in diffs:
-                diffs[key] = np.nanmedian(diffs[key])
-            for key in slopes:
-                slopes[key] = np.nanmedian(slopes[key])
+    paramsFilename = args["--params"] if args["--params"] else defaultParamsFilename
+    try:
+        with open(paramsFilename, 'r') as jsonFile:
+            params = json.load(jsonFile)
+            radiiDefault = params['radii']
+            slopesDefault = params['slopes']
+    except:
+        sys.exit(str("Error: params file \"") + paramsFilename + "\" does not exist or is not parsable.")
 
-            print(currentRadii, file=fileHandle)
-            print(diffs, file=fileHandle)
-            print(slopes, file=fileHandle)
-            medianDiff = diffs[currentAtomType]    
-            if abs(medianDiff) < abs(bestDiff):
-                bestDiff = medianDiff
-                bestMedianDiffs = diffs
-                bestSlopes = slopes
-                bestRadius = currentRadius
-                currentRadius = currentRadius + 0.01 if medianDiff < 0 else currentRadius - 0.01
-                currentRadii[currentAtomType] = currentRadius
-            else: 
-                break
+    try:
+        pdbids = []
+        with open(args["<pdbid-file>"], "r") as textFile:
+            for pdbid in textFile:
+                pdbids.append(pdbid[0:4])
+    except:
+        sys.exit(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
-        if max(map(abs, bestMedianDiffs.values())) < 0.05:
-            break
-        else:
-            currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y])) 
+    try:
+        with open(args["<log-file>"], 'w') as logFile:
+            currentAtomType = args["<start-atom-type>"]
+            currentRadii = radiiDefault
+            if args["--radius"] > 0:
+                currentRadii[currentAtomType] = args["--radius"]
             currentRadius = currentRadii[currentAtomType]
-            medianDiff = bestMedianDiffs[currentAtomType]
-            currentRadius = currentRadius + 0.01 if medianDiff < 0 else currentRadius - 0.01
-            currentRadii[currentAtomType] = currentRadius
-            currentSlopes = bestSlopes
+            currentSlopes = slopesDefault
+            bestSlopes = currentSlopes
+            while True:
+                bestMedianDiffs = {}
+                bestDiff = bestMedianDiffs[currentAtomType] if bestMedianDiffs else 100
+                currParamsFilename = createTempJSONFile({ "radii" : currentRadii, "slopes" : currentSlopes }, "tempParams_")
+                while True:
+                    print("working on", currentAtomType, "with radius", currentRadius, ",", str(datetime.datetime.now()))
+                    print(currentAtomType, currentRadius, file=logFile)
+                    with multiprocessing.Pool() as pool:
+                        results = pool.starmap(processFunction, ((pdbid, currentParamsFilename) for pdbid in pdbids))
 
-    fileHandle.close()
+                    slopes = { atomType:[] for atomType in radiiDefault }
+                    diffs = { atomType:[] for atomType in radiiDefault }
+                    for resultFilename in results:
+                        if resultFilename:
+                            try:
+                                with open(resultFilename, 'r') as jsonFile:
+                                    result = json.load(jsonFile)
+                                    for i, diff in enumerate(result['diffs']):
+                                        if diff:
+                                            diffs[sorted(radiiDefault)[i]].append(diff)
+                                    for i, slope in enumerate(result['slopes']):
+                                        if slope != slopesDefault[sorted(slopesDefault)[i]]:
+                                            slopes[sorted(slopesDefault)[i]].append(slope)
+                                os.remove(resultFilename)
+                            except:
+                                pass
+
+                    for key in diffs:
+                        diffs[key] = np.nanmedian(diffs[key])
+                    for key in slopes:
+                        slopes[key] = np.nanmedian(slopes[key])
+
+                    print(currentRadii, file=logFile)
+                    print(diffs, file=logFile)
+                    print(slopes, file=logFile)
+                    medianDiff = diffs[currentAtomType]
+                    if abs(medianDiff) < abs(bestDiff):
+                        bestDiff = medianDiff
+                        bestMedianDiffs = diffs
+                        bestSlopes = slopes
+                        currentRadius = currentRadius + radiusIncrement if medianDiff < 0 else currentRadius - radiusIncrement
+                        currentRadii[currentAtomType] = currentRadius
+                    else:
+                        break
+
+                os.remove(currParamsFilename) # Remove unneeded params file.
+
+                if max(map(abs, bestMedianDiffs.values())) < stoppingFractionalDifference:
+                    break
+                else:
+                    currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y]))
+                    currentRadius = currentRadii[currentAtomType]
+                    medianDiff = bestMedianDiffs[currentAtomType]
+                    currentRadius = currentRadius + radiusIncrement if medianDiff < 0 else currentRadius - radiusIncrement
+                    currentRadii[currentAtomType] = currentRadius
+                    currentSlopes = bestSlopes
+    except:
+        sys.exit(str("Error: unable to open log file \"") + args["<log-file>"] + "\".")
+
     print("Final radii:", currentRadii)
+
+    try:
+        with open(args["<final-params-file>"], 'w') as jsonFile:
+            json.dump({ "radii" : currentRadii, "slopes" : currentSlopes },jsonFile)
+    except:
+        sys.exit(str("Error: unable to create final params file \"") + args["<final-params-file>"] + "\".")
+
 
 
 if __name__ == '__main__':
-    _, filename, resultname, atomType, radius = sys.argv
-
-    main(filename, resultname, atomType, radius)
+    args = docopt.docopt(__doc__)
+    main(args)
 

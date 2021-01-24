@@ -1,4 +1,3 @@
-# !/usr/bin/python3
 """
 PDB Parser (pdb_eda.pdbParser)
 -------------------------------------------------------
