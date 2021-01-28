@@ -27,7 +27,7 @@ import docopt
 
 from pdb_eda import densityAnalysis
 
-defaultParamsFilename = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')
+defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')
 
 def main():
     args = docopt.docopt(__doc__)
@@ -36,9 +36,9 @@ def main():
     stoppingFractionalDifference = float(args["--stop"])
     startingRadius = float(args["--radius"])
 
-    paramsFilename = args["--params"] if args["--params"] else defaultParamsFilename
+    paramsFilepath = args["--params"] if args["--params"] else defaultParamsFilepath
     try:
-        with open(paramsFilename, 'r') as jsonFile:
+        with open(paramsFilepath, 'r') as jsonFile:
             params = json.load(jsonFile)
             currentRadii = params['radii']
             currentSlopes = params['slopes']
@@ -109,6 +109,14 @@ def main():
         sys.exit(str("Error: unable to create final params file \"") + args["<final-params-file>"] + "\".")
 
 def calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes):
+    """Calculates the median diffs and slopes across a list of pdb entries.
+
+    :param :py:class:`list` pdbids: list of pdbids to process.
+    :param :py:class:`dict` currentRadii:  atom type radii to use.
+    :param :py:class:`dict` currentSlopes: atom type b-factor slopes to use.
+    :return: diffs_slopes_tuple
+    :rtype: :py:class:`tuple`
+    """
     currParamsFilename = createTempJSONFile({"radii": currentRadii, "slopes": currentSlopes}, "tempParams_")
 
     with multiprocessing.Pool() as pool:
@@ -136,9 +144,16 @@ def calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes):
 
     return (medianDiffs, medianSlopes)
 
-def processFunction(pdbid, paramsPath):
+def processFunction(pdbid, paramsFilepath):
+    """Process function to analyze a single pdb entry.
+
+    :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
+    :param :py:class:`str` paramsFilepath: filepath to the radii and slopes parameters.
+    :return: resultFilename
+    :rtype: :py:class:`str` or 0
+    """
     try:
-        with open(paramsPath, 'r') as jsonFile:
+        with open(paramsFilepath, 'r') as jsonFile:
             params = json.load(jsonFile)
             radii = params['radii']
             slopes = params['slopes']
@@ -160,6 +175,13 @@ def processFunction(pdbid, paramsPath):
     return resultFilename
 
 def createTempJSONFile(data, filenamePrefix):
+    """Creates a temporary JSON file and returns its filename.
+
+    :param data:  data to save into the JSON file.
+    :param :py:class:`str` filenamePrefix: temporary filename prefix.
+    :return: filename
+    :rtype: :py:class:`str`
+    """
     dirname = os.getcwd()
     filename = 0
     with tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix=filenamePrefix, delete=False) as tempFile:

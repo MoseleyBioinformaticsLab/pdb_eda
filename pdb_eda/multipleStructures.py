@@ -4,11 +4,10 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>]
+    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--out-format=<format>]
 
 Options:
     -h, --help                      Show this screen.
-    <pdbid>                         The PDB id
     <out-file>                      Output file name
     <pdbid-file>                    File name that contains the pdb ids
     --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
@@ -19,8 +18,8 @@ Options:
     --red                           Calculate and print results of all red blobs (negative difference electron density)
     --all                           Calculate and print results of both green and red blobs (positive and negative difference electron density)
     --stats                         If set true, return green or red blobs' statistics instead of blob object lists.
-    --out-format=<format>           Onput file format, available formats: csv, json [default: json].
-    --symmetry-atoms                Calculate and print results of all symmetry atoms. (Only available in jason format)
+    --out-format=<format>           Output file format, available formats: csv, json [default: json].
+    --symmetry-atoms                Calculate and print results of all symmetry atoms. (Only available in json format)
 """
 
 import docopt
@@ -66,33 +65,41 @@ def main():
             pdbids.append(pdbid[0:4])
 
     with multiprocessing.Pool() as pool:
-        result_filenames = pool.map(openTemporaryFile, (1 for i in range(multiprocessing.cpu_count())))
         results = pool.map(processFunction, pdbids)
-        closed_filenames = pool.map(closeTemporaryFile, (1 for i in range(multiprocessing.cpu_count())))
 
 
-    unclosed_filenames = set(result_filenames) - set(closed_filenames)
-    if unclosed_filenames: # check whether all result files were closed.  Increase sleep time in closeTemporary File to prevent this.
-        print("Error: unclosed intermediate files: ", unclosed_filenames, ". Results may not be complete.",file=sys.stderr)
+    fullResults = {}
+    for resultFilename in results:
+        if resultFilename:
+            try:
+                with open(resultFilename, 'r') as jsonFile:
+                    result = json.load(jsonFile)
+                    fullResults[result["pdbid"]] = result
+                os.remove(resultFilename)
+            except:
+                pass
 
     with open(resultFile, "w") as outfile:
-        print(*['pdbid', 'chainMedian', 'voxelVolume', 'f000', 'chainNvoxel', 'chainTotalE', 'densityMean', 'diffDensityMean', 'resolution', 'spaceGroup'] + sorted(radiiDefault), sep=',', file=outfile)
-        for filename in result_filenames:
-            if filename:
-                try:
-                    with open(filename, "r") as infile:
-                        outfile.write(infile.read())
-                    os.remove(filename) # remove the file
-                except:
-                    print("Error: intermediate results file\"",filename,"\" was not parsable.  Results are not complete.",file=sys.stderr)
+        if args["--out-format"] == 'csv':
+            statsHeaders = ['pdbid', 'chainMedian', 'voxelVolume', 'f000', 'chainNvoxel', 'chainTotalE', 'densityMean', 'diffDensityMean', 'resolution', 'spaceGroup']
+            print(statsHeaders + sorted(radiiGlobal), sep=',', file=outfile)
+            for result in fullResults.values():
+                stats = [result["stats"][header] for header in statsHeader]
+                diffs = [result["diffs"][atomType] for atomType in sorted(radiiGlobal)]
+                print(stats + diffs, sep=',', file=outfile)
+        else:
+            json.dump(fullResults,outfile)
 
 
 def processFunction(pdbid):
-    """
+    """Process function to analyze a single pdb entry.
 
-    :param pdbid:
-    :return:
+    :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
+    :return: resultFilename
+    :rtype: :py:class:`str`
     """
+    startTime = time.process_time()
+
     analyser = densityAnalysis.fromPDBid(pdbid)
 
     if not analyser:
@@ -103,29 +110,29 @@ def processFunction(pdbid):
     if not analyser.chainMedian:
         return 0
 
-    diffs = []
-    for atomType in sorted(radiiGlobal):
-        diff = (analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian if atomType in analyser.medians.index else 0
-        diffs.append(diff)
-    stats = [analyser.pdbid, analyser.chainMedian, analyser.densityObj.header.unitVolume, analyser.f000, analyser.chainNvoxel, analyser.chainTotalE,
-             analyser.densityObj.header.densityMean, analyser.diffDensityObj.header.densityMean, analyser.pdbObj.header.resolution, analyser.pdbObj.header.spaceGroup]
+    diffs = { atomType:((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian) if atomType in analyser.medians.index else 0 for atomType in sorted(radiiGlobal) }
+    stats = { 'chainMedian' : analyser.chainMedian, 'voxelVolume' : analyser.densityObj.header.unitVolume, 'f000' : analyser.f000, 'chainNvoxel' : analyser.chainNvoxel, 'chainTotalE' : analyser.chainTotalE,
+        'densityMean' : analyser.densityObj.header.densityMean, 'diffDensityMean' : analyser.diffDensityObj.header.densityMean, 'resolution' : analyser.pdbObj.header.resolution, 'spaceGroup' : analyser.pdbObj.header.spaceGroup }
 
-    globalTempFile.write("%s\n" % ','.join([str(i) for i in stats + diffs]))
-    return globalTempFile.name
+    elapsedTime = time.process_time() - startTime
+    resultFilename = createTempJSONFile({ "pdbid" : analyser.pdbid, "diffs" : diffs, "stats" : stats, "execution_time" : elapsedTime }, "tempResults_")
+    return resultFilename
 
-def openTemporaryFile(temp):
+
+def createTempJSONFile(data, filenamePrefix):
+    """Creates a temporary JSON file and returns its filename.
+
+    :param data:  data to save into the JSON file.
+    :param :py:class:`str` filenamePrefix: temporary filename prefix.
+    :return: filename
+    :rtype: :py:class:`str`
+    """
     dirname = os.getcwd()
-    global globalTempFile
-    globalTempFile = tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix="tempPDB_", delete=False)
-    time.sleep(0.1) # sleep 0.1 seconds to prevent the same worker from calling this twice.
-    return globalTempFile.name
-
-def closeTemporaryFile(temp):
-    filename = globalTempFile.name
-    globalTempFile.close()
-    # Sleep 0.1 seconds to prevent the same worker from calling this twice.
-    # May need to increase this to 1 second or even 10 seconds to make this work.
-    time.sleep(0.1)
+    filename = 0
+    with tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix=filenamePrefix, delete=False) as tempFile:
+        json.dump(data,tempFile)
+        filename = tempFile.name
     return filename
+
 
 

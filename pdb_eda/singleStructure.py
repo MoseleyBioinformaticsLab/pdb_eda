@@ -95,8 +95,8 @@ def main():
 
 
     with open(filename, 'w') as outFile:
-        if args["--out-format"] == 'json':
+        if args["--out-format"] == 'csv':
+            print(*result, sep='\n', file=outFile)
+        else:
             result = jsonpickle.encode(result)
             outFile.write(result)
-        else:
-            print(*result, sep='\n', file=outFile)
