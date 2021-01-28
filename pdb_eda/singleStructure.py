@@ -1,13 +1,46 @@
 # !/usr/bin/python3
+"""
+pdb_eda single structure analysis mode command-line interface
 
+Usage:
+    pdb_eda single -h | --help
+    pdb_eda single <pdbid> <out-file> [--density-map | --diff-density-map]
+    pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--atom] [--residue] [--chain] [--out-format=<format>]
+    pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--green | --red | --all] [--stats] [--out-format=<format>]
+    pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--symmetry-atoms]
+
+Options:
+    -h, --help                      Show this screen.
+    single                          Running single-structure mode
+    <pdbid>                         The PDB id
+    <out-file>                      Output file name
+    <pdbid-file>                    File name that contains a list pdb ids, one per line.
+    --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
+    --atom                          Aggregate and print results by atom
+    --residue                       Aggregate and print results by residue
+    --chain                         Aggregate and print results by chain
+    --green                         Calculate and print results of all green blobs (positive difference electron density)
+    --red                           Calculate and print results of all red blobs (negative difference electron density)
+    --all                           Calculate and print results of both green and red blobs (positive and negative difference electron density)
+    --stats                         If set true, return green or red blobs' statistics instead of blob object lists.
+    --out-format=<format>           Output file format, available formats: csv, json [default: json].
+    --symmetry-atoms                Calculate and print results of all symmetry atoms. (Only available in json format)
+"""
+
+import docopt
 import os
 import sys
 import json
 import jsonpickle
 from . import densityAnalysis
+from . import __version__
 
 
-def main(args):
+def main():
+    args = docopt.docopt(__doc__, version=__version__)
+    if args["--help"]:
+        print(__doc__)
+        exit(0)
     pdbid = args["<pdbid>"]
     filename = args["<out-file>"]
 
@@ -60,9 +93,9 @@ def main(args):
         result = analyser.symmetryAtoms
 
 
-    with open(filename, 'w') as fh:
+    with open(filename, 'w') as outFile:
         if args["--out-format"] == 'json':
             result = jsonpickle.encode(result)
-            fh.write(result)
+            outFile.write(result)
         else:
-            print(*result, sep='\n', file=fh)
+            print(*result, sep='\n', file=outFile)
