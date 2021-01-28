@@ -69,7 +69,7 @@ def createTempJSONFile(data, filenamePrefix):
 def main(args):
     radiusIncrement = float(args["--change"])
     stoppingFractionalDifference = float(args["--stop"])
-    args["--radius"] = float(args["--radius"])
+    startingRadius = float(args["--radius"])
 
     paramsFilename = args["--params"] if args["--params"] else defaultParamsFilename
     try:
@@ -90,22 +90,24 @@ def main(args):
 
     try:
         with open(args["<log-file>"], 'w') as logFile:
+            print(args, file=logFile)
             currentAtomType = args["<start-atom-type>"]
             currentRadii = radiiDefault
-            if args["--radius"] > 0:
-                currentRadii[currentAtomType] = args["--radius"]
+            if startingRadius > 0:
+                currentRadii[currentAtomType] = startingRadius
             currentRadius = currentRadii[currentAtomType]
+            previousRadius = currentRadius
             currentSlopes = slopesDefault
             bestSlopes = currentSlopes
+            bestDiff = 100
             while True:
-                bestMedianDiffs = {}
-                bestDiff = bestMedianDiffs[currentAtomType] if bestMedianDiffs else 100
-                currParamsFilename = createTempJSONFile({ "radii" : currentRadii, "slopes" : currentSlopes }, "tempParams_")
                 while True:
                     print("working on", currentAtomType, "with radius", currentRadius, ",", str(datetime.datetime.now()))
                     print(currentAtomType, currentRadius, file=logFile)
+                    currParamsFilename = createTempJSONFile({"radii": currentRadii, "slopes": currentSlopes}, "tempParams_")
+
                     with multiprocessing.Pool() as pool:
-                        results = pool.starmap(processFunction, ((pdbid, currentParamsFilename) for pdbid in pdbids))
+                        results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids))
 
                     slopes = { atomType:[] for atomType in radiiDefault }
                     diffs = { atomType:[] for atomType in radiiDefault }
@@ -124,10 +126,8 @@ def main(args):
                             except:
                                 pass
 
-                    for key in diffs:
-                        diffs[key] = np.nanmedian(diffs[key])
-                    for key in slopes:
-                        slopes[key] = np.nanmedian(slopes[key])
+                    diffs = { key:np.nanmedian(value) for (key,value) in diffs.items() }
+                    slopes = { key:np.nanmedian(value) for (key,value) in slopes.items() }
 
                     print(currentRadii, file=logFile)
                     print(diffs, file=logFile)
@@ -137,22 +137,28 @@ def main(args):
                         bestDiff = medianDiff
                         bestMedianDiffs = diffs
                         bestSlopes = slopes
+                        currentSlopes = slopes # may be dangerous, because slopes are changing one step behind currentRadius, but the alternative is worse.
+                        previousRadius = currentRadius
                         currentRadius = currentRadius + radiusIncrement if medianDiff < 0 else currentRadius - radiusIncrement
                         currentRadii[currentAtomType] = currentRadius
                     else:
+                        currentRadii[currentAtomType] = previousRadius
                         break
 
                 os.remove(currParamsFilename) # Remove unneeded params file.
 
-                if max(map(abs, bestMedianDiffs.values())) < stoppingFractionalDifference:
+                maxAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y]))
+                if max(map(abs, bestMedianDiffs.values())) < stoppingFractionalDifference or maxAtomType == currentAtomType:
                     break
                 else:
                     currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y]))
                     currentRadius = currentRadii[currentAtomType]
+                    previousRadius = currentRadius
                     medianDiff = bestMedianDiffs[currentAtomType]
+                    bestDiff = medianDiff
                     currentRadius = currentRadius + radiusIncrement if medianDiff < 0 else currentRadius - radiusIncrement
                     currentRadii[currentAtomType] = currentRadius
-                    currentSlopes = bestSlopes
+                    currentSlopes = bestSlopes # likely redundant now.
     except:
         sys.exit(str("Error: unable to open log file \"") + args["<log-file>"] + "\".")
 
