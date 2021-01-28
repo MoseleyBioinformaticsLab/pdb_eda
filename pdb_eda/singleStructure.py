@@ -1,6 +1,7 @@
 # !/usr/bin/python3
 """
 pdb_eda single structure analysis mode command-line interface
+  Analyzes a single pdb entry.
 
 Usage:
     pdb_eda single -h | --help

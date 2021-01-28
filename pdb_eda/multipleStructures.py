@@ -1,5 +1,6 @@
 """
 pdb_eda multiple structure analysis mode command-line interface
+  Analyzes multiple pdb entries.
 
 Usage:
     pdb_eda multiple -h | --help
@@ -87,6 +88,11 @@ def main():
 
 
 def processFunction(pdbid):
+    """
+
+    :param pdbid:
+    :return:
+    """
     analyser = densityAnalysis.fromPDBid(pdbid)
 
     if not analyser:

@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 """
-optimizeParams.py
+pdb_eda radii and slope parameter optimization mode command-line interface
   Optimizes radii and b-factor slopes using a given set of PDB IDs.
 
 Usage:
-    optimizeParams -h | --help
-    optimizeParams <pdbid-file> <log-file> <final-params-file> [options]
+    pdb_eda optimize -h | --help
+    pdb_eda optimize <pdbid-file> <log-file> <final-params-file> [options]
 
 Options:
     -h, --help                          Show this screen.
@@ -29,67 +29,8 @@ from pdb_eda import densityAnalysis
 
 defaultParamsFilename = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')
 
-def processFunction(pdbid, paramsPath):
-    try:
-        with open(paramsPath, 'r') as jsonFile:
-            params = json.load(jsonFile)
-            radii = params['radii']
-            slopes = params['slopes']
-    except:
-        return 0
-
-    analyser = densityAnalysis.fromPDBid(pdbid)
-    if not analyser:
-        return 0 
-
-    analyser.aggregateCloud(radii, slopes)
-    if not analyser.chainMedian:
-        return 0
-
-    diffs = { atomType:((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian) for atomType in radii if atomType in analyser.medians.index }
-    newSlopes = { atomType:analyser.medians.loc[atomType]['slopes'] for atomType in slopes if atomType in analyser.medians.index }
-
-    resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes }, "tempResults_")
-    return resultFilename
-
-def createTempJSONFile(data, filenamePrefix):
-    dirname = os.getcwd()
-    filename = 0
-    with tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix=filenamePrefix, delete=False) as tempFile:
-        json.dump(data,tempFile)
-        filename = tempFile.name
-    return filename
-
-
-def calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes):
-    currParamsFilename = createTempJSONFile({"radii": currentRadii, "slopes": currentSlopes}, "tempParams_")
-
-    with multiprocessing.Pool() as pool:
-        results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids))
-
-    diffs = {atomType: [] for atomType in currentRadii}
-    slopes = {atomType: [] for atomType in currentSlopes}
-    for resultFilename in results:
-        if resultFilename:
-            try:
-                with open(resultFilename, 'r') as jsonFile:
-                    result = json.load(jsonFile)
-                    for atomType, diff in result['diffs'].items():
-                        diffs[atomType].append(diff)
-                    for atomType, slope in result['slopes'].items():
-                        slopes[atomType].append(slope)
-                os.remove(resultFilename)
-            except:
-                pass
-
-    os.remove(currParamsFilename)
-
-    medianDiffs = {key: np.nanmedian(value) for (key, value) in diffs.items()}
-    medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
-
-    return (medianDiffs, medianSlopes)
-
-def main(args):
+def main():
+    args = docopt.docopt(__doc__)
     radiusIncrement = float(args["--max"])
     minRadiusIncrement = float(args["--min"])
     stoppingFractionalDifference = float(args["--stop"])
@@ -167,8 +108,62 @@ def main(args):
     except:
         sys.exit(str("Error: unable to create final params file \"") + args["<final-params-file>"] + "\".")
 
+def calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes):
+    currParamsFilename = createTempJSONFile({"radii": currentRadii, "slopes": currentSlopes}, "tempParams_")
 
-if __name__ == '__main__':
-    args = docopt.docopt(__doc__)
-    main(args)
+    with multiprocessing.Pool() as pool:
+        results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids))
+
+    diffs = {atomType: [] for atomType in currentRadii}
+    slopes = {atomType: [] for atomType in currentSlopes}
+    for resultFilename in results:
+        if resultFilename:
+            try:
+                with open(resultFilename, 'r') as jsonFile:
+                    result = json.load(jsonFile)
+                    for atomType, diff in result['diffs'].items():
+                        diffs[atomType].append(diff)
+                    for atomType, slope in result['slopes'].items():
+                        slopes[atomType].append(slope)
+                os.remove(resultFilename)
+            except:
+                pass
+
+    os.remove(currParamsFilename)
+
+    medianDiffs = {key: np.nanmedian(value) for (key, value) in diffs.items()}
+    medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
+
+    return (medianDiffs, medianSlopes)
+
+def processFunction(pdbid, paramsPath):
+    try:
+        with open(paramsPath, 'r') as jsonFile:
+            params = json.load(jsonFile)
+            radii = params['radii']
+            slopes = params['slopes']
+    except:
+        return 0
+
+    analyser = densityAnalysis.fromPDBid(pdbid)
+    if not analyser:
+        return 0 
+
+    analyser.aggregateCloud(radii, slopes)
+    if not analyser.chainMedian:
+        return 0
+
+    diffs = { atomType:((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian) for atomType in radii if atomType in analyser.medians.index }
+    newSlopes = { atomType:analyser.medians.loc[atomType]['slopes'] for atomType in slopes if atomType in analyser.medians.index }
+
+    resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes }, "tempResults_")
+    return resultFilename
+
+def createTempJSONFile(data, filenamePrefix):
+    dirname = os.getcwd()
+    filename = 0
+    with tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix=filenamePrefix, delete=False) as tempFile:
+        json.dump(data,tempFile)
+        filename = tempFile.name
+    return filename
 
