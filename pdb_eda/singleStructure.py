@@ -12,10 +12,8 @@ Usage:
 
 Options:
     -h, --help                      Show this screen.
-    single                          Running single-structure mode
     <pdbid>                         The PDB id
     <out-file>                      Output file name
-    <pdbid-file>                    File name that contains a list pdb ids, one per line.
     --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
     --atom                          Aggregate and print results by atom
     --residue                       Aggregate and print results by residue
