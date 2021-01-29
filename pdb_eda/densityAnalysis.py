@@ -307,7 +307,7 @@ class DensityAnalysis(object):
                         residueDict[residue.resname] = [cloud]
 
                     totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
-                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron])
+                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron, len(cloud.crsList) * densityObj.header.unitVolume])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
         ## End residue
@@ -342,7 +342,7 @@ class DensityAnalysis(object):
                 continue
             atom = cloud.atoms[0]
             totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
-            chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron])
+            chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron, len(cloud.crsList) * densityObj.header.unitVolume])
             chainAvgDensity.append(cloud.totalDensity / totalElectron)
 
         if len(chainAvgDensity) == 0:
@@ -365,9 +365,9 @@ class DensityAnalysis(object):
             totalE = chainList[len(chainList)//2][5]
             chainMedian = np.median(chainAvgDensity)
 
-        # normalize the density by median volume of given atom type
+        # normalize the density by median volume (numVoxels) of given atom type
         def normVolumn(row):
-            return float(row['density_electron_ratio']) / float(row['volume']) * float(medians['volume'][row['atomType']])
+            return float(row['density_electron_ratio']) / float(row['numVoxels']) * float(medians['numVoxels'][row['atomType']])
 
         def calcSlope(data):
             ## Less than three data points or all b factors are the same
@@ -388,12 +388,13 @@ class DensityAnalysis(object):
                 medianBfactor.index == row['atomType']])).values * slopes.loc[slopes.index == row['atomType']].values)[0,0]
 
         try:
-            atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density_electron_ratio', 'volume', 'electrons', 'bfactor', 'centroidDist'])
+            atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density_electron_ratio', 'numVoxels', 'electrons', 'bfactor', 'centroidDist'])
             centroidCutoff = atoms['centroidDist'].median() + atoms['centroidDist'].std() * 2
             atoms = atoms[atoms['centroidDist'] < centroidCutoff]  # leave out the atoms that the centroid and atom coordinates are too far away
             medians = atoms.groupby(['atomType']).median()
+            atoms['volume'] = atoms['numVoxels'] * densityObj.header.unitVolume
 
-            ## Normalize by volume
+            ## Normalize by volume (numVoxels)
             atoms['adj_density_electron_ratio'] = atoms.apply(lambda row: normVolumn(row), axis=1)
             medians = atoms.groupby(['atomType']).median()
             atoms.loc[atoms.bfactor <= 0, 'bfactor'] = np.nan
@@ -555,7 +556,7 @@ class DensityAnalysis(object):
                                 x.symmetry = [i, j, k, r]
                             allAtoms.extend(inRangeAtoms)
 
-            self.symmetryAtoms = allAtoms
+        self.symmetryAtoms = allAtoms
 
     def calcAtomBlobDists(self, radii={}, slopes={}):
         """
@@ -563,7 +564,7 @@ class DensityAnalysis(object):
         if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs.
 
         :return diffMapStats: Difference density map statistics.
-        :rtype: :py:obj:`dict`
+        :rtype: :py:obj:`list`
         """
         if not self.symmetryAtoms:
             self.calcSymmetryAtoms()
@@ -582,12 +583,12 @@ class DensityAnalysis(object):
         diffMapStats = []
         atomCoords = np.asarray([x.coord for x in symmetryAtoms])
         for blob in greenBlobList + redBlobList:
-            ## distanct to the closest atoms
+            ## distance to the closest atoms
             centroid = np.array(blob.centroid).reshape((1, 3))
             dists = scipy.spatial.distance.cdist(centroid, atomCoords)
 
             ind = np.argmin(dists[0])
-            atom = list(symmetryAtoms)[ind]
+            atom = symmetryAtoms[ind] # atom = list(symmetryAtoms)[ind]
             if blob.totalDensity >= 0:
                 sign = '+'
             else: sign = '-'

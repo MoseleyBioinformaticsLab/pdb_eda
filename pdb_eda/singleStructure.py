@@ -53,29 +53,31 @@ def main():
     if not analyser:
         sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
 
-    result = []
+    jsonType = "jsonpickle"
     if args["--density-map"]:
         result = analyser.densityObj
     elif args["--diff-density-map"]:
         result = analyser.diffDensityObj
     elif args["--atom"] or args["--residue"] or args["--chain"]:
         analyser.aggregateCloud(radii, slopes, atomL=True, residueL=True, chainL=True)
+        jsonType = "json"
         if args["--atom"]:
-            result.append(','.join(map(str, list(analyser.atomList) + ['chainMedianRatio'])))
-            for item in analyser.atomList.values.tolist():
-                result.append(','.join(map(str, item + [analyser.chainMedian])))
+            headerList = map(str,list(analyser.atomList) + ['chainMedianRatio'])
+            result = [ item + [analyser.chainMedian] for item in analyser.atomList.values.tolist()]
         elif args["--residue"]:
-            result.append(','.join(['chain', 'resNum', 'resName', 'density_electron_ratio', 'volume', 'electrons', 'chainMedianRatio']))
-            for item in analyser.residueList:
-                result.append(','.join(map(str, item + [analyser.chainMedian])))
+            headerList = ['chain', 'resNum', 'resName', 'density_electron_ratio', 'numVoxels', 'electrons', 'volume', 'chainMedianRatio']
+            result = [ list(item) + [analyser.chainMedian] for item in analyser.residueList]
         elif args["--chain"]:
-            result.append(','.join(['chain', 'resNum', 'resName', 'density_electron_ratio', 'volume', 'electrons', 'chainMedianRatio']))
-            for item in analyser.chainList:
-                result.append(','.join(map(str, item + [analyser.chainMedian])))
+            headerList = ['chain', 'resNum', 'resName', 'density_electron_ratio', 'numVoxels', 'electrons', 'volumne', 'chainMedianRatio']
+            result = [ list(item) + [analyser.chainMedian] for item in analyser.chainList]
     elif args["--green"] or args["--red"] or args["--all"]:
         if args["--stats"]:
-            for item in analyser.calcAtomBlobDists(radii, slopes):
-                result.append(','.join(map(str, item)))
+            jsonType = "json"
+            headerList = ['distance', 'sign', 'electrons_of_discrepancy', 'numVoxels', 'volume', 'chain', 'resNum', 'resName', 'atomName', 'atomSymmetry', 'atomXYZ', 'blobCentroid']
+            result = analyser.calcAtomBlobDists(radii, slopes)
+            for blobInfo in result:
+                blobInfo[10] = [ float(val) for val in blobInfo[10] ]
+                blobInfo[11] = [ float(val) for val in blobInfo[11] ]
         else:
             analyser.getBlobList()
             if args["--green"]:
@@ -91,7 +93,11 @@ def main():
 
     with open(filename, 'w') as outFile:
         if args["--out-format"] == 'csv':
-            print(*result, sep='\n', file=outFile)
+            csvResult = [','.join(map(str, row)) for row in [headerList] + result]
+            print(*csvResult, sep='\n', file=outFile)
+        elif jsonType == "jsonpickle":
+            jsonText = jsonpickle.encode(result)
+            outFile.write(jsonText)
         else:
-            result = jsonpickle.encode(result)
-            outFile.write(result)
+            jsonResult = [ dict(zip(headerList, row)) for row in result ]
+            json.dump(jsonResult, outFile)
