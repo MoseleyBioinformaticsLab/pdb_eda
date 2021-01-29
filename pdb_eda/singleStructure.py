@@ -6,7 +6,7 @@ pdb_eda single structure analysis mode command-line interface
 Usage:
     pdb_eda single -h | --help
     pdb_eda single <pdbid> <out-file> [--density-map | --diff-density-map]
-    pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--atom] [--residue] [--chain] [--out-format=<format>]
+    pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--atom | --residue | --chain] [--out-format=<format>]
     pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--green | --red | --all] [--stats] [--out-format=<format>]
     pdb_eda single <pdbid> <out-file> [--radii-param=<paramfile>] [--symmetry-atoms]
 
@@ -49,7 +49,6 @@ def main():
     radii = params['radii']
     slopes = params['slopes']
 
-
     analyser = densityAnalysis.fromPDBid(pdbid)
     if not analyser:
         sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
@@ -59,22 +58,21 @@ def main():
         result = analyser.densityObj
     elif args["--diff-density-map"]:
         result = analyser.diffDensityObj
-
-
-    if args["--atom"] or args["--residue"] or args["--chain"]:
+    elif args["--atom"] or args["--residue"] or args["--chain"]:
         analyser.aggregateCloud(radii, slopes, atomL=True, residueL=True, chainL=True)
         if args["--atom"]:
-            result.append(','.join(map(str, list(analyser.atomList) + ['chainMedian'])))
+            result.append(','.join(map(str, list(analyser.atomList) + ['chainMedianRatio'])))
             for item in analyser.atomList.values.tolist():
                 result.append(','.join(map(str, item + [analyser.chainMedian])))
-        if args["--residue"]:
+        elif args["--residue"]:
+            result.append(','.join(['chain', 'resNum', 'resName', 'density_electron_ratio', 'volume', 'electrons', 'chainMedianRatio']))
             for item in analyser.residueList:
                 result.append(','.join(map(str, item + [analyser.chainMedian])))
-        if args["--chain"]:
+        elif args["--chain"]:
+            result.append(','.join(['chain', 'resNum', 'resName', 'density_electron_ratio', 'volume', 'electrons', 'chainMedianRatio']))
             for item in analyser.chainList:
                 result.append(','.join(map(str, item + [analyser.chainMedian])))
-
-    if args["--green"] or args["--red"] or args["--all"]:
+    elif args["--green"] or args["--red"] or args["--all"]:
         if args["--stats"]:
             for item in analyser.calcAtomBlobDists(radii, slopes):
                 result.append(','.join(map(str, item)))
@@ -86,8 +84,7 @@ def main():
                 result = analyser.redBlobList
             if args["--all"]:
                 result = analyser.greenBlobList + analyser.redBlobList
-
-    if args["--symmetry-atoms"]:
+    elif args["--symmetry-atoms"]:
         analyser.calcSymmetryAtoms()
         result = analyser.symmetryAtoms
 

@@ -367,14 +367,14 @@ class DensityAnalysis(object):
 
         # normalize the density by median volume of given atom type
         def normVolumn(row):
-            return float(row['density']) / float(row['volume']) * float(medians['volume'][row['atomType']])
+            return float(row['density_electron_ratio']) / float(row['volume']) * float(medians['volume'][row['atomType']])
 
         def calcSlope(data):
             ## Less than three data points or all b factors are the same
             if data['chain'].count() <= 2 or all(x == data.iloc[0]['bfactor'] for x in data['bfactor']): 
                 return currentSlopes[data.iloc[0]['atomType']]
 
-            slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adjDensity']-chainMedian)/chainMedian)
+            slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adj_density_electron_ratio']-chainMedian)/chainMedian)
             if p_value > 0.05:
                 return currentSlopes[data.iloc[0]['atomType']]
             else:
@@ -384,17 +384,17 @@ class DensityAnalysis(object):
             return currentSlopes[data.iloc[0]['atomType']]
 
         def correctFraction(row, slopes, medianBfactor, chainMedian):
-            return ((row['adjDensity'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[
+            return ((row['adj_density_electron_ratio'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[
                 medianBfactor.index == row['atomType']])).values * slopes.loc[slopes.index == row['atomType']].values)[0,0]
 
         try:
-            atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density', 'volume', 'electrons', 'bfactor', 'centroidDist'])
+            atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density_electron_ratio', 'volume', 'electrons', 'bfactor', 'centroidDist'])
             centroidCutoff = atoms['centroidDist'].median() + atoms['centroidDist'].std() * 2
             atoms = atoms[atoms['centroidDist'] < centroidCutoff]  # leave out the atoms that the centroid and atom coordinates are too far away
             medians = atoms.groupby(['atomType']).median()
 
             ## Normalize by volume
-            atoms['adjDensity'] = atoms.apply(lambda row: normVolumn(row), axis=1)
+            atoms['adj_density_electron_ratio'] = atoms.apply(lambda row: normVolumn(row), axis=1)
             medians = atoms.groupby(['atomType']).median()
             atoms.loc[atoms.bfactor <= 0, 'bfactor'] = np.nan
             atoms['bfactor'] = atoms.groupby('atomType')['bfactor'].transform(lambda x: x.fillna(x.median()))
@@ -403,9 +403,9 @@ class DensityAnalysis(object):
             medianBfactor = atoms.groupby('atomType')[['bfactor']].median()
 
             ## Correct by b-factor
-            atoms['chainFraction'] = (atoms['adjDensity'] - chainMedian) / chainMedian
+            atoms['chainFraction'] = (atoms['adj_density_electron_ratio'] - chainMedian) / chainMedian
             atoms['correctedFraction'] = atoms.apply(lambda row: correctFraction(row, slopes, medianBfactor, chainMedian), axis=1)
-            atoms['correctedDensity'] = atoms['correctedFraction'] * chainMedian + chainMedian
+            atoms['corrected_density_electron_ratio'] = atoms['correctedFraction'] * chainMedian + chainMedian
             medians = atoms.groupby(['atomType']).median()
             medians['slopes'] = slopes
         except:

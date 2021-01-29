@@ -5,20 +5,13 @@ pdb_eda multiple structure analysis mode command-line interface
 Usage:
     pdb_eda multiple -h | --help
     pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--out-format=<format>]
-    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--atom] [--residue] [--chain] [--green] [--red] [--symmetry-atoms]
 
 Options:
     -h, --help                      Show this screen.
     <out-file>                      Output file name
     <pdbid-file>                    File name that contains the pdb ids
     --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
-    --atom                          Aggregate and print results by atom
-    --residue                       Aggregate and print results by residue
-    --chain                         Aggregate and print results by chain
-    --green                         Calculate and print results of all green blobs (positive difference electron density)
-    --red                           Calculate and print results of all red blobs (negative difference electron density)
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
-    --symmetry-atoms                Calculate and print results of all symmetry atoms. (Only available in json format)
 """
 
 import docopt
