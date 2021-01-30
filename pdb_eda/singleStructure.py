@@ -13,7 +13,7 @@ Usage:
 Options:
     -h, --help                      Show this screen.
     <pdbid>                         The PDB id
-    <out-file>                      Output file name
+    <out-file>                      Output filename
     --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
     --atom                          Aggregate and print results by atom
     --residue                       Aggregate and print results by residue

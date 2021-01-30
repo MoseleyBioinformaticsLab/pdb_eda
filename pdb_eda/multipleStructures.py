@@ -8,9 +8,9 @@ Usage:
 
 Options:
     -h, --help                      Show this screen.
-    <out-file>                      Output file name
+    <out-file>                      Output filename
     <pdbid-file>                    File name that contains the pdb ids
-    --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
+    --radii-param=<paramfile>       Radii parameters filename. [default: conf/optimized_radii_slope_param.json]
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
     --time-out=<seconds>            Set a maximum time to try to analyze any single pdb entry. [default: 0]
 """
