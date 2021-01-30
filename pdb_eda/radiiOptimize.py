@@ -168,7 +168,7 @@ def processFunction(pdbid, paramsFilepath):
     if not analyser.chainMedian:
         return 0
 
-    diffs = { atomType:((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian) for atomType in radii if atomType in analyser.medians.index }
+    diffs = { atomType:((analyser.medians.loc[atomType]['corrected_density_electron_ratio'] - analyser.chainMedian) / analyser.chainMedian) for atomType in radii if atomType in analyser.medians.index }
     newSlopes = { atomType:analyser.medians.loc[atomType]['slopes'] for atomType in slopes if atomType in analyser.medians.index }
 
     resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes }, "tempResults_")

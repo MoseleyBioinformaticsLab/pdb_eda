@@ -62,8 +62,8 @@ def main():
         analyser.aggregateCloud(radii, slopes, atomL=True, residueL=True, chainL=True)
         jsonType = "json"
         if args["--atom"]:
-            headerList = map(str,list(analyser.atomList) + ['chainMedianRatio'])
-            result = [ item + [analyser.chainMedian] for item in analyser.atomList.values.tolist()]
+            headerList = list(map(str,list(analyser.atomList) + ['chainMedianRatio']))
+            result = [ list(item) + [analyser.chainMedian] for item in analyser.atomList.values.tolist()]
         elif args["--residue"]:
             headerList = ['chain', 'resNum', 'resName', 'density_electron_ratio', 'numVoxels', 'electrons', 'volume', 'chainMedianRatio']
             result = [ list(item) + [analyser.chainMedian] for item in analyser.residueList]
@@ -93,11 +93,11 @@ def main():
 
     with open(filename, 'w') as outFile:
         if args["--out-format"] == 'csv':
-            csvResult = [','.join(map(str, row)) for row in [headerList] + result]
-            print(*csvResult, sep='\n', file=outFile)
+            csvResults = [','.join(map(str, row)) for row in [headerList] + result]
+            print(*csvResults, sep='\n', file=outFile)
         elif jsonType == "jsonpickle":
             jsonText = jsonpickle.encode(result)
             outFile.write(jsonText)
         else:
-            jsonResult = [ dict(zip(headerList, row)) for row in result ]
-            json.dump(jsonResult, outFile)
+            jsonResults = [ dict(zip(headerList, row)) for row in result ]
+            print(json.dumps(jsonResults, indent=2, sort_keys=True), file=outFile)

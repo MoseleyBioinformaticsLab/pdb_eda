@@ -4,7 +4,7 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--out-format=<format>]
+    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--out-format=<format>] [--time-out=<seconds>]
 
 Options:
     -h, --help                      Show this screen.
@@ -12,6 +12,7 @@ Options:
     <pdbid-file>                    File name that contains the pdb ids
     --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
+    --time-out=<seconds>            Set a maximum time to try to analyze any single pdb entry. [default: 0]
 """
 
 import docopt
@@ -23,6 +24,7 @@ import json
 import csv
 import multiprocessing
 import tempfile
+import signal
 
 from . import densityAnalysis
 from . import __version__
@@ -42,6 +44,7 @@ def main():
     if globalArgs["--help"]:
         print(__doc__)
         exit(0)
+    globalArgs["--time-out"] = int(globalArgs["--time-out"])
 
     paramsFilepath = os.path.join(os.path.dirname(__file__), globalArgs["--radii-param"])
     try:
@@ -88,10 +91,19 @@ def main():
                 writer.writerow([result['pdbid']] + stats + diffs)
     else:
         with open(globalArgs['<out-file>'], "w") as jsonFile:
-            json.dump(fullResults, jsonFile)
-
+            print(json.dumps(fullResults, indent=2, sort_keys=True), file=jsonFile)
 
 def processFunction(pdbid):
+    if globalArgs["--time-out"]:
+        try:
+            with timeout(seconds=globalArgs["--time-out"]):
+                return analyzePDBID(pdbid)
+        except:
+            return 0
+    else:
+        return analyzePDBID(pdbid)
+
+def analyzePDBID(pdbid):
     """Process function to analyze a single pdb entry.
 
     :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
@@ -110,7 +122,7 @@ def processFunction(pdbid):
     if not analyser.chainMedian:
         return 0
 
-    diffs = { atomType:((analyser.medians.loc[atomType]['correctedDensity'] - analyser.chainMedian) / analyser.chainMedian) if atomType in analyser.medians.index else 0 for atomType in sorted(radiiGlobal) }
+    diffs = { atomType:((analyser.medians.loc[atomType]['corrected_density_electron_ratio'] - analyser.chainMedian) / analyser.chainMedian) if atomType in analyser.medians.index else 0 for atomType in sorted(radiiGlobal) }
     stats = { 'chainMedian' : analyser.chainMedian, 'voxelVolume' : analyser.densityObj.header.unitVolume, 'f000' : analyser.f000, 'chainNvoxel' : analyser.chainNvoxel, 'chainTotalE' : analyser.chainTotalE,
         'densityMean' : analyser.densityObj.header.densityMean, 'diffDensityMean' : analyser.diffDensityObj.header.densityMean, 'resolution' : analyser.pdbObj.header.resolution,
         'spaceGroup' : analyser.pdbObj.header.spaceGroup, 'numAtomsAnalyzed' : len(analyser.atomList.index), 'numResiduesAnalyzed' : len(analyser.residueList), 'numChainsAnalyzed' : len(analyser.chainList)  }
@@ -137,3 +149,14 @@ def createTempJSONFile(data, filenamePrefix):
 
 
 
+class timeout:
+    def __init__(self, seconds=1, error_message='Timeout'):
+        self.seconds = seconds
+        self.error_message = error_message
+    def handle_timeout(self, signum, frame):
+        raise TimeoutError(self.error_message)
+    def __enter__(self):
+        signal.signal(signal.SIGALRM, self.handle_timeout)
+        signal.alarm(self.seconds)
+    def __exit__(self, type, value, traceback):
+        signal.alarm(0)
