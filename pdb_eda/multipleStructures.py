@@ -4,7 +4,7 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--out-format=<format>] [--time-out=<seconds>]
+    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--out-format=<format>] [--time-out=<seconds>] [--single]
 
 Options:
     -h, --help                      Show this screen.
@@ -13,6 +13,7 @@ Options:
     --radii-param=<paramfile>       Radii parameters filename. [default: conf/optimized_radii_slope_param.json]
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
     --time-out=<seconds>            Set a maximum time to try to analyze any single pdb entry. [default: 0]
+    --single                        Run only a single process. (Mainly used for testing).
 """
 
 import docopt
@@ -25,6 +26,7 @@ import csv
 import multiprocessing
 import tempfile
 import signal
+import collections
 
 from . import densityAnalysis
 from . import __version__
@@ -66,8 +68,11 @@ def main():
     except:
         sys.exit(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
-    with multiprocessing.Pool() as pool:
-        results = pool.map(processFunction, pdbids)
+    if globalArgs["--single"]:
+        results = [ processFunction(pdbid) for pdbid in pdbids ]
+    else:
+        with multiprocessing.Pool() as pool:
+            results = pool.map(processFunction, pdbids)
 
     fullResults = {}
     for resultFilename in results:
@@ -112,23 +117,29 @@ def analyzePDBID(pdbid):
     """
     startTime = time.process_time()
 
-    analyser = densityAnalysis.fromPDBid(pdbid)
+    analyzer = densityAnalysis.fromPDBid(pdbid)
 
-    if not analyser:
+    if not analyzer:
         return 0
 
-    analyser.aggregateCloud(radiiGlobal, slopesGlobal, atomL=True, residueL=True, chainL=True)
-    analyser.estimateF000()
-    if not analyser.chainMedian:
+    analyzer.aggregateCloud(radiiGlobal, slopesGlobal, atomL=True, residueL=True, chainL=True)
+    analyzer.estimateF000()
+    if not analyzer.chainMedian:
         return 0
 
-    diffs = { atomType:((analyser.medians.loc[atomType]['corrected_density_electron_ratio'] - analyser.chainMedian) / analyser.chainMedian) if atomType in analyser.medians.index else 0 for atomType in sorted(radiiGlobal) }
-    stats = { 'chainMedian' : analyser.chainMedian, 'voxelVolume' : analyser.densityObj.header.unitVolume, 'f000' : analyser.f000, 'chainNvoxel' : analyser.chainNvoxel, 'chainTotalE' : analyser.chainTotalE,
-        'densityMean' : analyser.densityObj.header.densityMean, 'diffDensityMean' : analyser.diffDensityObj.header.densityMean, 'resolution' : analyser.pdbObj.header.resolution,
-        'spaceGroup' : analyser.pdbObj.header.spaceGroup, 'numAtomsAnalyzed' : len(analyser.atomList.index), 'numResiduesAnalyzed' : len(analyser.residueList), 'numChainsAnalyzed' : len(analyser.chainList)  }
+    diffs = { atomType:((analyzer.medians.loc[atomType]['corrected_density_electron_ratio'] - analyzer.chainMedian) / analyzer.chainMedian)
+     if atomType in analyzer.medians.index else 0 for atomType in sorted(radiiGlobal) }
+
+    stats = { 'chainMedian' : analyzer.chainMedian, 'voxelVolume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chainNvoxel' : analyzer.chainNvoxel,
+        'chainTotalE' : analyzer.chainTotalE, 'densityMean' : analyzer.densityObj.header.densityMean, 'diffDensityMean' : analyzer.diffDensityObj.header.densityMean,
+        'resolution' : analyzer.pdbObj.header.resolution, 'spaceGroup' : analyzer.pdbObj.header.spaceGroup, 'numAtomsAnalyzed' : len(analyzer.atomList.index),
+        'numResiduesAnalyzed' : len(analyzer.residueList), 'numChainsAnalyzed' : len(analyzer.chainList)  }
+
+    properties = { property : value for (property,value) in analyzer.biopdbObj.header.items() }
+    properties['residueCounts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))
 
     elapsedTime = time.process_time() - startTime
-    resultFilename = createTempJSONFile({ "pdbid" : analyser.pdbid, "diffs" : diffs, "stats" : stats, "execution_time" : elapsedTime }, "tempResults_")
+    resultFilename = createTempJSONFile({ "pdbid" : analyzer.pdbid, "diffs" : diffs, "stats" : stats, "execution_time" : elapsedTime, "properties" : properties }, "tempResults_")
     return resultFilename
 
 
