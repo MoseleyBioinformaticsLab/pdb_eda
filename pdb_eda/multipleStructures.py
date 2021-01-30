@@ -8,8 +8,8 @@ Usage:
 
 Options:
     -h, --help                      Show this screen.
-    <out-file>                      Output filename
-    <pdbid-file>                    File name that contains the pdb ids
+    <out-file>                      Output filename. "-" will write to standard output.
+    <pdbid-file>                    File name that contains the pdb ids. "-" will read from standard input.
     --radii-param=<paramfile>       Radii parameters filename. [default: conf/optimized_radii_slope_param.json]
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
     --time-out=<seconds>            Set a maximum time to try to analyze any single pdb entry. [default: 0]
@@ -60,7 +60,7 @@ def main():
 
     try:
         pdbids = []
-        with open(globalArgs["<pdbid-file>"], "r") as textFile:
+        with open(globalArgs["<pdbid-file>"], "r") if globalArgs["<pdbid-file>"] != "-" else sys.stdin as textFile:
             for pdbid in textFile:
                 pdbids.append(pdbid[0:4])
     except:
@@ -82,7 +82,7 @@ def main():
 
     if globalArgs["--out-format"] == 'csv':
         statsHeaders = ['chainMedian', 'voxelVolume', 'f000', 'chainNvoxel', 'chainTotalE', 'densityMean', 'diffDensityMean', 'resolution', 'spaceGroup', 'numAtomsAnalyzed', 'numResiduesAnalyzed', 'numChainsAnalyzed']
-        with open(globalArgs['<out-file>'], "w", newline='') as csvFile:
+        with open(globalArgs['<out-file>'], "w", newline='') if globalArgs["<out-file>"] != "-" else sys.stdout as csvFile:
             writer = csv.writer(csvFile)
             writer.writerow(['pdbid'] + statsHeaders + sorted(radiiGlobal))
             for result in fullResults.values():
@@ -90,7 +90,7 @@ def main():
                 diffs = [result["diffs"][atomType] for atomType in sorted(radiiGlobal)]
                 writer.writerow([result['pdbid']] + stats + diffs)
     else:
-        with open(globalArgs['<out-file>'], "w") as jsonFile:
+        with open(globalArgs['<out-file>'], "w") if globalArgs["<out-file>"] != "-" else sys.stdout as jsonFile:
             print(json.dumps(fullResults, indent=2, sort_keys=True), file=jsonFile)
 
 def processFunction(pdbid):

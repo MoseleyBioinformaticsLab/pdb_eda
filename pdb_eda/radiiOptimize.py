@@ -5,6 +5,8 @@ pdb_eda radii and slope parameter optimization mode command-line interface
   A simple steepest decent optimization approach is utilized.
   This approach is justified by testing and the use of median differences that smooths the error surface.
 
+  Should use a minimum of 1000 PDB entries for optimization.
+
 Usage:
     pdb_eda optimize -h | --help
     pdb_eda optimize <pdbid-file> <log-file> <final-params-file> [options]

@@ -12,8 +12,8 @@ Usage:
 
 Options:
     -h, --help                      Show this screen.
-    <pdbid>                         The PDB id
-    <out-file>                      Output filename
+    <pdbid>                         The PDB ID to download and analyze.
+    <out-file>                      Output filename. "-" will write to standard output.
     --radii-param=<paramfile>       Radii parameters. [default: conf/optimized_radii_slope_param.json]
     --atom                          Aggregate and print results by atom
     --residue                       Aggregate and print results by residue
@@ -40,8 +40,6 @@ def main():
     if args["--help"]:
         print(__doc__)
         exit(0)
-    pdbid = args["<pdbid>"]
-    filename = args["<out-file>"]
 
     paramsPath = os.path.join(os.path.dirname(__file__), args["--radii-param"])
     with open(paramsPath, 'r') as fh:
@@ -49,7 +47,7 @@ def main():
     radii = params['radii']
     slopes = params['slopes']
 
-    analyser = densityAnalysis.fromPDBid(pdbid)
+    analyser = densityAnalysis.fromPDBid(args["<pdbid>"])
     if not analyser:
         sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
 
@@ -90,8 +88,7 @@ def main():
         analyser.calcSymmetryAtoms()
         result = analyser.symmetryAtoms
 
-
-    with open(filename, 'w') as outFile:
+    with open(args["<out-file>"], 'w') if args["<out-file>"] != "-" else sys.stdout as outFile:
         if args["--out-format"] == 'csv':
             csvResults = [','.join(map(str, row)) for row in [headerList] + result]
             print(*csvResults, sep='\n', file=outFile)
