@@ -21,7 +21,6 @@ from . import multipleStructures
 from . import radiiOptimize
 from . import __version__
 
-
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "single":
         singleStructure.main()

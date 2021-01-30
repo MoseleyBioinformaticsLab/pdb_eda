@@ -18,6 +18,7 @@ import scipy.spatial
 from scipy import stats
 
 from . import ccp4
+from . import ccp4_utils
 from . import pdbParser
 from . import validationStats
 
@@ -280,7 +281,8 @@ class DensityAnalysis(object):
                 #    if j <= i:
                 #        continue
                 for j in range(i+1, len(residuePool)):
-                    overlap[i][j] = overlap[j][i] = residuePool[i].testOverlap(residuePool[j])
+                    #overlap[i][j] = overlap[j][i] = residuePool[i].testOverlap(residuePool[j])
+                    overlap[i][j] = overlap[j][i] = ccp4_utils.testOverlap(residuePool[i],residuePool[j])
 
             resClouds = []
             usedIdx = []
@@ -319,7 +321,8 @@ class DensityAnalysis(object):
             #    if j <= i:
             #        continue
             for j in range(i+1, len(chainPool)):
-                overlap[i][j] = overlap[j][i] = chainPool[i].testOverlap(chainPool[j])
+                #overlap[i][j] = overlap[j][i] = chainPool[i].testOverlap(chainPool[j])
+                overlap[i][j] = overlap[j][i] = ccp4_utils.testOverlap(chainPool[i],chainPool[j])
 
         usedIdx = []
         for i in range(len(chainPool)):
