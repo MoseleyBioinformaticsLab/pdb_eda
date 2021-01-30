@@ -36,4 +36,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "--profile":
+        sys.argv.pop(1)
+        import cProfile
+        profiler = cProfile.Profile()
+        profiler.enable()
+        main()
+        profiler.disable()
+        profiler.print_stats()
+    else:
+        main()

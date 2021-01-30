@@ -384,8 +384,8 @@ class DensityAnalysis(object):
             return currentSlopes[data.iloc[0]['atomType']]
 
         def correctFraction(row, slopes, medianBfactor, chainMedian):
-            return ((row['adj_density_electron_ratio'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[
-                medianBfactor.index == row['atomType']])).values * slopes.loc[slopes.index == row['atomType']].values)[0,0]
+            return ((row['adj_density_electron_ratio'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[medianBfactor.index == row['atomType']])).values *
+                    slopes.loc[slopes.index == row['atomType']].values)[0,0]
 
         try:
             atoms = pandas.DataFrame(atomList, columns=['chain', 'resNum', 'resName', 'atomName', 'atomType', 'density_electron_ratio', 'numVoxels', 'electrons', 'bfactor', 'centroidDist'])
