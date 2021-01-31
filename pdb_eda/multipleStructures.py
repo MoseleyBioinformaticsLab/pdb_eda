@@ -4,16 +4,18 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-file> [--radii-param=<paramfile>] [--out-format=<format>] [--time-out=<seconds>] [--single]
+    pdb_eda multiple <pdbid-file> <out-file> [options]
+    pdb_eda multiple <pdbid-file> <out-dir> --single=<quoted-single-mode-options> [--time-out=<seconds>]
 
 Options:
-    -h, --help                      Show this screen.
-    <out-file>                      Output filename. "-" will write to standard output.
-    <pdbid-file>                    File name that contains the pdb ids. "-" will read from standard input.
-    --radii-param=<paramfile>       Radii parameters filename. [default: conf/optimized_radii_slope_param.json]
-    --out-format=<format>           Output file format, available formats: csv, json [default: json].
-    --time-out=<seconds>            Set a maximum time to try to analyze any single pdb entry. [default: 0]
-    --single                        Run only a single process. (Mainly used for testing).
+    -h, --help                              Show this screen.
+    <out-file>                              Output filename. "-" will write to standard output.
+    <pdbid-file>                            File name that contains the pdb ids. "-" will read from standard input.
+    --radii-param=<paramfile>               Radii parameters filename. [default: conf/optimized_radii_slope_param.json]
+    --out-format=<format>                   Output file format, available formats: csv, json [default: json].
+    --time-out=<seconds>                    Set a maximum time to try to analyze any single pdb entry. [default: 0]
+    --test                                  Run only a single process for testing purposes.
+    --single=<quoted-single-mode-options>   Run single structure analysis mode on a set of PDB entries.
 """
 
 import docopt
@@ -30,6 +32,7 @@ import collections
 
 from . import densityAnalysis
 from . import __version__
+from . import singleStructure
 
 ## Final set of radii derived from optimization
 defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_radii_slope_param.json')
@@ -69,36 +72,48 @@ def main():
         sys.exit(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
     if globalArgs["--single"]:
+        processFunction = singleModeFunction
+        if not os.path.isdir(globalArgs["<out-dir>"]):
+            if not os.path.isfile(globalArgs["<out-dir>"]):
+                os.mkdir(globalArgs["<out-dir>"])
+            else:
+                sys.exit(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
+    else:
+        processFunction = multipleModeFunction
+
+    if globalArgs["--test"]:
         results = [ processFunction(pdbid) for pdbid in pdbids ]
     else:
         with multiprocessing.Pool() as pool:
             results = pool.map(processFunction, pdbids)
 
-    fullResults = {}
-    for resultFilename in results:
-        if resultFilename:
-            try:
-                with open(resultFilename, 'r') as jsonFile:
-                    result = json.load(jsonFile)
-                    fullResults[result["pdbid"]] = result
-                os.remove(resultFilename)
-            except:
-                pass
+    if not globalArgs["--single"]: # skip generating results if running in single structure analysis mode.
+        fullResults = {}
+        for resultFilename in results:
+            if resultFilename:
+                try:
+                    with open(resultFilename, 'r') as jsonFile:
+                        result = json.load(jsonFile)
+                        fullResults[result["pdbid"]] = result
+                    os.remove(resultFilename)
+                except:
+                    pass
 
-    if globalArgs["--out-format"] == 'csv':
-        statsHeaders = ['chainMedian', 'voxelVolume', 'f000', 'chainNvoxel', 'chainTotalE', 'densityMean', 'diffDensityMean', 'resolution', 'spaceGroup', 'numAtomsAnalyzed', 'numResiduesAnalyzed', 'numChainsAnalyzed']
-        with open(globalArgs['<out-file>'], "w", newline='') if globalArgs["<out-file>"] != "-" else sys.stdout as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerow(['pdbid'] + statsHeaders + sorted(radiiGlobal))
-            for result in fullResults.values():
-                stats = [result["stats"][header] for header in statsHeaders]
-                diffs = [result["diffs"][atomType] for atomType in sorted(radiiGlobal)]
-                writer.writerow([result['pdbid']] + stats + diffs)
-    else:
-        with open(globalArgs['<out-file>'], "w") if globalArgs["<out-file>"] != "-" else sys.stdout as jsonFile:
-            print(json.dumps(fullResults, indent=2, sort_keys=True), file=jsonFile)
+        if globalArgs["--out-format"] == 'csv':
+            statsHeaders = ['chainMedian', 'voxelVolume', 'f000', 'chainNvoxel', 'chainTotalE', 'densityMean', 'diffDensityMean', 'resolution', 'spaceGroup', 'numAtomsAnalyzed', 'numResiduesAnalyzed', 'numChainsAnalyzed']
+            with open(globalArgs['<out-file>'], "w", newline='') if globalArgs["<out-file>"] != "-" else sys.stdout as csvFile:
+                writer = csv.writer(csvFile)
+                writer.writerow(['pdbid'] + statsHeaders + sorted(radiiGlobal))
+                for result in fullResults.values():
+                    stats = [result["stats"][header] for header in statsHeaders]
+                    diffs = [result["diffs"][atomType] for atomType in sorted(radiiGlobal)]
+                    writer.writerow([result['pdbid']] + stats + diffs)
+        else:
+            with open(globalArgs['<out-file>'], "w") if globalArgs["<out-file>"] != "-" else sys.stdout as jsonFile:
+                print(json.dumps(fullResults, indent=2, sort_keys=True), file=jsonFile)
 
-def processFunction(pdbid):
+
+def multipleModeFunction(pdbid):
     if globalArgs["--time-out"]:
         try:
             with timeout(seconds=globalArgs["--time-out"]):
@@ -107,6 +122,24 @@ def processFunction(pdbid):
             return 0
     else:
         return analyzePDBID(pdbid)
+
+
+def singleModeFunction(pdbid):
+    singleModeCommandLine = "pdb_eda single " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--single"]
+    sys.argv = singleModeCommandLine.split()
+    if globalArgs["--time-out"]:
+        try:
+            with timeout(seconds=globalArgs["--time-out"]):
+                singleStructure.main()
+        except:
+            pass
+    else:
+        try:
+            singleStructure.main()
+        except:
+            pass
+
+    return 0
 
 def analyzePDBID(pdbid):
     """Process function to analyze a single pdb entry.
@@ -137,6 +170,8 @@ def analyzePDBID(pdbid):
 
     properties = { property : value for (property,value) in analyzer.biopdbObj.header.items() }
     properties['residueCounts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))
+    properties['elementCounts'] = dict(collections.Counter(atom.element for atom in analyzer.biopdbObj.get_atoms()))
+
 
     elapsedTime = time.process_time() - startTime
     resultFilename = createTempJSONFile({ "pdbid" : analyzer.pdbid, "diffs" : diffs, "stats" : stats, "execution_time" : elapsedTime, "properties" : properties }, "tempResults_")
