@@ -413,12 +413,12 @@ class DensityMatrix:
 
         return totalDensity
 
-    def findAberrantBlobs(self, xyzCoord, radius, densityCutoff=0):
+    def findAberrantBlobs(self, xyzCoords, radius, densityCutoff=0):
         """
         Within a given radius, find and aggregate all neighbouring aberrant points into blobs (red/green meshes).
 
-        :param xyzCoord: xyz coordinates.
-        :type xyzCoord: A :py:obj:`list` of xyz coordinates
+        :param xyzCoords: xyz coordinates.
+        :type xyzCoords: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.
         :param float radius: the search radius.
         :param float densityCutoff: A density cutoff for all the points wants to be included.
                 Default 0 means include every point within the radius.
@@ -428,7 +428,11 @@ class DensityMatrix:
         :return: A list of aberrant blobs described by their xyz centroid, total density, and volume.
         :rtype: A :py:obj:`list` of :class:`pdb_eda.ccp4.DensityBlob` object.
         """
-        crsCoordList = self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)
+
+        if any(isinstance(element, list) for element in xyzCoords):
+            crsCoordList = [list(x) for x in {tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in density_obj.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)}]
+        else:
+            crsCoordList = self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)
 
         dists = scipy.spatial.distance.cdist(np.matrix(crsCoordList), np.matrix(crsCoordList))
         dcutoff = np.sqrt(3)  ## the points are considered to be adjacent if one is in the one-layer outer box with the other one in the center
