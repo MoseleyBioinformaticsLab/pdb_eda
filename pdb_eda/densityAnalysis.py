@@ -162,15 +162,16 @@ class DensityAnalysis(object):
         self.symmetryAtoms = None
         self.greenBlobList = None
         self.redBlobList = None
-        self.chainMedian = None
         self.medians = None
         self.atomList = None
         self.residueList = None
         self.chainList = None
         self.statistics = None
         self.f000 = None
+        self.chainMedian = None
         self.chainNvoxel = None
         self.chainTotalE = None
+        self.chainTotalDensity = None
 
 
     def validation(self, densityObj=None, diffDensityObj=None, biopdbObj=None, recalculate=False):
@@ -208,7 +209,7 @@ class DensityAnalysis(object):
         self.statistics = valid.getStats(biopdbObj, fc, fo, sigma3)
 
 
-    def aggregateCloud(self, radiiUpdate={}, slopesUpdate={}, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False):
+    def aggregateCloud(self, radiiUpdate={}, slopesUpdate={}, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False, minResAtoms=4, minTotalAtoms=50):
         """
         Aggregate the electron density map clouds by atom, residue, and chain.
         Calculate and populate `densityAnalysis.chainMedian` and `densityAnalysis.medians` data member.
@@ -238,7 +239,6 @@ class DensityAnalysis(object):
 
         chainClouds = []
         chainPool = []
-        chainAvgDensity = []
         residueDict = {}
         chainList = []
         residueList = []
@@ -302,7 +302,7 @@ class DensityAnalysis(object):
                 resClouds.append(residuePool[i])
 
             for cloud in resClouds:
-                if len(cloud.atoms) >= 4:
+                if len(cloud.atoms) >= minResAtoms:
                     if residue.resname in residueDict.keys():
                         residueDict[residue.resname].append(cloud)
                     else:
@@ -339,34 +339,29 @@ class DensityAnalysis(object):
             for idx in currCluster:
                 chainPool[i].merge(chainPool[idx])
             chainClouds.append(chainPool[i])
+        ##End chain
 
+        ## Calculate chainMedian, which is technically a weighted mean value now.
+        numVoxels = 0
+        totalElectrons = 0
+        totalDensity = 0
         for cloud in chainClouds:
-            if len(cloud.atoms) <= 50:
-                continue
             atom = cloud.atoms[0]
-            totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
-            chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron, len(cloud.crsList) * densityObj.header.unitVolume])
-            chainAvgDensity.append(cloud.totalDensity / totalElectron)
+            chainElectrons = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+            totalElectrons += chainElectrons
+            numVoxels += len(cloud.crsList)
+            totalDensity += cloud.totalDensity
 
-        if len(chainAvgDensity) == 0:
-            if len(residueList) == 0:
-                if len(atomList) == 0:
-                    return 0
-                else:
-                    atomList.sort(key=lambda x: x[5])
-                    nVoxel = atomList[len(atomList) // 2][6]
-                    totalE = atomList[len(atomList) // 2][7]
-                    chainMedian = np.median([x[5] for x in atomList])
-            else:
-                residueList.sort(key=lambda x: x[3])
-                nVoxel = residueList[len(residueList) // 2][4]
-                totalE = residueList[len(residueList) // 2][5]
-                chainMedian = np.median([x[3] for x in residueList])
+            if len(cloud.atoms) >= minTotalAtoms:
+                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons])
+
+        if totalElectrons == 0 or len(atomList) < minTotalAtoms:
+            return 0
         else:
+            chainMedian = totalDensity / totalElectrons
             chainList.sort(key=lambda x: x[3])
-            nVoxel = chainList[len(chainList)//2][4]
-            totalE = chainList[len(chainList)//2][5]
-            chainMedian = np.median(chainAvgDensity)
+        ## End calculate chainMedian
+
 
         # normalize the density by median volume (numVoxels) of given atom type
         def normVolumn(row):
@@ -416,8 +411,9 @@ class DensityAnalysis(object):
             return 0
 
         self.chainMedian = chainMedian
-        self.chainNvoxel = nVoxel
-        self.chainTotalE = totalE
+        self.chainNvoxel = numVoxels
+        self.chainTotalE = totalElectrons
+        self.chainTotalDensity = totalDensity
         self.medians = medians
         if atomL:
             self.atomList = atoms
