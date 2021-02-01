@@ -100,7 +100,7 @@ def main():
                     pass
 
         if globalArgs["--out-format"] == 'csv':
-            statsHeaders = ['chainMedian', 'voxelVolume', 'f000', 'chainNvoxel', 'chainTotalE', 'densityMean', 'diffDensityMean', 'resolution', 'spaceGroup', 'numAtomsAnalyzed', 'numResiduesAnalyzed', 'numChainsAnalyzed']
+            statsHeaders = ['density_electron_ratio', 'voxel_volume', 'f000', 'chain_num_voxel', 'chain_total_electrons', 'density_mean', 'diff_density_mean', 'resolution', 'space_group', 'num_atoms_analyzed', 'num_residues_analyzed', 'num_chains_analyzed']
             with open(globalArgs['<out-file>'], "w", newline='') if globalArgs["<out-file>"] != "-" else sys.stdout as csvFile:
                 writer = csv.writer(csvFile)
                 writer.writerow(['pdbid'] + statsHeaders + sorted(radiiGlobal))
@@ -163,14 +163,14 @@ def analyzePDBID(pdbid):
     diffs = { atomType:((analyzer.medians.loc[atomType]['corrected_density_electron_ratio'] - analyzer.chainMedian) / analyzer.chainMedian)
      if atomType in analyzer.medians.index else 0 for atomType in sorted(radiiGlobal) }
 
-    stats = { 'chainMedian' : analyzer.chainMedian, 'voxelVolume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chainNvoxel' : analyzer.chainNvoxel,
-        'chainTotalE' : analyzer.chainTotalE, 'densityMean' : analyzer.densityObj.header.densityMean, 'diffDensityMean' : analyzer.diffDensityObj.header.densityMean,
-        'resolution' : analyzer.pdbObj.header.resolution, 'spaceGroup' : analyzer.pdbObj.header.spaceGroup, 'numAtomsAnalyzed' : len(analyzer.atomList.index),
-        'numResiduesAnalyzed' : len(analyzer.residueList), 'numChainsAnalyzed' : len(analyzer.chainList)  }
+    stats = { 'density_electron_ratio' : analyzer.chainMedian, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chain_num_voxel' : analyzer.chainNvoxel,
+        'chain_total_electrons' : analyzer.chainTotalE, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
+        'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomList.index),
+        'num_residues_analyzed' : len(analyzer.residueList), 'num_chains_analyzed' : len(analyzer.chainList)  }
 
     properties = { property : value for (property,value) in analyzer.biopdbObj.header.items() }
-    properties['residueCounts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))
-    properties['elementCounts'] = dict(collections.Counter(atom.element for atom in analyzer.biopdbObj.get_atoms()))
+    properties['residue_counts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))
+    properties['element_counts'] = dict(collections.Counter(atom.element for atom in analyzer.biopdbObj.get_atoms()))
 
 
     elapsedTime = time.process_time() - startTime
