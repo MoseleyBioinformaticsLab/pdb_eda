@@ -22,7 +22,7 @@ from . import ccp4_utils
 from . import pdbParser
 from . import validationStats
 
-## Data originally from https://arxiv.org/pdf/0804.2488.pdf
+## Starting data originally from https://arxiv.org/pdf/0804.2488.pdf
 radiiParamPath = os.path.join(os.path.dirname(__file__), 'conf/original_radii_slope_param.json')
 electronParamPath = os.path.join(os.path.dirname(__file__), 'conf/atom_type_electron_param.json')
 
@@ -81,7 +81,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
                 densityObj = ccp4.read(ccp4file, pdbid)
             else:
                 densityObj = ccp4.readFromPDBID(pdbid)
-            densityObj.densityCutoff = np.mean(densityObj.densityArray) + 1.5 * np.std(densityObj.densityArray)
+            densityObj.densityCutoff = densityObj.meanDensity + 1.5 * densityObj.stdDensity
             densityObj.densityCutoffFromHeader = densityObj.header.densityMean + 1.5 * densityObj.header.rmsd
 
             '''
@@ -112,7 +112,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
                 diffDensityObj = ccp4.read(ccp4diffFile, pdbid)
             else:
                 diffDensityObj = ccp4.readFromPDBID(pdbid + '_diff')
-            diffDensityObj.diffDensityCutoff = np.mean(diffDensityObj.densityArray) + 3 * np.std(diffDensityObj.densityArray)
+            diffDensityObj.diffDensityCutoff = diffDensityObj.meanDensity + 3 * diffDensityObj.stdDensity
 
         if pdbbio or pdbi:
             pdbfile = pdbfolder + 'pdb' + pdbid + '.ent'
@@ -159,10 +159,12 @@ class DensityAnalysis(object):
         self.biopdbObj = biopdbObj
         self.pdbObj = pdbObj
 
-        self.symmetryAtoms = None
-        self.symmetryOnlyAtoms = None
-        self.greenBlobList = None
-        self.redBlobList = None
+        self._symmetryAtoms = None
+        self._symmetryOnlyAtoms = None
+        self._symmetryAtomCoords = None
+        self._symmetryOnlyAtomCoords = None
+        self._greenBlobList = None
+        self._redBlobList = None
         self.medians = None
         self.atomList = None
         self.residueList = None
@@ -173,6 +175,43 @@ class DensityAnalysis(object):
         self.chainNvoxel = None
         self.chainTotalE = None
         self.chainTotalDensity = None
+
+
+    @property
+    def symmetryAtoms(self):
+        if self._symmetryAtoms == None:
+            self.calcSymmetryAtoms()
+        return self._symmetryAtoms
+
+    @property
+    def symmetryOnlyAtoms(self):
+        if self._symmetryOnlyAtoms == None:
+            self.calcSymmetryAtoms()
+        return self._symmetryOnlyAtoms
+
+    @property
+    def symmetryAtomCoords(self):
+        if self._symmetryAtoms == None:
+            self.calcSymmetryAtoms()
+        return self._symmetryAtomCoords
+
+    @property
+    def symmetryOnlyAtomCoords(self):
+        if self._symmetryOnlyAtoms == None:
+            self.calcSymmetryAtoms()
+        return self._symmetryOnlyAtomCoords
+
+    @property
+    def greenBlobList(self):
+        if self._greenBlobList == None:
+            self.getBlobList()
+        return self._greenBlobList
+
+    @property
+    def redBlobList(self):
+        if self._redBlobList == None:
+            self.getBlobList()
+        return self._redBlobList
 
 
     def validation(self, densityObj=None, diffDensityObj=None, biopdbObj=None, recalculate=False):
@@ -209,7 +248,8 @@ class DensityAnalysis(object):
 
         self.statistics = valid.getStats(biopdbObj, fc, fo, sigma3)
 
-
+    residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volumne', 'density_electron_ratio']
+    chainListHeader = residueListHeader
     def aggregateCloud(self, radiiUpdate={}, slopesUpdate={}, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False, minResAtoms=4, minTotalAtoms=50):
         """
         Aggregate the electron density map clouds by atom, residue, and chain.
@@ -435,7 +475,7 @@ class DensityAnalysis(object):
 
         :return: :py:obj:`None`
         """
-        if self.greenBlobList and self.redBlobList and not recalculate:
+        if self._greenBlobList and self._redBlobList and not recalculate:
             return None
         if not diffDensityObj:
             diffDensityObj = self.diffDensityObj
@@ -447,51 +487,12 @@ class DensityAnalysis(object):
         ncrs = diffDensityObj.header.uniqueNcrs
 
         ## crs points that are outside 3 sigma
-        greenCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 ])
-        redCrsList = np.asarray([[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) <= -sigma3 ])
+        greenCrsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 ]
+        redCrsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) <= -sigma3 ]
 
-        ## pairwise distances between all green/red points
-        greenDists = scipy.spatial.distance.cdist(greenCrsList, greenCrsList)
-        redDists = scipy.spatial.distance.cdist(redCrsList, redCrsList)
+        self._greenBlobList = diffDensityObj.createBlobList(greenCrsList)
+        self._redBlobList = diffDensityObj.createBlobList(redCrsList)
 
-        ## group all connected points together into green/red blobs
-        dcutoff = np.sqrt(3)  ## the points are considered to be adjacent if one is in the one layer outer box with the other one in the center
-        greenBlobList = []
-        usedIdx = []
-        for i in range(len(greenCrsList)):
-            if i in usedIdx:
-                continue
-
-            currCluster = [i]
-            newCluster = [n for n, d in enumerate(greenDists[i]) if n not in currCluster and d <= dcutoff]
-            currCluster = currCluster + newCluster
-            while len(newCluster):
-                newCluster = {n for x in newCluster for n, d in enumerate(greenDists[x]) if n not in currCluster and d <= dcutoff}
-                currCluster = currCluster + list(newCluster)
-
-            usedIdx = usedIdx + currCluster
-            blob = ccp4.DensityBlob.fromCrsList([greenCrsList[x] for x in currCluster], diffDensityObj.header, diffDensityObj.density)
-            greenBlobList.append(blob)
-
-        redBlobList = []
-        usedIdx = []
-        for i in range(len(redCrsList)):
-            if i in usedIdx:
-                continue
-
-            currCluster = [i]
-            newCluster = [n for n, d in enumerate(redDists[i]) if n not in currCluster and d <= dcutoff]
-            currCluster = currCluster + newCluster
-            while len(newCluster):
-                newCluster = {n for x in newCluster for n, d in enumerate(redDists[x]) if n not in currCluster and d <= dcutoff}
-                currCluster = currCluster + list(newCluster)
-
-            usedIdx = usedIdx + currCluster
-            blob = ccp4.DensityBlob.fromCrsList([redCrsList[x] for x in currCluster], diffDensityObj.header, diffDensityObj.density)
-            redBlobList.append(blob)
-
-        self.greenBlobList = greenBlobList
-        self.redBlobList = redBlobList
 
     def calcSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
         """
@@ -511,7 +512,7 @@ class DensityAnalysis(object):
 
         :return: :py:obj:`None`
         """
-        if self.symmetryAtoms and not recalculate:
+        if self._symmetryAtoms and not recalculate:
             return None
 
         if not densityObj:
@@ -520,9 +521,6 @@ class DensityAnalysis(object):
             biopdbObj = self.biopdbObj
         if not pdbObj:
             pdbObj = self.pdbObj
-
-        if not self.symmetryAtoms or recalculate:
-            pass
 
         ## For inRangeAtoms, the min/max range of xyz axes (the circumscribed box)
         ncrs = densityObj.header.ncrs
@@ -556,9 +554,12 @@ class DensityAnalysis(object):
                                 x.symmetry = [i, j, k, r]
                             allAtoms.extend(inRangeAtoms)
 
-        self.symmetryAtoms = allAtoms
-        self.symmetryOnlyAtoms = [atom for atom in allAtoms if atom.symmetry != [0,0,0,0]]
+        self._symmetryAtoms = allAtoms
+        self._symmetryAtomCoords = np.asarray([atom.coord for atom in allAtoms])
+        self._symmetryOnlyAtoms = [atom for atom in allAtoms if atom.symmetry != [0,0,0,0]]
+        self._symmetryOnlyAtomCoords = np.asarray([atom.coord for atom in self.symmetryOnlyAtoms])
 
+    atomBlobDistanceHeader = ['distance_to_atom', 'sign', 'electrons_of_discrepancy', 'num_voxels', 'volume', 'chain', 'residue_number', 'residue_name', 'atom_name', 'atom_symmetry', 'atom_xyz', 'centroid_xyz']
     def calcAtomBlobDists(self, radii={}, slopes={}):
         """
         Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
@@ -567,12 +568,9 @@ class DensityAnalysis(object):
         :return diffMapStats: Difference density map statistics.
         :rtype: :py:obj:`list`
         """
-        if not self.symmetryAtoms:
-            self.calcSymmetryAtoms()
         symmetryAtoms = self.symmetryAtoms
+        symmetryAtomCoords = self.symmetryAtomCoords
 
-        if not self.greenBlobList or not self.redBlobList:
-            self.getBlobList()
         greenBlobList = self.greenBlobList
         redBlobList = self.redBlobList
 
@@ -582,20 +580,121 @@ class DensityAnalysis(object):
 
         ## find the closest atoms to the red/green blobs
         diffMapStats = []
-        atomCoords = np.asarray([x.coord for x in symmetryAtoms])
         for blob in greenBlobList + redBlobList:
             ## distance to the closest atoms
             centroid = np.array(blob.centroid).reshape((1, 3))
-            dists = scipy.spatial.distance.cdist(centroid, atomCoords)
+            symmetryDistances = scipy.spatial.distance.cdist(centroid, symmetryAtomCoords)
 
-            ind = np.argmin(dists[0])
+            ind = np.argmin(symmetryDistances[0])
             atom = symmetryAtoms[ind] # atom = list(symmetryAtoms)[ind]
-            if blob.totalDensity >= 0:
-                sign = '+'
-            else: sign = '-'
-            diffMapStats.append([dists.min(), sign, abs(blob.totalDensity / chainMedian), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
+            sign = '+' if blob.totalDensity >= 0 else '-'
+            diffMapStats.append([symmetryDistances.min(), sign, abs(blob.totalDensity / chainMedian), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
 
         return diffMapStats
+
+    # Headers that match the order of the results
+    regionDiscrepancyHeader = [ "min_symmetry_atom_distance" , "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
+                 "expected_abs_significant_regional_discrepancy", "num_electrons_expected_abs_significant_regional_discrepancy" ]
+    atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy"] + regionDiscrepancyHeader
+    residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "min_occupancy"] + regionDiscrepancyHeader
+
+    def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", radii={}, slopes={}):
+        """
+        Calculates significant region discrepancies in a given radius of each atom.
+
+        :param float radius: the search radius.
+        :param float numSD: number of standard deviations of significance.
+        :param str type: residue type to filter on.
+        :param dict radii: Radii for all atom types.
+        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
+        :return diffMapRegionStats: Difference density map region header and statistics.
+        :rtype: :py:obj:`tuple`
+        """
+        biopdbObj = self.biopdbObj
+        atoms = list(biopdbObj.get_atoms())
+        if type:
+            atoms = [ atom for atom in atoms if atom.name == type]
+
+        results = []
+        for atom in atoms:
+            result = self.calculateRegionDiscrepancy([atom.coord], radius, numSD, radii, slopes)
+            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy() ] + result)
+
+        return results
+
+    def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type="", radii={}, slopes={}):
+        """
+        Calculates significant region discrepancies in a given radius of each residue.
+
+        :param float radius: the search radius.
+        :param float numSD: number of standard deviations of significance.
+        :param str type: residue type to filter on.
+        :param dict radii: Radii for all atom types.
+        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
+        :return diffMapRegionStats: Difference density map region header and statistics.
+        :rtype: :py:obj:`tuple`
+        """
+        biopdbObj = self.biopdbObj
+
+        results = []
+        residues = list(biopdbObj.get_residues())
+        if type:
+            residues = [residue for residue in residues if residue.resname == type]
+        for residue in residues:
+            atoms = [atom for atom in residue.get_atoms()]
+            xyzCoordList = [atom.coord for atom in atoms]
+            minOccupancy = min([atom.get_occupancy() for atom in atoms])
+            result = self.calculateRegionDiscrepancy(xyzCoordList, radius, numSD, radii, slopes)
+            results.append([residue.parent.id, residue.id[1], residue.resname, minOccupancy ] + result)
+
+        return results
+
+    def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, radii={}, slopes={}):
+        """
+        Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
+        if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs within a specific region.
+
+        :param xyzCoordLists: xyz coordinates.
+        :type xyzCoordLists: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.
+        :param float radius: the search radius.
+        :param float numSD: number of standard deviations of significance.
+        :param dict radii: Radii for all atom types.
+        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
+
+        :return diffMapRegionStats: Difference density map region header and statistics.
+        :rtype: :py:obj:`tuple`
+        """
+        if not self.chainMedian:
+            self.aggregateCloud(radii, slopes)
+        chainMedian = self.chainMedian
+
+        diffDensityObj = self.diffDensityObj
+
+        symmetryOnlyAtomCoords = self.symmetryOnlyAtomCoords
+
+        minSymmetryAtomDistance = np.min(scipy.spatial.distance.cdist(np.asarray(xyzCoordList), symmetryOnlyAtomCoords))
+
+        avg_discrep = diffDensityObj.meanDensity
+        diffDensityCutoff = avg_discrep + numSD * diffDensityObj.stdDensity
+
+        # observed absolute significant regional discrepancy
+        green = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, diffDensityCutoff)
+        red = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, -1.0 * diffDensityCutoff)
+
+        actual_abs_sig_regional_discrep = sum([abs(blob.totalDensity) for blob in green + red])
+        num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / chainMedian
+
+        # expected absolute significant regional discrepancy
+        total_abs_sig_discrep = ccp4_utils.sumOfAbs(diffDensityObj.densityArray, diffDensityCutoff)
+        total_voxel_count = len(diffDensityObj.densityArray)
+        avg_abs_vox_discrep = total_abs_sig_discrep / total_voxel_count
+        crsCoordList = {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in diffDensityObj.getSphereCrsFromXyz(xyzCoord, radius)}
+        regional_voxel_count = len(crsCoordList)
+        expected_abs_sig_regional_discrep = avg_abs_vox_discrep * regional_voxel_count
+        num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / chainMedian
+
+        return [ minSymmetryAtomDistance, actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
+                 expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
 
 
     def estimateF000(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
@@ -639,115 +738,6 @@ class DensityAnalysis(object):
 
         self.f000 = totalElectrons/asuVolume
 
-    def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", radii={}, slopes={}):
-        """
-        Calculates significant region discrepancies in a given radius of each atom.
-
-        :param float radius: the search radius.
-        :param float numSD: number of standard deviations of significance.
-        :param str type: residue type to filter on.
-        :param dict radii: Radii for all atom types.
-        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
-        :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`tuple`
-        """
-
-        biopdbObj = self.biopdbObj
-        atoms = list(biopdbObj.get_atoms())
-        if type:
-            atoms = [ atom for atom in atoms if atom.name == type]
-
-        results = []
-        header = []
-        for atom in atoms:
-            (header, result) = self.calculateRegionDiscrepancy([atom.get_coord()],radius, numSD, radii, slopes)
-            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy() ] + result)
-
-        header = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy"] + header
-        return (header, results)
-
-    def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type="", radii={}, slopes={}):
-        """
-        Calculates significant region discrepancies in a given radius of each residue.
-
-        :param float radius: the search radius.
-        :param float numSD: number of standard deviations of significance.
-        :param str type: residue type to filter on.
-        :param dict radii: Radii for all atom types.
-        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
-        :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`tuple`
-        """
-
-        biopdbObj = self.biopdbObj
-
-        results = []
-        header = []
-        residues = list(biopdbObj.get_residues())
-        if type:
-            residues = [residue for residue in residues if residue.resname == type]
-        for residue in residues:
-            atoms = [atom for atom in residue.get_atoms()]
-            xyzCoordList = [atom.get_coord() for atom in atoms]
-            minOccupancy = min([atom.get_occupancy() for atom in atoms])
-            (header, result) = self.calculateRegionDiscrepancy(xyzCoordList,radius, numSD, radii, slopes)
-            results.append([residue.parent.id, residue.id[1], residue.resname, minOccupancy ] + result)
-
-        header = ['chain', 'residue_number', 'residue_name', "min_occupancy"] + header
-        return (header, results)
-
-    def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, radii={}, slopes={}):
-        """
-        Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
-        if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs within a specific region.
-
-        :param xyzCoordLists: xyz coordinates.
-        :type xyzCoordLists: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.
-        :param float radius: the search radius.
-        :param float numSD: number of standard deviations of significance.
-        :param dict radii: Radii for all atom types.
-        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
-
-        :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`tuple`
-        """
-
-        if not self.chainMedian:
-            self.aggregateCloud(radii, slopes)
-        chainMedian = self.chainMedian
-
-        diffDensityObj = self.diffDensityObj
-
-        if not self.symmetryOnlyAtoms:
-            self.calcSymmetryAtoms()
-        symmetryOnlyAtoms = self.symmetryOnlyAtoms
-
-        symmetry_distance = np.min([np.linalg.norm(sym_atom.coord - xyzCoord) for sym_atom in symmetryOnlyAtoms for xyzCoord in xyzCoordList]) if len(symmetryOnlyAtoms) else -1
-
-        avg_discrep = np.mean(diffDensityObj.densityArray)
-        diffDensityCutoff = avg_discrep + numSD * np.std(diffDensityObj.densityArray)
-
-        # observed absolute significant regional discrepancy
-        green = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, diffDensityCutoff)
-        red = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, -1.0 * diffDensityCutoff)
-
-        actual_abs_sig_regional_discrep = sum([abs(blob.totalDensity) for blob in green + red])
-        num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / chainMedian
-
-        # expected absolute significant regional discrepancy
-        total_abs_sig_discrep = np.sum([abs(discrep) for discrep in diffDensityObj.densityArray if abs(discrep) > diffDensityCutoff])
-        total_voxel_count = len(diffDensityObj.densityArray)
-        avg_abs_vox_discrep = total_abs_sig_discrep / total_voxel_count
-        crsCoordList = [crsCoord for xyzCoord in xyzCoordList for crsCoord in diffDensityObj.getSphereCrsFromXyz(xyzCoord, radius)]
-        regional_voxel_count = len(crsCoordList)
-        expected_abs_sig_regional_discrep = avg_abs_vox_discrep * regional_voxel_count
-        num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / chainMedian
-
-        header = [ "min_symmetry_distance" , "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
-                 "expected_abs_significant_regional_discrepancy", "num_electrons_expected_abs_significant_regional_discrepancy" ]
-        result = [ symmetry_distance, actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
-                 expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
-        return (header,result)
 
 
 class symAtom:
