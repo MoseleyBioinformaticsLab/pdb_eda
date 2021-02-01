@@ -427,7 +427,8 @@ class DensityMatrix:
         """
         if not isinstance(xyzCoords[0], (np.floating, float)): # test if xyzCoords is a single xyzCoord or a list of them.
             if len(xyzCoords) > 1:
-                crsCoordList = [list(uniqueCRScoord) for uniqueCRScoord in {tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)}]
+                # crsCoordList = [list(uniqueCRScoord) for uniqueCRScoord in {tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)}]
+                crsCoordList = {tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)}
             else:
                 crsCoordList = self.getSphereCrsFromXyz(xyzCoords[0], radius, densityCutoff)
         else:
@@ -483,10 +484,9 @@ class DensityBlob:
         self.coordCenter = coordCenter
         self.totalDensity = totalDensity
         self.volume = volume
-        self.crsList = crsList
+        self.crsList = {tuple(crs) for crs in crsList}
         self.header = header
         self.densityMatrix = densityMatrix
-        self.nearbyAtoms = []
         self.atoms = []
 
 
@@ -511,7 +511,7 @@ class DensityBlob:
 
         centroidXYZ = [weight / totalDen for weight in weights]
         npoints = len(crsList)
-        coordCenter = [sum(k) / npoints for k in zip(*[header.crs2xyzCoord(i) for i in crsList])]
+        coordCenter = [sum(k) / npoints for k in zip(*[header.crs2xyzCoord(crs) for crs in crsList])]
         return DensityBlob(centroidXYZ, coordCenter, totalDen, header.unitVolume * len(crsList), crsList, header, densityMatrix)
 
 
@@ -550,9 +550,9 @@ class DensityBlob:
         :param otherBlob: A :class:`pdb_eda.ccp4.DensityBlob` object.
         :return: :py:obj:`None`.
         """
-        combinedList = self.crsList + [x for x in otherBlob.crsList if x not in self.crsList]
+        self.crsList.update(otherBlob.crsList)
         atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]
-        newBlob = DensityBlob.fromCrsList(combinedList, self.header, self.densityMatrix)
+        newBlob = DensityBlob.fromCrsList(self.crsList, self.header, self.densityMatrix)
 
         self.__dict__.update(newBlob.__dict__)
         self.atoms = atoms

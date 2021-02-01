@@ -204,13 +204,13 @@ class DensityAnalysis(object):
     @property
     def greenBlobList(self):
         if self._greenBlobList == None:
-            self.getBlobList()
+            self.createBlobLists()
         return self._greenBlobList
 
     @property
     def redBlobList(self):
         if self._redBlobList == None:
-            self.getBlobList()
+            self.createBlobLists()
         return self._redBlobList
 
 
@@ -280,7 +280,6 @@ class DensityAnalysis(object):
 
         chainClouds = []
         chainPool = []
-        residueDict = {}
         chainList = []
         residueList = []
         atomList = []
@@ -288,7 +287,7 @@ class DensityAnalysis(object):
         currentRadii = {**radiiDefault, **radiiUpdate}
         currentSlopes = {**slopesDefault, **slopesUpdate}
         for residue in biopdbObj.get_residues():
-            if residue.id[0] != ' ':
+            if residue.id[0] != ' ': # skip HETATOM residues.
                 continue
 
             residuePool = []
@@ -318,39 +317,30 @@ class DensityAnalysis(object):
             ## Group connected residue density clouds together from individual atom clouds
             overlap = np.zeros((len(residuePool), len(residuePool)))
             for i in range(len(residuePool)):
-                #for j in range(len(residuePool)):
-                #    if j <= i:
-                #        continue
                 for j in range(i+1, len(residuePool)):
                     #overlap[i][j] = overlap[j][i] = residuePool[i].testOverlap(residuePool[j])
                     overlap[i][j] = overlap[j][i] = ccp4_utils.testOverlap(residuePool[i],residuePool[j])
 
             resClouds = []
-            usedIdx = []
-            for i in range(len(residuePool)):
-                if i in usedIdx:
-                    continue
+            usedIdx = set()
+            for startingIndex in range(len(residuePool)):
+                if startingIndex not in usedIdx:
+                    newCluster = {index for index, o in enumerate(overlap[startingIndex]) if o}
+                    currCluster = set([startingIndex])
+                    currCluster.update(newCluster)
+                    while len(newCluster):
+                        newCluster = {index for oldIndex in newCluster for index, o in enumerate(overlap[oldIndex]) if index not in currCluster and o}
+                        currCluster.update(newCluster)
 
-                newCluster = [n for n, d in enumerate(overlap[i]) if d]
-                currCluster = [i] + newCluster
-                while len(newCluster):
-                    newCluster = {n for x in newCluster for n, d in enumerate(overlap[x]) if n not in currCluster and d}
-                    currCluster = currCluster + list(newCluster)
-
-                usedIdx = usedIdx + currCluster
-                for idx in currCluster:
-                    residuePool[i].merge(residuePool[idx])
-                resClouds.append(residuePool[i])
+                    usedIdx.update(currCluster)
+                    for idx in currCluster:
+                        residuePool[i].merge(residuePool[idx])
+                    resClouds.append(residuePool[i])
 
             for cloud in resClouds:
                 if len(cloud.atoms) >= minResAtoms:
-                    if residue.resname in residueDict.keys():
-                        residueDict[residue.resname].append(cloud)
-                    else:
-                        residueDict[residue.resname] = [cloud]
-
-                    totalElectron = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
-                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectron, len(cloud.crsList), totalElectron, len(cloud.crsList) * densityObj.header.unitVolume])
+                    totalElectrons = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectrons, len(cloud.crsList), totalElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
         ## End residue
@@ -358,28 +348,24 @@ class DensityAnalysis(object):
         ## Group connected chain density clouds together from individual residue clouds
         overlap = np.zeros((len(chainPool), len(chainPool)))
         for i in range(len(chainPool)):
-            #for j in range(len(chainPool)):
-            #    if j <= i:
-            #        continue
             for j in range(i+1, len(chainPool)):
                 #overlap[i][j] = overlap[j][i] = chainPool[i].testOverlap(chainPool[j])
                 overlap[i][j] = overlap[j][i] = ccp4_utils.testOverlap(chainPool[i],chainPool[j])
 
-        usedIdx = []
-        for i in range(len(chainPool)):
-            if i in usedIdx:
-                continue
+        usedIdx = set()
+        for startingIndex in range(len(chainPool)):
+            if startingIndex not in usedIdx:
+                newCluster = {index for index, o in enumerate(overlap[startingIndex]) if o}
+                currCluster = set([startingIndex])
+                currCluster.update(newCluster)
+                while len(newCluster):
+                    newCluster = {index for oldIndex in newCluster for index, o in enumerate(overlap[oldIndex]) if index not in currCluster and o}
+                    currCluster.update(newCluster)
 
-            newCluster = [n for n, d in enumerate(overlap[i]) if d]
-            currCluster = [i] + newCluster
-            while len(newCluster):
-                newCluster = {n for x in newCluster for n, d in enumerate(overlap[x]) if n not in currCluster and d}
-                currCluster = currCluster + list(newCluster)
-
-            usedIdx = usedIdx + currCluster
-            for idx in currCluster:
-                chainPool[i].merge(chainPool[idx])
-            chainClouds.append(chainPool[i])
+                usedIdx.update(currCluster)
+                for idx in currCluster:
+                    chainPool[startingIndex].merge(chainPool[idx])
+                chainClouds.append(chainPool[startingIndex])
         ##End chain
 
         ## Calculate chainMedian, which is technically a weighted mean value now.
@@ -464,7 +450,7 @@ class DensityAnalysis(object):
             self.chainList = chainList
 
 
-    def getBlobList(self, diffDensityObj=None, recalculate=False):
+    def createBlobLists(self, diffDensityObj=None, recalculate=False):
         """
         Aggregate the difference density map into positive (green) and negative (red) blobs,
         and assign to `densityAnalysis.redBlobList` and `densityAnalysis.greenBlobList`
@@ -613,7 +599,7 @@ class DensityAnalysis(object):
         biopdbObj = self.biopdbObj
         atoms = list(biopdbObj.get_atoms())
         if type:
-            atoms = [ atom for atom in atoms if atom.name == type]
+            atoms = [atom for atom in atoms if atom.name == type]
 
         results = []
         for atom in atoms:
