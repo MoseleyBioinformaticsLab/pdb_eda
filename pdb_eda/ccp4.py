@@ -428,7 +428,7 @@ class DensityMatrix:
         if not isinstance(xyzCoords[0], (np.floating, float)): # test if xyzCoords is a single xyzCoord or a list of them.
             if len(xyzCoords) > 1:
                 # crsCoordList = [list(uniqueCRScoord) for uniqueCRScoord in {tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)}]
-                crsCoordList = {tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)}
+                crsCoordList = list({tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)})
             else:
                 crsCoordList = self.getSphereCrsFromXyz(xyzCoords[0], radius, densityCutoff)
         else:

@@ -178,37 +178,37 @@ class DensityAnalysis(object):
     @property
     def symmetryAtoms(self):
         if self._symmetryAtoms == None:
-            self.calcSymmetryAtoms()
+            self._calcSymmetryAtoms()
         return self._symmetryAtoms
 
     @property
     def symmetryOnlyAtoms(self):
         if self._symmetryOnlyAtoms == None:
-            self.calcSymmetryAtoms()
+            self._calcSymmetryAtoms()
         return self._symmetryOnlyAtoms
 
     @property
     def symmetryAtomCoords(self):
         if self._symmetryAtoms == None:
-            self.calcSymmetryAtoms()
+            self._calcSymmetryAtoms()
         return self._symmetryAtomCoords
 
     @property
     def symmetryOnlyAtomCoords(self):
         if self._symmetryOnlyAtoms == None:
-            self.calcSymmetryAtoms()
+            self._calcSymmetryAtoms()
         return self._symmetryOnlyAtomCoords
 
     @property
     def greenBlobList(self):
         if self._greenBlobList == None:
-            self.createBlobLists()
+            self._createBlobLists()
         return self._greenBlobList
 
     @property
     def redBlobList(self):
         if self._redBlobList == None:
-            self.createBlobLists()
+            self._createBlobLists()
         return self._redBlobList
 
 
@@ -448,7 +448,7 @@ class DensityAnalysis(object):
             self.chainList = chainList
 
 
-    def createBlobLists(self, diffDensityObj=None, recalculate=False):
+    def _createBlobLists(self, diffDensityObj=None, recalculate=False):
         """
         Aggregate the difference density map into positive (green) and negative (red) blobs,
         and assign to `densityAnalysis.redBlobList` and `densityAnalysis.greenBlobList`
@@ -478,7 +478,7 @@ class DensityAnalysis(object):
         self._redBlobList = diffDensityObj.createBlobList(redCrsList)
 
 
-    def calcSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
+    def _calcSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
         """
         Calculate all the symmetry and nearby cells and keep those have at least on atom within 5 grid points of the non-repeating crs boundary.
         Ref: Biomolecular Crystallography: Principles, Practice, and Application to Structural Biology by Bernhard Rupp.
@@ -544,7 +544,7 @@ class DensityAnalysis(object):
         self._symmetryOnlyAtomCoords = np.asarray([atom.coord for atom in self.symmetryOnlyAtoms])
 
     atomBlobDistanceHeader = ['distance_to_atom', 'sign', 'electrons_of_discrepancy', 'num_voxels', 'volume', 'chain', 'residue_number', 'residue_name', 'atom_name', 'atom_symmetry', 'atom_xyz', 'centroid_xyz']
-    def calcAtomBlobDists(self, params=None):
+    def calculateAtomSpecificBlobs(self, params=None):
         """
         Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
         if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs.
@@ -578,7 +578,7 @@ class DensityAnalysis(object):
         return diffMapStats
 
     # Headers that match the order of the results
-    regionDiscrepancyHeader = [ "min_symmetry_atom_distance" , "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
+    regionDiscrepancyHeader = [ "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
                  "expected_abs_significant_regional_discrepancy", "num_electrons_expected_abs_significant_regional_discrepancy" ]
     atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy"] + regionDiscrepancyHeader
     residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "min_occupancy"] + regionDiscrepancyHeader
@@ -650,16 +650,15 @@ class DensityAnalysis(object):
         chainMedian = self.chainMedian
 
         diffDensityObj = self.diffDensityObj
-        symmetryOnlyAtomCoords = self.symmetryOnlyAtomCoords
-
-        minSymmetryAtomDistance = np.min(scipy.spatial.distance.cdist(np.asarray(xyzCoordList), symmetryOnlyAtomCoords))
         avg_discrep = diffDensityObj.meanDensity
         diffDensityCutoff = avg_discrep + numSD * diffDensityObj.stdDensity
+
+        # symmetryOnlyAtomCoords = self.symmetryOnlyAtomCoords
+        # minSymmetryAtomDistance = np.min(scipy.spatial.distance.cdist(np.asarray(xyzCoordList), symmetryOnlyAtomCoords))
 
         # observed absolute significant regional discrepancy
         green = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, diffDensityCutoff)
         red = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, -1.0 * diffDensityCutoff)
-
         actual_abs_sig_regional_discrep = sum([abs(blob.totalDensity) for blob in green + red])
         num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / chainMedian
 
@@ -672,7 +671,9 @@ class DensityAnalysis(object):
         expected_abs_sig_regional_discrep = avg_abs_vox_discrep * regional_voxel_count
         num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / chainMedian
 
-        return [ minSymmetryAtomDistance, actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
+        # return [ minSymmetryAtomDistance, actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
+        #          expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
+        return [ actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
                  expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
 
 

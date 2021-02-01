@@ -85,7 +85,7 @@ def main():
             result = analyzer.calculateResidueRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
         else:
             headerList = densityAnalysis.DensityAnalysis.atomBlobDistanceHeader
-            result = analyzer.calcAtomBlobDists(params)
+            result = analyzer.calculateAtomSpecificBlobs(params)
             for blobInfo in result:
                 blobInfo[10] = [ float(val) for val in blobInfo[10] ]
                 blobInfo[11] = [ float(val) for val in blobInfo[11] ]

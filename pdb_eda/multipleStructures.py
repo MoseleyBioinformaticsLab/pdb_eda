@@ -164,7 +164,6 @@ def analyzePDBID(pdbid):
     properties['residue_counts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))
     properties['element_counts'] = dict(collections.Counter(atom.element for atom in analyzer.biopdbObj.get_atoms()))
 
-
     elapsedTime = time.process_time() - startTime
     resultFilename = createTempJSONFile({ "pdbid" : analyzer.pdbid, "diffs" : diffs, "stats" : stats, "execution_time" : elapsedTime, "properties" : properties }, "tempResults_")
     return resultFilename
