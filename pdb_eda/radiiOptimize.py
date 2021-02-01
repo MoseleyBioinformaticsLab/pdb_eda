@@ -32,7 +32,7 @@ import docopt
 
 from pdb_eda import densityAnalysis
 
-defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/intermediate_radii_slope_param.json')
+defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
 
 def main():
     args = docopt.docopt(__doc__)
@@ -90,7 +90,7 @@ def main():
             print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()))
             print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()), file=logFile)
 
-            (medianDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes)
+            (medianDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes })
             print("Radii: ", currentRadii, file=logFile)
             print("Median Diffs: ", medianDiffs, file=logFile)
             print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())))
@@ -100,6 +100,12 @@ def main():
             if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
                 bestMedianDiffs = medianDiffs
                 currentSlopes = slopes
+
+                try:
+                    with open(args["<final-params-file>"] + ".temp", 'w') as jsonFile:
+                        print(json.dumps({**params, "radii": currentRadii, "slopes": currentSlopes}, indent=2, sort_keys=True), file=jsonFile)
+                except:
+                    sys.exit(str("Error: unable to create temporary params file \"") + args["<final-params-file>"] + ".temp" + "\".")
             else:
                 currentRadii[currentAtomType] = previousRadius
 
@@ -124,11 +130,11 @@ def main():
 
     try:
         with open(args["<final-params-file>"], 'w') as jsonFile:
-            print(json.dumps({ "radii" : currentRadii, "slopes" : currentSlopes, "optimize" : list(atoms2Optimize) }, indent=2, sort_keys=True), file=jsonFile)
+            print(json.dumps({**params, "radii" : currentRadii, "slopes" : currentSlopes }, indent=2, sort_keys=True), file=jsonFile)
     except:
         sys.exit(str("Error: unable to create final params file \"") + args["<final-params-file>"] + "\".")
 
-def calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes):
+def calculateMedianDiffsSlopes(pdbids, currentParams):
     """Calculates the median diffs and slopes across a list of pdb entries.
 
     :param :py:class:`list` pdbids: list of pdbids to process.
@@ -137,7 +143,7 @@ def calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes):
     :return: diffs_slopes_tuple
     :rtype: :py:class:`tuple`
     """
-    currParamsFilename = createTempJSONFile({"radii": currentRadii, "slopes": currentSlopes}, "tempParams_")
+    currParamsFilename = createTempJSONFile(currentParams, "tempParams_")
 
     with multiprocessing.Pool() as pool:
         results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids))
@@ -175,8 +181,6 @@ def processFunction(pdbid, paramsFilepath):
     try:
         with open(paramsFilepath, 'r') as jsonFile:
             params = json.load(jsonFile)
-            radii = params['radii']
-            slopes = params['slopes']
     except:
         return 0
 
@@ -184,7 +188,7 @@ def processFunction(pdbid, paramsFilepath):
     if not analyser:
         return 0 
 
-    analyser.aggregateCloud(radii, slopes)
+    analyser.aggregateCloud(params)
     if not analyser.chainMedian:
         return 0
 

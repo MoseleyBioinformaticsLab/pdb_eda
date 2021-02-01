@@ -4,18 +4,18 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-file> [options]
-    pdb_eda multiple <pdbid-file> <out-dir> --single=<quoted-single-mode-options> [--time-out=<seconds>]
+    pdb_eda multiple <pdbid-file> <out-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>]
+    pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>]
 
 Options:
-    -h, --help                              Show this screen.
-    <out-file>                              Output filename. "-" will write to standard output.
-    <pdbid-file>                            File name that contains the pdb ids. "-" will read from standard input.
-    --radii-param=<paramfile>               Radii parameters filename. [default: conf/optimized_radii_slope_param.json]
-    --out-format=<format>                   Output file format, available formats: csv, json [default: json].
-    --time-out=<seconds>                    Set a maximum time to try to analyze any single pdb entry. [default: 0]
-    --test                                  Run only a single process for testing purposes.
-    --single=<quoted-single-mode-options>   Run single structure analysis mode on a set of PDB entries.
+    -h, --help                                  Show this screen.
+    <out-file>                                  Output filename. "-" will write to standard output.
+    <pdbid-file>                                File name that contains the pdb ids. "-" will read from standard input.
+    --params=<params-file>                      Overriding parameters file that includes radii, slopes, etc. [default: ]
+    --out-format=<format>                       Output file format, available formats: csv, json [default: json].
+    --time-out=<seconds>                        Set a maximum time to try to analyze any single pdb entry. [default: 0]
+    --testing                                   Run only a single process for testing purposes.
+    --single-mode=<quoted-single-mode-options>  Run single structure analysis mode on a set of PDB entries.
 """
 
 import docopt
@@ -34,13 +34,9 @@ from . import densityAnalysis
 from . import __version__
 from . import singleStructure
 
-## Final set of radii derived from optimization
-defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_radii_slope_param.json')
-with open(defaultParamsFilepath, 'r') as fh:
-    params = json.load(fh)
+defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
 
-radiiGlobal = params['radii']
-slopesGlobal = params['slopes']
+globalParams = None
 globalArgs = {}
 
 def main():
@@ -51,15 +47,11 @@ def main():
         exit(0)
     globalArgs["--time-out"] = int(globalArgs["--time-out"])
 
-    paramsFilepath = os.path.join(os.path.dirname(__file__), globalArgs["--radii-param"])
+    paramsFilepath = globalArgs["--params"] if globalArgs["--params"] else defaultParamsFilepath
     try:
-        if paramsFilepath != defaultParamsFilepath:
-            with open(paramsFilepath, 'r') as paramsFile:
-                params = json.load(paramsFile)
-                global radiiGlobal
-                radiiGlobal = params['radii']
-                global slopesGlobal
-                slopesGlobal = params['slopes']
+        with open(paramsFilepath, 'r') as paramsFile:
+            global globalParams
+            globalParams = json.load(paramsFile)
     except:
         sys.exit(str("Error: params file \"") + paramsFilepath + "\" does not exist or is not parsable.")
 
@@ -71,7 +63,7 @@ def main():
     except:
         sys.exit(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
-    if globalArgs["--single"]:
+    if globalArgs["--single-mode"]:
         processFunction = singleModeFunction
         if not os.path.isdir(globalArgs["<out-dir>"]):
             if not os.path.isfile(globalArgs["<out-dir>"]):
@@ -81,13 +73,13 @@ def main():
     else:
         processFunction = multipleModeFunction
 
-    if globalArgs["--test"]:
+    if globalArgs["--testing"]:
         results = [ processFunction(pdbid) for pdbid in pdbids ]
     else:
         with multiprocessing.Pool() as pool:
             results = pool.map(processFunction, pdbids)
 
-    if not globalArgs["--single"]: # skip generating results if running in single structure analysis mode.
+    if not globalArgs["--single-mode"]: # skip generating results if running in single structure analysis mode.
         fullResults = {}
         for resultFilename in results:
             if resultFilename:
@@ -103,10 +95,10 @@ def main():
             statsHeaders = ['density_electron_ratio', 'voxel_volume', 'f000', 'chain_num_voxel', 'chain_total_electrons', 'density_mean', 'diff_density_mean', 'resolution', 'space_group', 'num_atoms_analyzed', 'num_residues_analyzed', 'num_chains_analyzed']
             with open(globalArgs['<out-file>'], "w", newline='') if globalArgs["<out-file>"] != "-" else sys.stdout as csvFile:
                 writer = csv.writer(csvFile)
-                writer.writerow(['pdbid'] + statsHeaders + sorted(radiiGlobal))
+                writer.writerow(['pdbid'] + statsHeaders + sorted(globalParams["radii"]))
                 for result in fullResults.values():
                     stats = [result["stats"][header] for header in statsHeaders]
-                    diffs = [result["diffs"][atomType] for atomType in sorted(radiiGlobal)]
+                    diffs = [result["diffs"][atomType] for atomType in sorted(globalParams["radii"])]
                     writer.writerow([result['pdbid']] + stats + diffs)
         else:
             with open(globalArgs['<out-file>'], "w") if globalArgs["<out-file>"] != "-" else sys.stdout as jsonFile:
@@ -155,13 +147,13 @@ def analyzePDBID(pdbid):
     if not analyzer:
         return 0
 
-    analyzer.aggregateCloud(radiiGlobal, slopesGlobal, atomL=True, residueL=True, chainL=True)
+    analyzer.aggregateCloud(globalParams, atomL=True, residueL=True, chainL=True)
     analyzer.estimateF000()
     if not analyzer.chainMedian:
         return 0
 
     diffs = { atomType:((analyzer.medians.loc[atomType]['corrected_density_electron_ratio'] - analyzer.chainMedian) / analyzer.chainMedian)
-     if atomType in analyzer.medians.index else 0 for atomType in sorted(radiiGlobal) }
+     if atomType in analyzer.medians.index else 0 for atomType in sorted(globalParams["radii"]) }
 
     stats = { 'density_electron_ratio' : analyzer.chainMedian, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chain_num_voxel' : analyzer.chainNvoxel,
         'chain_total_electrons' : analyzer.chainTotalE, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,

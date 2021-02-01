@@ -15,7 +15,7 @@ Options:
     -h, --help                      Show this screen.
     <pdbid>                         The PDB ID to download and analyze.
     <out-file>                      Output filename. "-" will write to standard output.
-    --params=<params-file>          Parameter file that includes radii and slopes. [default: conf/optimized_radii_slope_param.json]
+    --params=<params-file>          Overriding parameters file that includes radii, slopes, etc. [default: ]
     --include-pdbid                 Include PDB ID at the beginning of each result.
     --atom                          Aggregate and print results by atom.
     --residue                       Aggregate and print results by residue.
@@ -35,6 +35,8 @@ import jsonpickle
 from . import densityAnalysis
 from . import __version__
 
+defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
+
 
 def main():
     args = docopt.docopt(__doc__, version=__version__)
@@ -45,11 +47,12 @@ def main():
         print(__doc__)
         exit(0)
 
-    paramsPath = os.path.join(os.path.dirname(__file__), args["--params"])
-    with open(paramsPath, 'r') as fh:
-        params = json.load(fh)
-    radii = params['radii']
-    slopes = params['slopes']
+    paramsFilepath = args["--params"] if args["--params"] else defaultParamsFilepath
+    try:
+        with open(paramsFilepath, 'r') as paramsFile:
+            params = json.load(paramsFile)
+    except:
+        sys.exit(str("Error: params file \"") + paramsFilepath + "\" does not exist or is not parsable.")
 
     analyzer = densityAnalysis.fromPDBid(args["<pdbid>"])
     if not analyzer:
@@ -61,7 +64,7 @@ def main():
     elif args["--diff-density"]:
         result = analyzer.diffDensityObj
     elif args["density"]:
-        analyzer.aggregateCloud(radii, slopes, atomL=True, residueL=True, chainL=True)
+        analyzer.aggregateCloud(params, atomL=True, residueL=True, chainL=True)
         jsonType = "json"
         if args["--atom"]:
             headerList = list(map(str,list(analyzer.atomList) + ['density_electron_ratio']))
@@ -76,18 +79,17 @@ def main():
         jsonType = "json"
         if args["--atom"]:
             headerList = densityAnalysis.DensityAnalysis.atomRegionDiscrepancyHeader
-            result = analyzer.calculateAtomRegionDiscrepancies(args["--radius"],args["--num-sd"],args["--type"],radii,slopes)
+            result = analyzer.calculateAtomRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
         elif args["--residue"]:
             headerList = densityAnalysis.DensityAnalysis.residueRegionDiscrepancyHeader
-            result = analyzer.calculateResidueRegionDiscrepancies(args["--radius"],args["--num-sd"],args["--type"],radii,slopes)
+            result = analyzer.calculateResidueRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
         else:
             headerList = densityAnalysis.DensityAnalysis.atomBlobDistanceHeader
-            result = analyzer.calcAtomBlobDists(radii, slopes)
+            result = analyzer.calcAtomBlobDists(params)
             for blobInfo in result:
                 blobInfo[10] = [ float(val) for val in blobInfo[10] ]
                 blobInfo[11] = [ float(val) for val in blobInfo[11] ]
     elif args["symmetry-atoms"]:
-        analyzer.calcSymmetryAtoms()
         result = analyzer.symmetryAtoms
 
     if args["--include-pdbid"]:

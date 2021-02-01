@@ -23,20 +23,18 @@ from . import pdbParser
 from . import validationStats
 
 ## Starting data originally from https://arxiv.org/pdf/0804.2488.pdf
-radiiParamPath = os.path.join(os.path.dirname(__file__), 'conf/original_radii_slope_param.json')
-electronParamPath = os.path.join(os.path.dirname(__file__), 'conf/atom_type_electron_param.json')
+paramsPath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
 
-with open(radiiParamPath, 'r') as fh:
-    radiiParams = json.load(fh)
-with open(electronParamPath, 'r') as fh:
-    electronParams = json.load(fh)
+paramsGlobal = None
+with open(paramsPath, 'r') as fh:
+    paramsGlobal = json.load(fh)
 
-radiiDefault = radiiParams['radii']
-slopesDefault = radiiParams['slopes']
-elementElectrons = electronParams['elementElectrons']
-aaElectrons = electronParams['aaElectrons']
-electrons = electronParams['atomTypeElectrons']
-atomType = electronParams['atomType']
+radiiGlobal = paramsGlobal['radii']
+slopesGlobal = paramsGlobal['slopes']
+elementElectrons = paramsGlobal['elementElectrons']
+aaElectrons = paramsGlobal['aaElectrons']
+atomTypeElectrons = paramsGlobal['atomTypeElectrons']
+atomTypes = paramsGlobal['atomTypes']
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4urlSuffix = ".ccp4"
@@ -250,13 +248,12 @@ class DensityAnalysis(object):
 
     residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volumne', 'density_electron_ratio']
     chainListHeader = residueListHeader
-    def aggregateCloud(self, radiiUpdate={}, slopesUpdate={}, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False, minResAtoms=4, minTotalAtoms=50):
+    def aggregateCloud(self, params=None, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False, minResAtoms=4, minTotalAtoms=50):
         """
         Aggregate the electron density map clouds by atom, residue, and chain.
         Calculate and populate `densityAnalysis.chainMedian` and `densityAnalysis.medians` data member.
 
-        :param dict radiiUpdate: Radii for all atom types.
-        :param dict slopesUpdate: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
+        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :param densityObj: Optional :class:`pdb_eda.ccp4` object.
         :param biopdbObj: Optional `bio.PDB` object.
         :param atomL: Whether or not to calculate statistics for all atoms and assign to `densityAnalysis.atomList`, default as False.
@@ -284,8 +281,9 @@ class DensityAnalysis(object):
         residueList = []
         atomList = []
 
-        currentRadii = {**radiiDefault, **radiiUpdate}
-        currentSlopes = {**slopesDefault, **slopesUpdate}
+        currentRadii = {**radiiGlobal, **(params["radii"])} if params and "radii" in params else radiiGlobal
+        currentSlopes = {**slopesGlobal, **(params["slopes"])} if params and "slopes" in params else slopesGlobal
+
         for residue in biopdbObj.get_residues():
             if residue.id[0] != ' ': # skip HETATOM residues.
                 continue
@@ -293,11 +291,11 @@ class DensityAnalysis(object):
             residuePool = []
             for atom in residue.child_list:
                 resAtom = atom.parent.resname + '_' + atom.name
-                if resAtom not in atomType.keys() or atom.get_occupancy() == 0:
+                if resAtom not in atomTypes.keys() or atom.get_occupancy() == 0:
                     continue
 
                 ## Calculate atom clouds
-                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[atomType[resAtom]], densityObj.densityCutoff)
+                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[atomTypes[resAtom]], densityObj.densityCutoff)
                 if len(atomClouds) == 0:
                     continue
                 elif len(atomClouds) == 1:
@@ -311,7 +309,7 @@ class DensityAnalysis(object):
                     aCloud.atoms = [atom]
                 residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
 
-                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomType[resAtom], bestAtomCloud.totalDensity / electrons[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), electrons[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
+                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomTypes[resAtom], bestAtomCloud.totalDensity / atomTypeElectrons[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), atomTypeElectrons[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
             ## End atom loop
 
             ## Group connected residue density clouds together from individual atom clouds
@@ -334,12 +332,12 @@ class DensityAnalysis(object):
 
                     usedIdx.update(currCluster)
                     for idx in currCluster:
-                        residuePool[i].merge(residuePool[idx])
-                    resClouds.append(residuePool[i])
+                        residuePool[startingIndex].merge(residuePool[idx])
+                    resClouds.append(residuePool[startingIndex])
 
             for cloud in resClouds:
                 if len(cloud.atoms) >= minResAtoms:
-                    totalElectrons = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+                    totalElectrons = sum([atomTypeElectrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
                     residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectrons, len(cloud.crsList), totalElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
@@ -374,7 +372,7 @@ class DensityAnalysis(object):
         totalDensity = 0
         for cloud in chainClouds:
             atom = cloud.atoms[0]
-            chainElectrons = sum([electrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+            chainElectrons = sum([atomTypeElectrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
             totalElectrons += chainElectrons
             numVoxels += len(cloud.crsList)
             totalDensity += cloud.totalDensity
@@ -546,11 +544,12 @@ class DensityAnalysis(object):
         self._symmetryOnlyAtomCoords = np.asarray([atom.coord for atom in self.symmetryOnlyAtoms])
 
     atomBlobDistanceHeader = ['distance_to_atom', 'sign', 'electrons_of_discrepancy', 'num_voxels', 'volume', 'chain', 'residue_number', 'residue_name', 'atom_name', 'atom_symmetry', 'atom_xyz', 'centroid_xyz']
-    def calcAtomBlobDists(self, radii={}, slopes={}):
+    def calcAtomBlobDists(self, params=None):
         """
         Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
         if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs.
 
+        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :return diffMapStats: Difference density map statistics.
         :rtype: :py:obj:`list`
         """
@@ -561,7 +560,7 @@ class DensityAnalysis(object):
         redBlobList = self.redBlobList
 
         if not self.chainMedian:
-            self.aggregateCloud(radii, slopes)
+            self.aggregateCloud(params)
         chainMedian = self.chainMedian
 
         ## find the closest atoms to the red/green blobs
@@ -584,15 +583,14 @@ class DensityAnalysis(object):
     atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy"] + regionDiscrepancyHeader
     residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "min_occupancy"] + regionDiscrepancyHeader
 
-    def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", radii={}, slopes={}):
+    def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
         """
         Calculates significant region discrepancies in a given radius of each atom.
 
         :param float radius: the search radius.
         :param float numSD: number of standard deviations of significance.
         :param str type: residue type to filter on.
-        :param dict radii: Radii for all atom types.
-        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
+        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :return diffMapRegionStats: Difference density map region header and statistics.
         :rtype: :py:obj:`tuple`
         """
@@ -603,20 +601,19 @@ class DensityAnalysis(object):
 
         results = []
         for atom in atoms:
-            result = self.calculateRegionDiscrepancy([atom.coord], radius, numSD, radii, slopes)
+            result = self.calculateRegionDiscrepancy([atom.coord], radius, numSD, params)
             results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy() ] + result)
 
         return results
 
-    def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type="", radii={}, slopes={}):
+    def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
         """
         Calculates significant region discrepancies in a given radius of each residue.
 
         :param float radius: the search radius.
         :param float numSD: number of standard deviations of significance.
         :param str type: residue type to filter on.
-        :param dict radii: Radii for all atom types.
-        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
+        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :return diffMapRegionStats: Difference density map region header and statistics.
         :rtype: :py:obj:`tuple`
         """
@@ -630,12 +627,12 @@ class DensityAnalysis(object):
             atoms = [atom for atom in residue.get_atoms()]
             xyzCoordList = [atom.coord for atom in atoms]
             minOccupancy = min([atom.get_occupancy() for atom in atoms])
-            result = self.calculateRegionDiscrepancy(xyzCoordList, radius, numSD, radii, slopes)
+            result = self.calculateRegionDiscrepancy(xyzCoordList, radius, numSD, params)
             results.append([residue.parent.id, residue.id[1], residue.resname, minOccupancy ] + result)
 
         return results
 
-    def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, radii={}, slopes={}):
+    def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, params=None):
         """
         Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
         if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs within a specific region.
@@ -644,22 +641,18 @@ class DensityAnalysis(object):
         :type xyzCoordLists: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.
         :param float radius: the search radius.
         :param float numSD: number of standard deviations of significance.
-        :param dict radii: Radii for all atom types.
-        :param dict slopes: Slopes of chain median deviation fraction vs. log b-factor for all atom types.
-
+        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :return diffMapRegionStats: Difference density map region header and statistics.
         :rtype: :py:obj:`tuple`
         """
         if not self.chainMedian:
-            self.aggregateCloud(radii, slopes)
+            self.aggregateCloud(params)
         chainMedian = self.chainMedian
 
         diffDensityObj = self.diffDensityObj
-
         symmetryOnlyAtomCoords = self.symmetryOnlyAtomCoords
 
         minSymmetryAtomDistance = np.min(scipy.spatial.distance.cdist(np.asarray(xyzCoordList), symmetryOnlyAtomCoords))
-
         avg_discrep = diffDensityObj.meanDensity
         diffDensityCutoff = avg_discrep + numSD * diffDensityObj.stdDensity
 
@@ -723,7 +716,6 @@ class DensityAnalysis(object):
         asuVolume = densityObj.header.unitVolume * densityObj.header.nintervalX * densityObj.header.nintervalY * densityObj.header.nintervalZ
 
         self.f000 = totalElectrons/asuVolume
-
 
 
 class symAtom:
