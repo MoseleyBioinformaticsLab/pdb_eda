@@ -11,7 +11,6 @@ import urllib.request
 import os.path
 
 import json
-import pandas
 import numpy as np
 import Bio.PDB as biopdb
 import scipy.spatial
@@ -388,50 +387,39 @@ class DensityAnalysis(object):
         ## End calculate chainMedian
 
 
-        # normalize the density by median volume (numVoxels) of given atom type
-        def normVolumn(row):
-            return float(row['density_electron_ratio']) / float(row['num_voxels']) * float(medians['num_voxels'][row['atom_type']])
-
-        def calcSlope(data):
-            ## Less than three data points or all b factors are the same
-            if data['chain'].count() <= 2 or all(x == data.iloc[0]['bfactor'] for x in data['bfactor']): 
-                return currentSlopes[data.iloc[0]['atom_type']]
+        def calcSlope(data, atom_type):
+            if len(data['chain']) <= 2 or len(np.unique(data['bfactor'])) == 1: ## Less than three data points or all b factors are the same
+                return currentSlopes[atom_type]
 
             slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adj_density_electron_ratio']-chainMedian)/chainMedian)
-            if p_value > 0.05:
-                return currentSlopes[data.iloc[0]['atom_type']]
-            else:
-                return slope
-
-        def getSlope(data):
-            return currentSlopes[data.iloc[0]['atom_type']]
-
-        def correctFraction(row, slopes, medianBfactor, chainMedian):
-            return ((row['adj_density_electron_ratio'] - chainMedian) / chainMedian - (np.log(row['bfactor']) - np.log(medianBfactor.loc[medianBfactor.index == row['atom_type']])).values *
-                    slopes.loc[slopes.index == row['atom_type']].values)[0,0]
+            return currentSlopes[atom_type] if p_value > 0.05 else slope
 
         try:
-            atoms = pandas.DataFrame(atomList, columns=['chain', 'residue_number', 'residue_name', 'atom_name', 'atom_type', 'density_electron_ratio', 'num_voxels', 'electrons', 'bfactor', 'centroid_distance'])
-            centroidCutoff = atoms['centroid_distance'].median() + atoms['centroid_distance'].std() * 2
-            atoms = atoms[atoms['centroid_distance'] < centroidCutoff]  # leave out the atoms that the centroid and atom coordinates are too far away
-            medians = atoms.groupby(['atom_type']).median()
-            atoms['volume'] = atoms['num_voxels'] * densityObj.header.unitVolume
+            dataType = np.dtype([('chain', np.dtype(('U', 10))), ('residue_number',int), ('residue_name',np.dtype(('U', 10)) ), ('atom_name',np.dtype(('U', 10)) ), ('atom_type',np.dtype(('U', 20)) ),
+                                 ('density_electron_ratio',float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('adj_density_electron_ratio', float), ('chain_fraction', float),
+                                 ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
+            atoms = np.asarray([tuple(atom+[0.0 for x in range(5)]) for atom in atomList],dataType) # must pass in list of tuples to create ndarray correctly.
+            centroidCutoff = np.median(atoms['centroid_distance']) + np.std(atoms['centroid_distance']) * 2
+            atoms = atoms[atoms['centroid_distance'] < centroidCutoff]
+            atom_types = np.unique(atoms['atom_type'])
+            medians = { column : {atom_type : np.median(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in ['num_voxels'] }
+            medians_translator = np.vectorize(lambda column,atom_type : medians[column][atom_type])
 
             ## Normalize by volume (numVoxels)
-            atoms['adj_density_electron_ratio'] = atoms.apply(lambda row: normVolumn(row), axis=1)
-            medians = atoms.groupby(['atom_type']).median()
-            atoms.loc[atoms.bfactor <= 0, 'bfactor'] = np.nan
-            atoms['bfactor'] = atoms.groupby('atom_type')['bfactor'].transform(lambda x: x.fillna(x.median()))
-
-            slopes = atoms.groupby('atom_type').apply(calcSlope)
-            medianBfactor = atoms.groupby('atom_type')[['bfactor']].median()
+            atoms['adj_density_electron_ratio'] = atoms['density_electron_ratio'] / atoms['num_voxels'] * medians_translator('num_voxels', atoms['atom_type'])
+            atoms['volume'] = atoms['num_voxels'] * densityObj.header.unitVolume
+            medians.update({column : {atom_type : np.median(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
+                         ['density_electron_ratio', 'centroid_distance', 'adj_density_electron_ratio', 'volume']})
+            medians['bfactor'] = {atom_type : np.median(atoms['bfactor'][(atoms['atom_type'] == atom_type) & (atoms['bfactor'] > 0)]) for atom_type in atom_types}
+            atoms['bfactor'][atoms['bfactor'] <= 0] = medians_translator('bfactor', atoms['atom_type'])[atoms['bfactor'] <= 0]
+            medians['slopes'] = {atom_type : calcSlope(atoms[atoms['atom_type'] == atom_type], atom_type) for atom_type in atom_types}
 
             ## Correct by b-factor
             atoms['chain_fraction'] = (atoms['adj_density_electron_ratio'] - chainMedian) / chainMedian
-            atoms['corrected_fraction'] = atoms.apply(lambda row: correctFraction(row, slopes, medianBfactor, chainMedian), axis=1)
+            atoms['corrected_fraction'] = atoms['chain_fraction'] - (np.log(atoms['bfactor']) - np.log(medians_translator('bfactor', atoms['atom_type']))) * medians_translator('slopes', atoms['atom_type'])
             atoms['corrected_density_electron_ratio'] = atoms['corrected_fraction'] * chainMedian + chainMedian
-            medians = atoms.groupby(['atom_type']).median()
-            medians['slopes'] = slopes
+            medians.update({column : {atom_type : np.median(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
+                         ['chain_fraction', 'corrected_fraction', 'corrected_density_electron_ratio']})
         except:
             return 0
 
@@ -526,10 +514,6 @@ class DensityAnalysis(object):
                             atoms = [symAtom(atom) for atom in biopdbObj.get_atoms()]
                             for x in atoms:
                                 x.coord = np.dot(rMat[:, 0:3], x.coord) + rMat[:, 3] + otMat
-
-                            ## test if the symmetry atoms are within the range of the original
-                            ## convert atom xyz coordinates back to the crs space and check if they are within the original crs range
-                            #inRangeAtoms = [x for x in atoms if all([-5 <= densityObj.header.xyz2crsCoord(x.coord)[t] < densityObj.header.uniqueNcrs[t] + 5 for t in range(3)])]
 
                             inRangeAtoms = [x for x in atoms if xs[0] - 5 <= x.coord[0] <= xs[-1] + 5 and ys[0] - 5 <= x.coord[1] <= ys[-1] + 5 and zs[0] - 5 <= x.coord[2] <= zs[-1] + 5]
 

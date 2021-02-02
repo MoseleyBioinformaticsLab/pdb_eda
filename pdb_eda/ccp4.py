@@ -9,12 +9,11 @@ Format details of ccp4 can be found in http://www.ccp4.ac.uk/html/maplib.html.
 
 import warnings
 import struct
-#import statistics
 import itertools
 
 import urllib.request
 import numpy as np
-import scipy.spatial
+from . import ccp4_utils
 
 urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 urlSuffix = ".ccp4"
@@ -209,6 +208,9 @@ class DensityHeader(object):
         self.map2xyz = indices
         self.map2crs = [self.col2xyz - 1, self.row2xyz - 1, self.sec2xyz - 1]
 
+        self.crsInterval = [self.xyzInterval[self.map2crs[ind]] for ind in range(3)]
+
+
         alpha = np.pi / 180 * self.alpha
         beta = np.pi / 180 * self.beta
         gamma = np.pi / 180 * self.gamma
@@ -258,6 +260,21 @@ class DensityHeader(object):
 
         return origin
 
+    def validCRS(self, crsCoord):
+        """
+        Check if the crs coordinate is valid (within the range of data).
+
+        :param crsCoord: crs coordinates.
+        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
+        """
+        for ind in range(3):
+            if crsCoord[ind] < 0 or crsCoord[ind] >= self.ncrs[ind]:
+                crsCoord[ind] -= int(np.floor(crsCoord[ind] / self.crsInterval[ind]) * self.crsInterval[ind])
+
+            if self.ncrs[ind] <= crsCoord[ind] < self.crsInterval[ind]:
+                return False
+
+        return True
 
     def xyz2crsCoord(self, xyzCoord):
         """
@@ -325,25 +342,6 @@ class DensityMatrix:
             self._stdDensity = np.std(self.densityArray)
         return self._stdDensity
 
-    def validCRS(self, crsCoord):
-        """
-        Check if the crs coordinate is valid (within the range of data).
-
-        :param crsCoord: crs coordinates.
-        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
-        """
-        for ind in range(3):
-            crsInterval = self.header.xyzInterval[self.header.map2crs[ind]]
-
-            if crsCoord[ind] < 0 or crsCoord[ind] >= self.header.ncrs[ind]:
-                n = np.floor(crsCoord[ind] / crsInterval)
-                crsCoord[ind] -= int(n * crsInterval)
-
-            if self.header.ncrs[ind] <= crsCoord[ind] < crsInterval:
-                return False
-
-        return True
-
     def getPointDensityFromCrs(self, crsCoord):
         """
         Get the density of a point.
@@ -351,7 +349,7 @@ class DensityMatrix:
         :param crsCoord: crs coordinates.
         :type crsCoord: A :py:obj:`list` of :py:obj:`int`
         """
-        return self.density[crsCoord[2], crsCoord[1], crsCoord[0]] if self.validCRS(crsCoord) else 0
+        return self.density[crsCoord[2], crsCoord[1], crsCoord[0]] if self.header.validCRS(crsCoord) else 0
 
     def getPointDensityFromXyz(self, xyzCoord):
         """
@@ -403,12 +401,7 @@ class DensityMatrix:
                 If cutoff > 0, include only points with density > cutoff.
         """
         crsCoordList = self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)
-
-        totalDensity = 0
-        for crs in crsCoordList:
-            totalDensity += self.getPointDensityFromCrs(crs)
-
-        return totalDensity
+        return sum(self.getPointDensityFromCrs(crs) for crs in crsCoordList)
 
     def findAberrantBlobs(self, xyzCoords, radius, densityCutoff=0):
         """
@@ -427,7 +420,6 @@ class DensityMatrix:
         """
         if not isinstance(xyzCoords[0], (np.floating, float)): # test if xyzCoords is a single xyzCoord or a list of them.
             if len(xyzCoords) > 1:
-                # crsCoordList = [list(uniqueCRScoord) for uniqueCRScoord in {tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)}]
                 crsCoordList = list({tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)})
             else:
                 crsCoordList = self.getSphereCrsFromXyz(xyzCoords[0], radius, densityCutoff)
@@ -444,25 +436,9 @@ class DensityMatrix:
         :return: blobList is a list of blobs.
         :rtype: A :py:obj:`list` of :class:`pdb_eda.ccp4.DensityBlob` object.
         """
-        crsArray = np.matrix(crsList)
-        distances = scipy.spatial.distance.cdist(crsArray, crsArray)
+        crsLists = ccp4_utils.createCrsLists(crsList)
+        return [ DensityBlob.fromCrsList(crs_list, self.header, self.density) for crs_list in crsLists ]
 
-        dcutoff = np.sqrt(3)  ## the points are considered to be adjacent if one is in the one layer outer box with the other one in the center
-        blobList = []
-        usedIdx = set()
-        for startingIndex in range(len(crsList)):
-            if not startingIndex in usedIdx:
-                currCluster = set([startingIndex])
-                newCluster = {index for index, distance in enumerate(distances[startingIndex]) if index not in currCluster and distance <= dcutoff}
-                currCluster.update(newCluster)
-                while len(newCluster):
-                    newCluster = {index for oldIndex in newCluster for index, distance in enumerate(distances[oldIndex]) if index not in currCluster and distance <= dcutoff}
-                    currCluster.update(newCluster)
-
-                usedIdx.update(currCluster)
-                blob = DensityBlob.fromCrsList([crsList[index] for index in currCluster], self.header, self.density)
-                blobList.append(blob)
-        return blobList
 
 class DensityBlob:
     """:class:`pdb_eda.ccp4.DensityBlob` that stores data and methods of a electron density blob."""

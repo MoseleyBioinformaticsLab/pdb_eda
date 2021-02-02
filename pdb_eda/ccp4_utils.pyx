@@ -21,3 +21,33 @@ def testOverlap(selfBlob, otherBlob):
 
 def sumOfAbs(array, float cutoff):
     return sum(abs(value) for value in array if abs(value) > cutoff)
+
+import numpy as np
+import scipy.spatial
+dcutoff = np.sqrt(3)  ## the points are considered to be adjacent if one is in the one layer outer box with the other one in the center
+def createCrsLists(crsList):
+    """
+    Calculates a list of crsLists from a given crsList.
+    This is a preparation step for creating blobs.
+
+    :param crsList: a crs list.
+    :return: crsLists is a list of crsList.
+    :rtype: A :py:obj:`list`
+    """
+    crsArray = np.matrix(crsList)
+    distances = scipy.spatial.distance.cdist(crsArray, crsArray)
+
+    crsLists = []
+    usedIdx = set()
+    for startingIndex in range(len(crsList)):
+        if not startingIndex in usedIdx:
+            currCluster = set([startingIndex])
+            newCluster = {index for index, distance in enumerate(distances[startingIndex]) if index not in currCluster and distance <= dcutoff}
+            currCluster.update(newCluster)
+            while len(newCluster):
+                newCluster = {index for oldIndex in newCluster for index, distance in enumerate(distances[oldIndex]) if index not in currCluster and distance <= dcutoff}
+                currCluster.update(newCluster)
+
+            usedIdx.update(currCluster)
+            crsLists.append([crsList[index] for index in currCluster])
+    return crsLists
