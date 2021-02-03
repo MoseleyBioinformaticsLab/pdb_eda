@@ -10,6 +10,7 @@ Usage:
     pdb_eda multiple ...    for multiple structure analysis mode.
     pdb_eda optimize ...    for radii and slope parameter optimization mode.
     pdb_eda select ...      for PDB entry selection mode.
+    pdb_eda contacts ...    for crystal contacts analysis mode.
 
 For help on a specific mode, use the mode option -h or --help.
 For example:
@@ -21,6 +22,7 @@ from . import singleStructure
 from . import multipleStructures
 from . import radiiOptimize
 from . import selectPDBIDs
+from . import crystalContacts
 from . import __version__
 
 def main():
@@ -32,6 +34,8 @@ def main():
         radiiOptimize.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "select":
         selectPDBIDs.main()
+    elif len(sys.argv) > 1 and sys.argv[1] == "contacts":
+        crystalContacts.main()
     elif len(sys.argv) > 1 and (sys.argv[1] == "--version" or sys.argv[1] == "-v") :
         print("Version: ",__version__)
     elif len(sys.argv) > 1 and sys.argv[1] == "--full-help":

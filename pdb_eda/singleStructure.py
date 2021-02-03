@@ -7,8 +7,9 @@ Usage:
     pdb_eda single -h | --help
     pdb_eda single <pdbid> <out-file> map (--density | --diff-density)
     pdb_eda single <pdbid> <out-file> density (--atom | --residue | --chain) [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> difference --blob [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> difference (--atom | --residue) [--green | --red] [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> difference (--atom | --residue) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> symmetry-atoms [--radii-param=<paramfile>]
 
 Options:
@@ -20,8 +21,11 @@ Options:
     --atom                          Aggregate and print results by atom.
     --residue                       Aggregate and print results by residue.
     --chain                         Aggregate and print results by chain.
+    --green                         Calculate green (positive) difference map blobs.
+    --red                           Calculate red (negative) difference map blobs.
+    --blue                          Calculate blue (positive) density map blobs. Default option if red/green not selected.  However, this option uses a LOT OF MEMORY at 1.5sd.
     --radius=<radius>               Radius (in angstroms) around atom or residue to calculate significant discrepancy. [default: 3.5]
-    --num-sd=<num-sd>               Number of standard deviation units to use as a significant discrepancy cutoff. [default: 3]
+    --num-sd=<num-sd>               Number of standard deviation units to use as a significant discrepancy cutoff. Default is 3.0 for atom, residue, green, and red.  Default is 1.5 for blue.
     --type=<type>                   Residue type or atom type to filter by.
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
     --symmetry-atoms                Calculate and print results of all symmetry atoms. (Only available in json format).
@@ -40,12 +44,15 @@ defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_
 
 def main():
     args = docopt.docopt(__doc__, version=__version__)
-    args["--radius"] = float(args["--radius"])
-    args["--num-sd"] = float(args["--num-sd"])
-
     if args["--help"]:
         print(__doc__)
         exit(0)
+
+    args["--radius"] = float(args["--radius"])
+
+    if args["--num-sd"] == None:
+        args["--num-sd"] = 3.0 if args["--green"] or args["--red"] else 1.5
+    args["--num-sd"] = float(args["--num-sd"])
 
     paramsFilepath = args["--params"] if args["--params"] else defaultParamsFilepath
     try:
@@ -83,12 +90,21 @@ def main():
         elif args["--residue"]:
             headerList = densityAnalysis.DensityAnalysis.residueRegionDiscrepancyHeader
             result = analyzer.calculateResidueRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
-        else:
-            headerList = densityAnalysis.DensityAnalysis.atomBlobDistanceHeader
-            result = analyzer.calculateAtomSpecificBlobs(params)
-            for blobInfo in result:
-                blobInfo[10] = [ float(val) for val in blobInfo[10] ]
-                blobInfo[11] = [ float(val) for val in blobInfo[11] ]
+    elif args['blob']:
+        headerList = densityAnalysis.DensityAnalysis.blobStatisticsHeader
+        result = []
+        if args["--green"]:
+            greenBlobList = analyzer.createFullBlobList(analyzer.diffDensityObj, analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity)
+            result.extend(analyzer.calculateAtomSpecificBlobStatistics(greenBlobList, params))
+        if args["--red"]:
+            redBlobList = analyzer.createFullBlobList(analyzer.diffDensityObj, -1 * (analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity))
+            result.extend(analyzer.calculateAtomSpecificBlobStatistics(redBlobList, params))
+        if not args["--green"] and not args["--red"]: # args["--blue"] by default
+            blueBlobList = analyzer.createFullBlobList(analyzer.densityObj, analyzer.densityObj.meanDensity + args["--num-sd"] * analyzer.densityObj.stdDensity)
+            result.extend(analyzer.calculateAtomSpecificBlobStatistics(blueBlobList, params))
+        for blobInfo in result:
+            blobInfo[10] = [ float(val) for val in blobInfo[10] ]
+            blobInfo[11] = [ float(val) for val in blobInfo[11] ]
     elif args["symmetry-atoms"]:
         result = analyzer.symmetryAtoms
 

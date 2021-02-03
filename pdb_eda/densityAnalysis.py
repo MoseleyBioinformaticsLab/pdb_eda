@@ -41,7 +41,7 @@ ccp4folder = './ccp4_data/'
 pdbfolder = './pdb_data/'
 
 
-def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, downloadFile=True):
+def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, downloadFile=True, mmcif=False):
     """
     Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
     and the structure has electron density file available.
@@ -81,20 +81,6 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
             densityObj.densityCutoff = densityObj.meanDensity + 1.5 * densityObj.stdDensity
             densityObj.densityCutoffFromHeader = densityObj.header.densityMean + 1.5 * densityObj.header.rmsd
 
-            '''
-            sample = np.random.choice(densityObj.densityArray, int(len(densityObj.densityArray) / 10))
-            kernel = stats.gaussian_kde(sample)
-            #kernel = stats.gaussian_kde(densityObj.densityArray)
-            x = np.linspace(min(densityObj.densityArray), max(densityObj.densityArray), 200)
-            mode = x[np.argmax(kernel(x))]
-            leftside = [i for i in densityObj.densityArray if i < mode]
-            dev = np.sqrt(sum([(i - mode) ** 2 for i in leftside]) / len(leftside))
-            densityObj.densityCutoffFromLeftSide = mode + dev * 1.5
-            densityObj.densityCutoffFromLeftSide2 = mode + dev * 2
-            densityObj.densityCutoffFromLeftSide25 = mode + dev * 2.5
-            densityObj.densityCutoffFromLeftSide3 = mode + dev * 3
-            '''
-
         if ccp4diff:
             ## ccp4 Fo - Fc map parser
             if downloadFile:
@@ -128,8 +114,15 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
                 ## my own PDB parser
                 pdbObj = pdbParser.readPDBfile(pdbfile)
 
-        if not downloadFile and os.path.isfile(pdbfile):
-            os.remove(pdbfile)
+        if mmcif and downloadFile:
+            mmcifFile = pdbfolder + pdbid + '.cif'
+            if not os.path.isfile(mmcifFile):
+                if not os.path.exists(pdbfolder):
+                    os.makedirs(pdbfolder)
+
+                pdbl = biopdb.PDBList()
+                pdbl.retrieve_pdb_file(pdbid, pdir=pdbfolder, file_format="mmCif")
+
     except:
         return 0
 
@@ -158,10 +151,13 @@ class DensityAnalysis(object):
 
         self._symmetryAtoms = None
         self._symmetryOnlyAtoms = None
+        self._asymmetryAtoms = None
         self._symmetryAtomCoords = None
         self._symmetryOnlyAtomCoords = None
+        self._asymmetryAtomCoords = None
         self._greenBlobList = None
         self._redBlobList = None
+        self._blueBlobList = None
         self.medians = None
         self.atomList = None
         self.residueList = None
@@ -187,6 +183,12 @@ class DensityAnalysis(object):
         return self._symmetryOnlyAtoms
 
     @property
+    def asymmetryAtoms(self):
+        if self._asymmetryAtoms == None:
+            self._calcSymmetryAtoms()
+        return self._asymmetryAtoms
+
+    @property
     def symmetryAtomCoords(self):
         if self._symmetryAtoms == None:
             self._calcSymmetryAtoms()
@@ -199,17 +201,28 @@ class DensityAnalysis(object):
         return self._symmetryOnlyAtomCoords
 
     @property
+    def asymmetryAtomCoords(self):
+        if self._asymmetryAtoms == None:
+            self._calcSymmetryAtoms()
+        return self._asymmetryAtomCoords
+
+    @property
     def greenBlobList(self):
         if self._greenBlobList == None:
-            self._createBlobLists()
+            self._greenBlobList = self.createFullBlobList(self.diffDensityObj, self.diffDensityObj.diffDensityCutoff)
         return self._greenBlobList
 
     @property
     def redBlobList(self):
         if self._redBlobList == None:
-            self._createBlobLists()
+            self._redBlobList = self.createFullBlobList(self.diffDensityObj, -1 * self.diffDensityObj.diffDensityCutoff)
         return self._redBlobList
 
+    @property
+    def blueBlobList(self):
+        if self._blueBlobList == None:
+            self._blueBlobList = self.createFullBlobList(self.densityObj, self.densityObj.densityCutoff)
+        return self._blueBlobList
 
     def validation(self, densityObj=None, diffDensityObj=None, biopdbObj=None, recalculate=False):
         """
@@ -436,34 +449,26 @@ class DensityAnalysis(object):
             self.chainList = chainList
 
 
-    def _createBlobLists(self, diffDensityObj=None, recalculate=False):
+    def createFullBlobList(self, densityMatrixObj, cutoff):
         """
-        Aggregate the difference density map into positive (green) and negative (red) blobs,
-        and assign to `densityAnalysis.redBlobList` and `densityAnalysis.greenBlobList`
+        Aggregate the given density map into positive (green or blue) or negative (red) blobs.
 
-        :param diffDensityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
-        :type recalculate: :py:obj:`True` or :py:obj:`False`
-
-        :return: :py:obj:`None`
+        :param DensityMatrixObj:  :class:`pdb_eda.ccp4.DensityMatrix` object.
+        :param float cutoff: density cutoff to use to filter voxels.
+        :return blobList: list of DensityBlobs
+        :rtype: :py:obj:`list`
         """
-        if self._greenBlobList and self._redBlobList and not recalculate:
-            return None
-        if not diffDensityObj:
-            diffDensityObj = self.diffDensityObj
-
-        # find all red/green blobs
-        sigma3 = diffDensityObj.diffDensityCutoff
-
         ## only explore the non-repeating part (<= # xyz intervals) of the density map for blobs
-        ncrs = diffDensityObj.header.uniqueNcrs
+        ncrs = densityMatrixObj.header.uniqueNcrs
 
-        ## crs points that are outside 3 sigma
-        greenCrsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) >= sigma3 ]
-        redCrsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if diffDensityObj.getPointDensityFromCrs([i, j, k]) <= -sigma3 ]
+        if cutoff > 0:
+            crsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if densityMatrixObj.getPointDensityFromCrs([i, j, k]) >= cutoff ]
+        elif cutoff < 0:
+            crsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if densityMatrixObj.getPointDensityFromCrs([i, j, k]) <= cutoff ]
+        else:
+            return None
 
-        self._greenBlobList = diffDensityObj.createBlobList(greenCrsList)
-        self._redBlobList = diffDensityObj.createBlobList(redCrsList)
+        return densityMatrixObj.createBlobList(crsList)
 
 
     def _calcSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
@@ -525,41 +530,35 @@ class DensityAnalysis(object):
         self._symmetryAtoms = allAtoms
         self._symmetryAtomCoords = np.asarray([atom.coord for atom in allAtoms])
         self._symmetryOnlyAtoms = [atom for atom in allAtoms if atom.symmetry != [0,0,0,0]]
-        self._symmetryOnlyAtomCoords = np.asarray([atom.coord for atom in self.symmetryOnlyAtoms])
+        self._symmetryOnlyAtomCoords = np.asarray([atom.coord for atom in self._symmetryOnlyAtoms])
+        self._asymmetryAtoms = [atom for atom in allAtoms if atom.symmetry == [0,0,0,0]]
+        self._asymmetryAtomCoords = np.asarray([atom.coord for atom in self._asymmetryAtoms])
 
-    atomBlobDistanceHeader = ['distance_to_atom', 'sign', 'electrons_of_discrepancy', 'num_voxels', 'volume', 'chain', 'residue_number', 'residue_name', 'atom_name', 'atom_symmetry', 'atom_xyz', 'centroid_xyz']
-    def calculateAtomSpecificBlobs(self, params=None):
+    blobStatisticsHeader = ['distance_to_atom', 'sign', 'electrons_of_discrepancy', 'num_voxels', 'volume', 'chain', 'residue_number', 'residue_name', 'atom_name', 'atom_symmetry', 'atom_xyz', 'centroid_xyz']
+    def calculateAtomSpecificBlobStatistics(self, blobList, params=None):
         """
-        Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
-        if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs.
+        Calculate atom-specific blob statistics.
 
-        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
-        :return diffMapStats: Difference density map statistics.
+        :param :py:obj:`list` blobList: list of blobs to calculate statistics for.
+        :return blobStats: Difference density map statistics.
         :rtype: :py:obj:`list`
         """
         symmetryAtoms = self.symmetryAtoms
         symmetryAtomCoords = self.symmetryAtomCoords
 
-        greenBlobList = self.greenBlobList
-        redBlobList = self.redBlobList
-
         if not self.chainMedian:
             self.aggregateCloud(params)
         chainMedian = self.chainMedian
 
-        ## find the closest atoms to the red/green blobs
-        diffMapStats = []
-        for blob in greenBlobList + redBlobList:
-            ## distance to the closest atoms
+        blobStats = []
+        for blob in blobList:
             centroid = np.array(blob.centroid).reshape((1, 3))
             symmetryDistances = scipy.spatial.distance.cdist(centroid, symmetryAtomCoords)
-
-            ind = np.argmin(symmetryDistances[0])
-            atom = symmetryAtoms[ind] # atom = list(symmetryAtoms)[ind]
+            atom = symmetryAtoms[np.argmin(symmetryDistances[0])] # closest atom
             sign = '+' if blob.totalDensity >= 0 else '-'
-            diffMapStats.append([symmetryDistances.min(), sign, abs(blob.totalDensity / chainMedian), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
+            blobStats.append([symmetryDistances.min(), sign, abs(blob.totalDensity / chainMedian), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
 
-        return diffMapStats
+        return blobStats
 
     # Headers that match the order of the results
     regionDiscrepancyHeader = [ "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
@@ -586,7 +585,7 @@ class DensityAnalysis(object):
         results = []
         for atom in atoms:
             result = self.calculateRegionDiscrepancy([atom.coord], radius, numSD, params)
-            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy() ] + result)
+            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
 
         return results
 
@@ -618,8 +617,7 @@ class DensityAnalysis(object):
 
     def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, params=None):
         """
-        Calculate `densityAnalysis.symmetryAtoms`, `densityAnalysis.greenBlobList`, `densityAnalysis.redBlobList`, and `densityAnalysis.chainMedian`
-        if not already exist, and calculate statistics for positive (green) and negative (red) difference density blobs within a specific region.
+        Calculate region-specific discrepancy from the difference density matrix.
 
         :param xyzCoordLists: xyz coordinates.
         :type xyzCoordLists: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.

@@ -1,143 +1,104 @@
 #!/usr/bin/python3
-
 """
-crystal_contacts.py
-  Identifies 'crystal contact' atoms in a PDB entry.
-    If run as a script, it saves a jsonpickled list of Biopython Atom objects.
-    If imported as a module, simply use the get_contact_atoms(mmcif_file) function for any PDB entry.
+pdb_eda (crystal) contacts analysis mode command-line interface
+	Analyzes atoms in a PDB entry for the closest crystal contacts.
+	This mode requires the pymol package and python library to be installed.
 
 Usage:
-	crystal_contacts.py <pdb_mmcif_file>
-	crystal_contacts.py -h
+	pdb_eda contacts -h | --help
+	pdb_eda contacts <pdbid> <out-file> [--distance=<cutoff>] [--symmetry-atoms] [--include-pdbid] [--out-format=<format>]
 
 Arguments:
-	<pdb_mmcif> - /path/to/pdb/1xyz.cif
+    <pdbid>				  The PDB ID to download and analyze.
+    <out-file>			  Output filename. "-" will write to standard output.
+    --distance=<cutoff>	  Distance cutoff in angstroms for detecting crystal contacts. [default: 5.0]
+    --symmetry-atoms	  Calculate crystal contacts to symmetry atoms too.
+    --include-pdbid		  Include PDB ID at the beginning of each result.
 """
 
-import Bio.PDB.MMCIFParser
-import itertools
 import scipy.spatial.distance
 import numpy as np
 import pymol as pm
 import os
-import gzip
-import jsonpickle
 import docopt
+import json
 
+from . import densityAnalysis
+from . import __version__
 
-def main(args):
-	mmcif_file = args["<pdb_mmcif_file>"]
+def main():
+	args = docopt.docopt(__doc__, version=__version__)
+	if args["--help"]:
+		print(__doc__)
+		exit(0)
 
-	entry_id = mmcif_file.split('/')[-1].split('.')[0]
+	args["--distance"] = float(args["--distance"])
 
-	# Get list of contact atoms as Biopython Atom objects.
-	contact_atoms = get_contact_atoms(mmcif_file)
+	analyzer = densityAnalysis.fromPDBid(args["<pdbid>"], mmcif=True)
+	if not analyzer:
+		sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
 
-	# Save list of atoms as a json pickle.
-	json_atom_list = jsonpickle.encode(contact_atoms)
-	with open(entry_id + "_contact_atoms.json", "w") as json_file:
-		json_file.write(json_atom_list)
+	mmcif_file = densityAnalysis.pdbfolder + args["<pdbid>"] + '.cif'
 
-	exit(0)
+	crystalNeighborCoords = simulateCrystalNeighborCoordinates(mmcif_file)
 
-
-def _pymol_test(mmcif_file):
-	"""For verifying that this method of identifying crystal contacts is reliable."""
-
-	contact_atoms = get_contact_atoms(mmcif_file)
-
-	pm.cmd.reinitialize()
-	pm.cmd.load(mmcif_file)
-	pm.cmd.show_as("surface")
-	pm.cmd.color("orange", "all")
-
-	for atom in contact_atoms:
-		pm.cmd.color("red", "///{0}/{1}/{2}".format(atom.get_full_id()[2], atom.get_full_id()[3][1], atom.get_full_id()[4][0]))
-
-
-def get_contact_atoms(mmcif_file):
-	"""Return a list of Biopython Atom objects which are involved in crystal contacts for the given PDB entry (mmcif format)."""
-
-	parser = Bio.PDB.MMCIFParser()
-
-	# Open with gzip if compressed.
-	if mmcif_file.endswith("gz"):
-		mmcif_filehandle = gzip.open(mmcif_file, "rt")
+	if args["--symmetry-atoms"]:
+		contacts = findCoordContacts(analyzer.symmetryAtomCoords, crystalNeighborCoords, args["--distance"])
+		atoms = analyzer.symmetryAtoms
 	else:
-		mmcif_filehandle = open(mmcif_file, "rt")
+		contacts = findCoordContacts(analyzer.asymmetryAtomCoords, crystalNeighborCoords, args["--distance"])
+		atoms = analyzer.asymmetryAtoms
 
-	# Parse mmcif file into Biopython Structure.
-	structure = parser.get_structure("entry", mmcif_filehandle)
+	headerList = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy", "atom_symmetry", "atom_xyz", "crystal_contact_distance"]
+	result = []
+	for index,contactDistance in contacts:
+		atom = atoms[index]
+		result.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(), atom.symmetry, [float (c) for c in atom.coord], contactDistance])
 
-	# Get atoms of asymmetric unit (exluding heteroatoms).
-	asym_unit_atoms = [atom for atom in structure.get_atoms() if atom.get_full_id()[3][0] == " "]
-	asym_unit_coords = [atom.get_coord() for atom in asym_unit_atoms]
+	if args["--include-pdbid"]:
+		headerList = ["pdbid"] + headerList
+		result = [[analyzer.pdbid] + row for row in result]
 
-	# Get atoms of neighboring crystal environment.
-	crystal_neighbor_coords = simulate_crystal_coordinates(mmcif_file)
-
-	# Determine which atoms are 'in contact' with the neighboring crystal units.
-	contacts = find_atomic_contacts([asym_unit_coords, crystal_neighbor_coords])
-	contact_atoms = [atom for atom, is_contact in zip(asym_unit_atoms, contacts[0]) if is_contact]
-
-	return contact_atoms
-
-
-def find_atomic_contacts(macromolecules, contact_cutoff=5):
-	"""Given a list of atomic coordinate lists, return a "parallel" list of boolean atomic contact lists.
-	Parameters:
-		macromolecules - a list of lists; each internal list contains all atoms in a single molecular entity.
-		contact_cutoff - atoms within this distance (in angstroms) of another molecule are considered 'atomic contacts'."""
-
-	print("Running cdist...")
-
-	# Build an array of atomic distance matrices for all pairwise combinations (i, j) of macromolecules in macromolecules_coordinates.
-	dist_matrices = np.array(
-		[scipy.spatial.distance.cdist(mol_i, mol_j) for mol_i, mol_j in itertools.combinations(macromolecules, 2)])
-
-	print("Done running cdist.")
-
-	# Build an array of intermolecular atomic contact maps for each pair of macromolecules.
-	pairwise_contact_maps = np.array(
-		[[np.less(row, contact_cutoff) for row in dist_matrix] for dist_matrix in dist_matrices])
-
-	# Initially all atoms are assumed to be non-contact atoms (False), and updated if indicated by a contact map in the below iteration.
-	contact_axes = [[False for atom in mol] for mol in macromolecules]
-
-	# Keep track of which macromolecules are represented in each combinatorial distance matrix by their index in 'macromolecules'.
-	index_pairs = [index_pair for index_pair in itertools.combinations(range(0, len(macromolecules)), 2)]
-
-	# Identify which atoms make at least one intermolecule contact for each macromolecule in each contact map.
-	for cmap, index_pair in zip(pairwise_contact_maps, index_pairs):
-		# Find truth values for atomic contacts for each macromolecule in the current contact map.
-		axis_1_contact = np.squeeze(np.asarray(cmap.any(1)))
-		axis_0_contact = np.squeeze(np.asarray(cmap.any(0)))
-
-		# Update truth values for atomic contacts for each macromolecule.  If atom contact is True for ANY contact map, then the atom is a contact atom.
-		contact_axes[index_pair[0]] = [True if (was_true or now_true) else False for was_true, now_true in
-									   zip(contact_axes[index_pair[0]], axis_1_contact)]
-		contact_axes[index_pair[1]] = [True if (was_true or now_true) else False for was_true, now_true in
-									   zip(contact_axes[index_pair[1]], axis_0_contact)]
-
-	return contact_axes
+	with open(args["<out-file>"], 'w') if args["<out-file>"] != "-" else sys.stdout as outFile:
+		if args["--out-format"] == 'csv':
+			csvResults = [','.join(map(str, row)) for row in [headerList] + result]
+			print(*csvResults, sep='\n', file=outFile)
+		else:
+			jsonResults = [dict(zip(headerList, row)) for row in result]
+			print(json.dumps(jsonResults, indent=2, sort_keys=True), file=outFile)
 
 
-def simulate_crystal_coordinates(filename):
-	"""RETURN a list of atom coordinates of the simulated crystal environment surrounding the X-Ray
-	Diffraction asymmetric unit (excluding heteroatoms). Requires a file path instead of a 
+def findCoordContacts(coordList1, coordList2, distanceCutoff=5.0):
+	"""
+	Find contacts in coordList1 to coordList2 at the given distance cutoff.
+
+	:param :py:obj:`list` coordList1: list of coordinates.
+	:param :py:obj:`list` coordList2: list of coordinates.
+	:param float distanceCutoff: distance cutoff.
+	:return: contactList of index,minDistance tuples.
+    :rtype: :py:obj:`list`
+	"""
+	distances = scipy.spatial.distance.cdist(np.matrix(coordList1), np.matrix(coordList2))
+	return [(index,minDistance) for index,minDistance in enumerate(np.min(distances[x]) for x in range(len(coordList1))) if minDistance <= distanceCutoff]
+
+
+def simulateCrystalNeighborCoordinates(filename):
+	"""
+	RETURN a list of atom coordinates of the simulated crystal environment surrounding the X-Ray
+	Diffraction asymmetric unit (excluding heteroatoms). Requires a file path instead of a
 	structure because the bulk of this is handled by Pymol.
 	NOTE: This will only work with PDB structures resolved with X-RAY DIFFRACTION.
-	Parameters:
-		filename - /path/to/pdb/file"""
 
-	file_path = filename
-
+	:param str filename:
+	:return: coordList
+    :rtype: :py:obj:`list`
+	"""
 	# Launch pymol.
 	pm.pymol_argv = ['pymol', '-qc']
 	pm.finish_launching()
 
 	# Set absolute path and name of PDB entry.
-	spath = os.path.abspath(file_path)
+	spath = os.path.abspath(filename)
 	sname = spath.split('/')[-1].split('.')[0]
 	asym_unit = "asym_unit"
 
@@ -157,10 +118,5 @@ def simulate_crystal_coordinates(filename):
 	pm.cmd.iterate_state(1, "all", "coordinates.append([x,y,z])", space=myspace)
 
 	pm.cmd.reinitialize()
-
 	return myspace["coordinates"]
 
-
-if __name__ == "__main__":
-	args = docopt.docopt(__doc__)
-	main(args)
