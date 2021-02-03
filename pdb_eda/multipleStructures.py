@@ -6,16 +6,18 @@ Usage:
     pdb_eda multiple -h | --help
     pdb_eda multiple <pdbid-file> <out-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>]
     pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>]
+    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>]
 
 Options:
-    -h, --help                                  Show this screen.
-    <out-file>                                  Output filename. "-" will write to standard output.
-    <pdbid-file>                                File name that contains the pdb ids. "-" will read from standard input.
-    --params=<params-file>                      Overriding parameters file that includes radii, slopes, etc. [default: ]
-    --out-format=<format>                       Output file format, available formats: csv, json [default: json].
-    --time-out=<seconds>                        Set a maximum time to try to analyze any single pdb entry. [default: 0]
-    --testing                                   Run only a single process for testing purposes.
-    --single-mode=<quoted-single-mode-options>  Run single structure analysis mode on a set of PDB entries.
+    -h, --help                                      Show this screen.
+    <out-file>                                      Output filename. "-" will write to standard output.
+    <pdbid-file>                                    File name that contains the pdb ids. "-" will read from standard input.
+    --params=<params-file>                          Overriding parameters file that includes radii, slopes, etc. [default: ]
+    --out-format=<format>                           Output file format, available formats: csv, json [default: json].
+    --time-out=<seconds>                            Set a maximum time to try to analyze any single pdb entry. [default: 0]
+    --testing                                       Run only a single process for testing purposes.
+    --single-mode=<quoted-single-mode-options>      Run single structure analysis mode on a set of PDB entries.
+    --contacts-mode=<quoted-contacts-mode-options>  Run (crystal) contacts analysis mode on a set of PDB entries.
 """
 
 import docopt
@@ -33,6 +35,7 @@ import collections
 from . import densityAnalysis
 from . import __version__
 from . import singleStructure
+from . import crystalContacts
 
 defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
 
@@ -70,6 +73,13 @@ def main():
                 os.mkdir(globalArgs["<out-dir>"])
             else:
                 sys.exit(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
+    elif globalArgs["--contacts-mode"]:
+        processFunction = contactsModeFunction
+        if not os.path.isdir(globalArgs["<out-dir>"]):
+            if not os.path.isfile(globalArgs["<out-dir>"]):
+                os.mkdir(globalArgs["<out-dir>"])
+            else:
+                sys.exit(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
     else:
         processFunction = multipleModeFunction
 
@@ -79,7 +89,7 @@ def main():
         with multiprocessing.Pool() as pool:
             results = pool.map(processFunction, pdbids)
 
-    if not globalArgs["--single-mode"]: # skip generating results if running in single structure analysis mode.
+    if not globalArgs["--single-mode"] and not globalArgs["--contacts-mode"]: # skip generating results if running in another analysis mode.
         fullResults = {}
         for resultFilename in results:
             if resultFilename:
@@ -105,19 +115,8 @@ def main():
                 print(json.dumps(fullResults, indent=2, sort_keys=True), file=jsonFile)
 
 
-def multipleModeFunction(pdbid):
-    if globalArgs["--time-out"]:
-        try:
-            with timeout(seconds=globalArgs["--time-out"]):
-                return analyzePDBID(pdbid)
-        except:
-            return 0
-    else:
-        return analyzePDBID(pdbid)
-
-
 def singleModeFunction(pdbid):
-    singleModeCommandLine = "pdb_eda single " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--single"]
+    singleModeCommandLine = "pdb_eda single " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--single-mode"]
     sys.argv = singleModeCommandLine.split()
     if globalArgs["--time-out"]:
         try:
@@ -132,6 +131,36 @@ def singleModeFunction(pdbid):
             pass
 
     return 0
+
+
+def contactsModeFunction(pdbid):
+    contactsModeCommandLine = "pdb_eda contacts " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--contacts-mode"]
+    sys.argv = contactsModeCommandLine.split()
+    if globalArgs["--time-out"]:
+        try:
+            with timeout(seconds=globalArgs["--time-out"]):
+                crystalContacts.main()
+        except:
+            pass
+    else:
+        try:
+            crystalContacts.main()
+        except:
+            pass
+
+    return 0
+
+
+def multipleModeFunction(pdbid):
+    if globalArgs["--time-out"]:
+        try:
+            with timeout(seconds=globalArgs["--time-out"]):
+                return analyzePDBID(pdbid)
+        except:
+            return 0
+    else:
+        return analyzePDBID(pdbid)
+
 
 def analyzePDBID(pdbid):
     """Process function to analyze a single pdb entry.
@@ -183,7 +212,6 @@ def createTempJSONFile(data, filenamePrefix):
         json.dump(data,tempFile)
         filename = tempFile.name
     return filename
-
 
 
 class timeout:
