@@ -635,9 +635,6 @@ class DensityAnalysis(object):
         avg_discrep = diffDensityObj.meanDensity
         diffDensityCutoff = avg_discrep + numSD * diffDensityObj.stdDensity
 
-        # symmetryOnlyAtomCoords = self.symmetryOnlyAtomCoords
-        # minSymmetryAtomDistance = np.min(scipy.spatial.distance.cdist(np.asarray(xyzCoordList), symmetryOnlyAtomCoords))
-
         # observed absolute significant regional discrepancy
         green = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, diffDensityCutoff)
         red = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, -1.0 * diffDensityCutoff)
@@ -653,8 +650,6 @@ class DensityAnalysis(object):
         expected_abs_sig_regional_discrep = avg_abs_vox_discrep * regional_voxel_count
         num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / chainMedian
 
-        # return [ minSymmetryAtomDistance, actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
-        #          expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
         return [ actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
                  expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
 

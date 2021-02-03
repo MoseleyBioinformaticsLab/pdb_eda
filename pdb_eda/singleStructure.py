@@ -77,7 +77,7 @@ def main():
             headerList = list(map(str,list(analyzer.atomList) + ['density_electron_ratio']))
             result = [ list(item) + [analyzer.chainMedian] for item in analyzer.atomList.values.tolist()]
         elif args["--residue"]:
-            headerList = densityAnalysis.DensityAnalysis.atomListHeader
+            headerList = densityAnalysis.DensityAnalysis.residueListHeader
             result = [ list(item) + [analyzer.chainMedian] for item in analyzer.residueList]
         elif args["--chain"]:
             headerList = densityAnalysis.DensityAnalysis.chainListHeader

@@ -43,17 +43,18 @@ def main():
 	crystalNeighborCoords = simulateCrystalNeighborCoordinates(mmcif_file)
 
 	if args["--symmetry-atoms"]:
-		contacts = findCoordContacts(analyzer.symmetryAtomCoords, crystalNeighborCoords, args["--distance"])
 		atoms = analyzer.symmetryAtoms
+		contacts = findCoordContacts(analyzer.symmetryAtomCoords, crystalNeighborCoords, args["--distance"])
 	else:
-		contacts = findCoordContacts(analyzer.asymmetryAtomCoords, crystalNeighborCoords, args["--distance"])
-		atoms = analyzer.asymmetryAtoms
+		atoms = list(analyzer.biopdbObj.get_atoms())
+		contacts = findCoordContacts(np.asarray([atom.coord for atom in atoms]), crystalNeighborCoords, args["--distance"])
 
 	headerList = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy", "atom_symmetry", "atom_xyz", "crystal_contact_distance"]
 	result = []
 	for index,contactDistance in contacts:
 		atom = atoms[index]
-		result.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(), atom.symmetry, [float (c) for c in atom.coord], contactDistance])
+		result.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(),
+					   atom.symmetry if args["--symmetry-atoms"] else [0,0,0,0], [float(c) for c in atom.coord], contactDistance])
 
 	if args["--include-pdbid"]:
 		headerList = ["pdbid"] + headerList
@@ -78,7 +79,7 @@ def findCoordContacts(coordList1, coordList2, distanceCutoff=5.0):
 	:return: contactList of index,minDistance tuples.
     :rtype: :py:obj:`list`
 	"""
-	distances = scipy.spatial.distance.cdist(np.matrix(coordList1), np.matrix(coordList2))
+	distances = scipy.spatial.distance.cdist(coordList1, coordList2)
 	return [(index,minDistance) for index,minDistance in enumerate(np.min(distances[x]) for x in range(len(coordList1))) if minDistance <= distanceCutoff]
 
 
