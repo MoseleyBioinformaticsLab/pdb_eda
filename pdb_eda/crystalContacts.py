@@ -33,6 +33,7 @@ def main():
 		exit(0)
 
 	args["--distance"] = float(args["--distance"])
+	args["<pdbid>"] = args["<pdbid>"].lower()
 
 	analyzer = densityAnalysis.fromPDBid(args["<pdbid>"], mmcif=True)
 	if not analyzer:

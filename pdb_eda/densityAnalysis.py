@@ -258,7 +258,7 @@ class DensityAnalysis(object):
 
         self.statistics = valid.getStats(biopdbObj, fc, fo, sigma3)
 
-    residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volumne', 'density_electron_ratio']
+    residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume', 'density_electron_ratio']
     chainListHeader = residueListHeader
     def aggregateCloud(self, params=None, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False, minResAtoms=4, minTotalAtoms=50):
         """
@@ -390,7 +390,7 @@ class DensityAnalysis(object):
             totalDensity += cloud.totalDensity
 
             if len(cloud.atoms) >= minTotalAtoms:
-                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons])
+                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
         if totalElectrons == 0 or len(atomList) < minTotalAtoms:
             return 0
@@ -632,8 +632,7 @@ class DensityAnalysis(object):
         chainMedian = self.chainMedian
 
         diffDensityObj = self.diffDensityObj
-        avg_discrep = diffDensityObj.meanDensity
-        diffDensityCutoff = avg_discrep + numSD * diffDensityObj.stdDensity
+        diffDensityCutoff = diffDensityObj.meanDensity + numSD * diffDensityObj.stdDensity
 
         # observed absolute significant regional discrepancy
         green = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, diffDensityCutoff)

@@ -5,8 +5,8 @@ pdb_eda multiple structure analysis mode command-line interface
 Usage:
     pdb_eda multiple -h | --help
     pdb_eda multiple <pdbid-file> <out-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>]
-    pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>]
-    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>]
+    pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing]
+    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing]
 
 Options:
     -h, --help                                      Show this screen.
@@ -124,6 +124,8 @@ def singleModeFunction(pdbid):
                 singleStructure.main()
         except:
             pass
+    elif globalArgs["--testing"]:
+        singleStructure.main()
     else:
         try:
             singleStructure.main()
@@ -142,6 +144,8 @@ def contactsModeFunction(pdbid):
                 crystalContacts.main()
         except:
             pass
+    elif globalArgs["--testing"]:
+        crystalContacts.main()
     else:
         try:
             crystalContacts.main()
@@ -181,12 +185,12 @@ def analyzePDBID(pdbid):
     if not analyzer.chainMedian:
         return 0
 
-    diffs = { atomType:((analyzer.medians.loc[atomType]['corrected_density_electron_ratio'] - analyzer.chainMedian) / analyzer.chainMedian)
-     if atomType in analyzer.medians.index else 0 for atomType in sorted(globalParams["radii"]) }
+    diffs = { atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.chainMedian) / analyzer.chainMedian)
+              if atomType in analyzer.medians['corrected_density_electron_ratio'] else 0 for atomType in sorted(globalParams["radii"]) }
 
     stats = { 'density_electron_ratio' : analyzer.chainMedian, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chain_num_voxel' : analyzer.chainNvoxel,
         'chain_total_electrons' : analyzer.chainTotalE, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
-        'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomList.index),
+        'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomList),
         'num_residues_analyzed' : len(analyzer.residueList), 'num_chains_analyzed' : len(analyzer.chainList)  }
 
     properties = { property : value for (property,value) in analyzer.biopdbObj.header.items() }
