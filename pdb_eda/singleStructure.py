@@ -79,13 +79,13 @@ def main():
         analyzer.aggregateCloud(params, atomL=True, residueL=True, chainL=True)
         if args["--atom"]:
             headerList = list(map(str,list(analyzer.atomList.dtype.names) + ['density_electron_ratio']))
-            result = [ [numpyConverter(element) for element in item] + [analyzer.chainMedian] for item in analyzer.atomList]
+            result = [ [numpyConverter(element) for element in item] + [analyzer.densityElectronRatio] for item in analyzer.atomList]
         elif args["--residue"]:
-            headerList = densityAnalysis.DensityAnalysis.residueListHeader
-            result = [ list(item) + [analyzer.chainMedian] for item in analyzer.residueList]
+            headerList = densityAnalysis.DensityAnalysis.residueListHeader + ['density_electron_ratio']
+            result = [ list(item) + [analyzer.densityElectronRatio] for item in analyzer.residueList]
         elif args["--chain"]:
-            headerList = densityAnalysis.DensityAnalysis.chainListHeader
-            result = [ list(item) + [analyzer.chainMedian] for item in analyzer.chainList]
+            headerList = densityAnalysis.DensityAnalysis.chainListHeader + ['density_electron_ratio']
+            result = [ list(item) + [analyzer.densityElectronRatio] for item in analyzer.chainList]
     elif args["difference"]:
         if args["--atom"]:
             headerList = densityAnalysis.DensityAnalysis.atomRegionDiscrepancyHeader

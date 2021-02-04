@@ -200,10 +200,10 @@ def processFunction(pdbid, paramsFilepath):
         return 0 
 
     analyzer.aggregateCloud(params)
-    if not analyzer.chainMedian:
+    if not analyzer.densityElectronRatio:
         return 0
 
-    diffs = { atomType:((analyzer.medians.loc[atomType]['corrected_density_electron_ratio'] - analyzer.chainMedian) / analyzer.chainMedian) for atomType in radii if atomType in analyzer.medians.index }
+    diffs = { atomType:((analyzer.medians.loc[atomType]['corrected_density_electron_ratio'] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio) for atomType in radii if atomType in analyzer.medians.index }
     newSlopes = { atomType:analyzer.medians.loc[atomType]['slopes'] for atomType in slopes if atomType in analyzer.medians.index }
 
     resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes }, "tempResults_")

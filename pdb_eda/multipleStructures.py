@@ -182,13 +182,13 @@ def analyzePDBID(pdbid):
 
     analyzer.aggregateCloud(globalParams, atomL=True, residueL=True, chainL=True)
     analyzer.estimateF000()
-    if not analyzer.chainMedian:
+    if not analyzer.densityElectronRatio:
         return 0
 
-    diffs = { atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.chainMedian) / analyzer.chainMedian)
+    diffs = { atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio)
               if atomType in analyzer.medians['corrected_density_electron_ratio'] else 0 for atomType in sorted(globalParams["radii"]) }
 
-    stats = { 'density_electron_ratio' : analyzer.chainMedian, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chain_num_voxel' : analyzer.chainNvoxel,
+    stats = { 'density_electron_ratio' : analyzer.densityElectronRatio, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chain_num_voxel' : analyzer.chainNvoxel,
         'chain_total_electrons' : analyzer.chainTotalE, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
         'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomList),
         'num_residues_analyzed' : len(analyzer.residueList), 'num_chains_analyzed' : len(analyzer.chainList)  }

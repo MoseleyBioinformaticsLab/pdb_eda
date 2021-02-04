@@ -167,7 +167,7 @@ class DensityAnalysis(object):
         self.chainList = None
         self.statistics = None
         self.f000 = None
-        self.chainMedian = None
+        self.densityElectronRatio = None
         self.chainNvoxel = None
         self.chainTotalE = None
         self.chainTotalDensity = None
@@ -261,12 +261,12 @@ class DensityAnalysis(object):
 
         self.statistics = valid.getStats(biopdbObj, fc, fo, sigma3)
 
-    residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume', 'density_electron_ratio']
+    residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume']
     chainListHeader = residueListHeader
     def aggregateCloud(self, params=None, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False, minResAtoms=4, minTotalAtoms=50):
         """
         Aggregate the electron density map clouds by atom, residue, and chain.
-        Calculate and populate `densityAnalysis.chainMedian` and `densityAnalysis.medians` data member.
+        Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data member.
 
         :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :param densityObj: Optional :class:`pdb_eda.ccp4` object.
@@ -283,7 +283,7 @@ class DensityAnalysis(object):
 
         :return: :py:obj:`None`
         """
-        if self.chainMedian and not recalculate:
+        if self.densityElectronRatio and not recalculate:
             return None
         if not densityObj:
             densityObj = self.densityObj
@@ -381,7 +381,7 @@ class DensityAnalysis(object):
                 chainClouds.append(chainPool[startingIndex])
         ##End chain
 
-        ## Calculate chainMedian, which is technically a weighted mean value now.
+        ## Calculate densityElectronRatio, which is technically a weighted mean value now.
         numVoxels = 0
         totalElectrons = 0
         totalDensity = 0
@@ -398,16 +398,16 @@ class DensityAnalysis(object):
         if totalElectrons == 0 or len(atomList) < minTotalAtoms:
             return 0
         else:
-            chainMedian = totalDensity / totalElectrons
+            densityElectronRatio = totalDensity / totalElectrons
             chainList.sort(key=lambda x: x[3])
-        ## End calculate chainMedian
+        ## End calculate densityElectronRatio
 
 
         def calcSlope(data, atom_type):
             if len(data['chain']) <= 2 or len(np.unique(data['bfactor'])) == 1: ## Less than three data points or all b factors are the same
                 return currentSlopes[atom_type]
 
-            slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adj_density_electron_ratio']-chainMedian)/chainMedian)
+            slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adj_density_electron_ratio']-densityElectronRatio)/densityElectronRatio)
             return currentSlopes[atom_type] if p_value > 0.05 else slope
 
         try:
@@ -431,15 +431,15 @@ class DensityAnalysis(object):
             medians['slopes'] = {atom_type : calcSlope(atoms[atoms['atom_type'] == atom_type], atom_type) for atom_type in atom_types}
 
             ## Correct by b-factor
-            atoms['chain_fraction'] = (atoms['adj_density_electron_ratio'] - chainMedian) / chainMedian
+            atoms['chain_fraction'] = (atoms['adj_density_electron_ratio'] - densityElectronRatio) / densityElectronRatio
             atoms['corrected_fraction'] = atoms['chain_fraction'] - (np.log(atoms['bfactor']) - np.log(medians_translator('bfactor', atoms['atom_type']))) * medians_translator('slopes', atoms['atom_type'])
-            atoms['corrected_density_electron_ratio'] = atoms['corrected_fraction'] * chainMedian + chainMedian
+            atoms['corrected_density_electron_ratio'] = atoms['corrected_fraction'] * densityElectronRatio + densityElectronRatio
             medians.update({column : {atom_type : np.median(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
                          ['chain_fraction', 'corrected_fraction', 'corrected_density_electron_ratio']})
         except:
             return 0
 
-        self.chainMedian = chainMedian
+        self.densityElectronRatio = densityElectronRatio
         self.chainNvoxel = numVoxels
         self.chainTotalE = totalElectrons
         self.chainTotalDensity = totalDensity
@@ -529,9 +529,9 @@ class DensityAnalysis(object):
         symmetryAtoms = self.symmetryAtoms
         symmetryAtomCoords = self.symmetryAtomCoords
 
-        if not self.chainMedian:
+        if not self.densityElectronRatio:
             self.aggregateCloud(params)
-        chainMedian = self.chainMedian
+        densityElectronRatio = self.densityElectronRatio
 
         blobStats = []
         for blob in blobList:
@@ -539,7 +539,7 @@ class DensityAnalysis(object):
             symmetryDistances = scipy.spatial.distance.cdist(centroid, symmetryAtomCoords)
             atom = symmetryAtoms[np.argmin(symmetryDistances[0])] # closest atom
             sign = '+' if blob.totalDensity >= 0 else '-'
-            blobStats.append([symmetryDistances.min(), sign, abs(blob.totalDensity / chainMedian), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
+            blobStats.append([symmetryDistances.min(), sign, abs(blob.totalDensity / densityElectronRatio), len(blob.crsList), blob.volume, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, blob.centroid])
 
         return blobStats
 
@@ -610,9 +610,9 @@ class DensityAnalysis(object):
         :return diffMapRegionStats: Difference density map region header and statistics.
         :rtype: :py:obj:`tuple`
         """
-        if not self.chainMedian:
+        if not self.densityElectronRatio:
             self.aggregateCloud(params)
-        chainMedian = self.chainMedian
+        densityElectronRatio = self.densityElectronRatio
 
         diffDensityObj = self.diffDensityObj
         diffDensityCutoff = diffDensityObj.meanDensity + numSD * diffDensityObj.stdDensity
@@ -621,7 +621,7 @@ class DensityAnalysis(object):
         green = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, diffDensityCutoff)
         red = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, -1.0 * diffDensityCutoff)
         actual_abs_sig_regional_discrep = sum([abs(blob.totalDensity) for blob in green + red])
-        num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / chainMedian
+        num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / densityElectronRatio
 
         # expected absolute significant regional discrepancy
         total_abs_sig_discrep = utils.sumOfAbs(diffDensityObj.densityArray, diffDensityCutoff)
@@ -630,7 +630,7 @@ class DensityAnalysis(object):
         crsCoordList = {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in diffDensityObj.getSphereCrsFromXyz(xyzCoord, radius)}
         regional_voxel_count = len(crsCoordList)
         expected_abs_sig_regional_discrep = avg_abs_vox_discrep * regional_voxel_count
-        num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / chainMedian
+        num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / densityElectronRatio
 
         return [ actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
                  expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
