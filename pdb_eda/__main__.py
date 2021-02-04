@@ -20,7 +20,7 @@ For example:
 import sys
 from . import singleStructure
 from . import multipleStructures
-from . import radiiOptimize
+from . import paramsOptimize
 from . import selectPDBIDs
 from . import crystalContacts
 from . import __version__
@@ -31,7 +31,7 @@ def main():
     elif len(sys.argv) > 1 and sys.argv[1] == "multiple":
         multipleStructures.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "optimize":
-        radiiOptimize.main()
+        paramsOptimize.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "select":
         selectPDBIDs.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "contacts":

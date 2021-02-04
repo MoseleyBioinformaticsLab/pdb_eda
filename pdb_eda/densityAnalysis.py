@@ -17,9 +17,13 @@ import scipy.spatial
 from scipy import stats
 
 from . import ccp4
-from . import ccp4_utils
 from . import pdbParser
 from . import validationStats
+
+try:
+    from . import cutils as utils
+except ImportError:
+    from . import utils
 
 ## Starting data originally from https://arxiv.org/pdf/0804.2488.pdf
 paramsPath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
@@ -329,7 +333,7 @@ class DensityAnalysis(object):
             for i in range(len(residuePool)):
                 for j in range(i+1, len(residuePool)):
                     #overlap[i][j] = overlap[j][i] = residuePool[i].testOverlap(residuePool[j])
-                    overlap[i][j] = overlap[j][i] = ccp4_utils.testOverlap(residuePool[i],residuePool[j])
+                    overlap[i][j] = overlap[j][i] = utils.testOverlap(residuePool[i],residuePool[j])
 
             resClouds = []
             usedIdx = set()
@@ -360,7 +364,7 @@ class DensityAnalysis(object):
         for i in range(len(chainPool)):
             for j in range(i+1, len(chainPool)):
                 #overlap[i][j] = overlap[j][i] = chainPool[i].testOverlap(chainPool[j])
-                overlap[i][j] = overlap[j][i] = ccp4_utils.testOverlap(chainPool[i],chainPool[j])
+                overlap[i][j] = overlap[j][i] = utils.testOverlap(chainPool[i],chainPool[j])
 
         usedIdx = set()
         for startingIndex in range(len(chainPool)):
@@ -641,7 +645,7 @@ class DensityAnalysis(object):
         num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / chainMedian
 
         # expected absolute significant regional discrepancy
-        total_abs_sig_discrep = ccp4_utils.sumOfAbs(diffDensityObj.densityArray, diffDensityCutoff)
+        total_abs_sig_discrep = utils.sumOfAbs(diffDensityObj.densityArray, diffDensityCutoff)
         total_voxel_count = len(diffDensityObj.densityArray)
         avg_abs_vox_discrep = total_abs_sig_discrep / total_voxel_count
         crsCoordList = {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in diffDensityObj.getSphereCrsFromXyz(xyzCoord, radius)}

@@ -13,7 +13,11 @@ import itertools
 
 import urllib.request
 import numpy as np
-from . import ccp4_utils
+
+try:
+    from . import cutils as utils
+except ImportError:
+    from . import utils
 
 urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 urlSuffix = ".ccp4"
@@ -436,7 +440,7 @@ class DensityMatrix:
         :return: blobList is a list of blobs.
         :rtype: A :py:obj:`list` of :class:`pdb_eda.ccp4.DensityBlob` object.
         """
-        crsLists = ccp4_utils.createCrsLists(crsList)
+        crsLists = utils.createCrsLists(crsList)
         return [ DensityBlob.fromCrsList(crs_list, self.header, self.density) for crs_list in crsLists ]
 
 

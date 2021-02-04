@@ -2,7 +2,7 @@
 """
 pdb_eda (crystal) contacts analysis mode command-line interface
 	Analyzes atoms in a PDB entry for the closest crystal contacts.
-	This mode requires the pymol package and python library to be installed.
+	This mode requires the pymol package and associated python library to be installed.
 
 Usage:
 	pdb_eda contacts -h | --help
@@ -18,7 +18,6 @@ Arguments:
 
 import scipy.spatial.distance
 import numpy as np
-import pymol as pm
 import os
 import docopt
 import json
@@ -26,8 +25,20 @@ import json
 from . import densityAnalysis
 from . import __version__
 
+try:
+	import pymol
+	pymolImported = True
+except ImportError:
+	pymolImported = False
+
 def main():
+	if not pymolImported:
+		print("Error: pymol module did not load.")
+		print(__doc__)
+		exit(0)
+
 	args = docopt.docopt(__doc__, version=__version__)
+
 	if args["--help"]:
 		print(__doc__)
 		exit(0)
@@ -96,8 +107,8 @@ def simulateCrystalNeighborCoordinates(filename):
     :rtype: :py:obj:`list`
 	"""
 	# Launch pymol.
-	pm.pymol_argv = ['pymol', '-qc']
-	pm.finish_launching()
+	pymol.pymol_argv = ['pymol', '-qc']
+	pymol.finish_launching()
 
 	# Set absolute path and name of PDB entry.
 	spath = os.path.abspath(filename)
@@ -105,20 +116,20 @@ def simulateCrystalNeighborCoordinates(filename):
 	asym_unit = "asym_unit"
 
 	# Load Structure.
-	pm.cmd.load(spath, format="cif")
-	pm.cmd.disable("all")
-	pm.cmd.enable(sname)
-	pm.cmd.create(asym_unit, "polymer")
+	pymol.cmd.load(spath, format="cif")
+	pymol.cmd.disable("all")
+	pymol.cmd.enable(sname)
+	pymol.cmd.create(asym_unit, "polymer")
 
 	# Generate local crystal environment using symexp; delete original structures.
-	pm.cmd.symexp("neighbor", asym_unit, asym_unit, 5)
-	pm.cmd.delete(sname)
-	pm.cmd.delete(asym_unit)
+	pymol.cmd.symexp("neighbor", asym_unit, asym_unit, 5)
+	pymol.cmd.delete(sname)
+	pymol.cmd.delete(asym_unit)
 
 	# Return atom coordinates of the neighboring structures.
 	myspace = {"coordinates": []}
-	pm.cmd.iterate_state(1, "all", "coordinates.append([x,y,z])", space=myspace)
+	pymol.cmd.iterate_state(1, "all", "coordinates.append([x,y,z])", space=myspace)
 
-	pm.cmd.reinitialize()
+	pymol.cmd.reinitialize()
 	return myspace["coordinates"]
 
