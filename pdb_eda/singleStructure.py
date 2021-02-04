@@ -110,7 +110,7 @@ def main():
             blobInfo[11] = [ float(val) for val in blobInfo[11] ]
     elif args["symmetry-atoms"]:
         headerList = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy", "atom_symmetry", "atom_xyz"]
-        result = [[atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(), [float(c) for c in atom.coord]] for atom in analyzer.symmetryAtoms]
+        result = [[atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(), atom.symmetry, [float(c) for c in atom.coord]] for atom in analyzer.symmetryAtoms]
 
     if args["--include-pdbid"]:
         headerList = ["pdbid"] + headerList

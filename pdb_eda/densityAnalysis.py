@@ -126,7 +126,6 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
 
                 pdbl = biopdb.PDBList()
                 pdbl.retrieve_pdb_file(pdbid, pdir=pdbfolder, file_format="mmCif")
-
     except:
         return 0
 
@@ -177,37 +176,37 @@ class DensityAnalysis(object):
     @property
     def symmetryAtoms(self):
         if self._symmetryAtoms == None:
-            self._calcSymmetryAtoms()
+            self._calculateSymmetryAtoms()
         return self._symmetryAtoms
 
     @property
     def symmetryOnlyAtoms(self):
         if self._symmetryOnlyAtoms == None:
-            self._calcSymmetryAtoms()
+            self._calculateSymmetryAtoms()
         return self._symmetryOnlyAtoms
 
     @property
     def asymmetryAtoms(self):
         if self._asymmetryAtoms == None:
-            self._calcSymmetryAtoms()
+            self._calculateSymmetryAtoms()
         return self._asymmetryAtoms
 
     @property
     def symmetryAtomCoords(self):
         if self._symmetryAtoms == None:
-            self._calcSymmetryAtoms()
+            self._calculateSymmetryAtoms()
         return self._symmetryAtomCoords
 
     @property
     def symmetryOnlyAtomCoords(self):
         if self._symmetryOnlyAtoms == None:
-            self._calcSymmetryAtoms()
+            self._calculateSymmetryAtoms()
         return self._symmetryOnlyAtomCoords
 
     @property
     def asymmetryAtomCoords(self):
         if self._asymmetryAtoms == None:
-            self._calcSymmetryAtoms()
+            self._calculateSymmetryAtoms()
         return self._asymmetryAtomCoords
 
     @property
@@ -475,7 +474,7 @@ class DensityAnalysis(object):
         return densityMatrixObj.createBlobList(crsList)
 
 
-    def _calcSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
+    def _calculateSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
         """
         Calculate all the symmetry and nearby cells and keep those have at least on atom within 5 grid points of the non-repeating crs boundary.
         Ref: Biomolecular Crystallography: Principles, Practice, and Application to Structural Biology by Bernhard Rupp.
@@ -490,7 +489,6 @@ class DensityAnalysis(object):
         :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
         :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
         :type recalculate: :py:obj:`True` or :py:obj:`False`
-
         :return: :py:obj:`None`
         """
         if self._symmetryAtoms and not recalculate:
@@ -510,26 +508,7 @@ class DensityAnalysis(object):
         ys = sorted([i[1] for i in orginalDensityBox])
         zs = sorted([i[2] for i in orginalDensityBox])
 
-        allAtoms = []
-        for i in [-1, 0, 1]:
-            for j in [-1, 0, 1]:
-                for k in [-1, 0, 1]:
-                    for r in range(len(pdbObj.header.rotationMats)):
-                        if i == 0 and j == 0 and k == 0 and r == 0:
-                            inRangeAtoms = list(biopdbObj.get_atoms())
-                        else:
-                            rMat = pdbObj.header.rotationMats[r]
-                            otMat = np.dot(densityObj.header.orthoMat, [i, j, k])
-                            atoms = [symAtom(atom) for atom in biopdbObj.get_atoms()]
-                            for x in atoms:
-                                x.coord = np.dot(rMat[:, 0:3], x.coord) + rMat[:, 3] + otMat
-
-                            inRangeAtoms = [x for x in atoms if xs[0] - 5 <= x.coord[0] <= xs[-1] + 5 and ys[0] - 5 <= x.coord[1] <= ys[-1] + 5 and zs[0] - 5 <= x.coord[2] <= zs[-1] + 5]
-
-                        if len(inRangeAtoms):
-                            for x in inRangeAtoms:
-                                x.symmetry = [i, j, k, r]
-                            allAtoms.extend(inRangeAtoms)
+        allAtoms = utils.createSymmetryAtoms(list(biopdbObj.get_atoms()), pdbObj.header.rotationMats, densityObj.header.orthoMat, xs,ys,zs)
 
         self._symmetryAtoms = allAtoms
         self._symmetryAtomCoords = np.asarray([atom.coord for atom in allAtoms])
@@ -697,22 +676,4 @@ class DensityAnalysis(object):
         asuVolume = densityObj.header.unitVolume * densityObj.header.nintervalX * densityObj.header.nintervalY * densityObj.header.nintervalZ
 
         self.f000 = totalElectrons/asuVolume
-
-
-class symAtom:
-    """A wrapper class to the `BioPDB.atom` class,
-    delegating all BioPDB atom class methods and data members except having its own symmetry and coordination. """
-
-    def __init__(self, atom):
-        """
-        `pdb_eda.densityAnalysis.symAtom` initializer.
-
-        :param atom: `BioPDB.atom` object.
-        """
-        self.atom = atom
-        self.coord = atom.coord
-        self.symmetry = []
-
-    def __getattr__(self, attr):
-        return getattr(self.atom, attr)
 
