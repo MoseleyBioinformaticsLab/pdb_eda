@@ -34,10 +34,10 @@ with open(paramsPath, 'r') as fh:
 
 radiiGlobal = paramsGlobal['radii']
 slopesGlobal = paramsGlobal['slopes']
-elementElectrons = paramsGlobal['elementElectrons']
-aaElectrons = paramsGlobal['aaElectrons']
-atomTypeElectrons = paramsGlobal['atomTypeElectrons']
-atomTypes = paramsGlobal['atomTypes']
+elementElectronsGlobal = paramsGlobal['element_electrons']
+residueElectronsGlobal = paramsGlobal['residue_electrons']
+atomTypeElectronsGlobal = paramsGlobal['atom_type_electrons']
+atomTypesMapGlobal = paramsGlobal['atom_types_map']
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4urlSuffix = ".ccp4"
@@ -306,11 +306,11 @@ class DensityAnalysis(object):
             residuePool = []
             for atom in residue.child_list:
                 resAtom = atom.parent.resname + '_' + atom.name
-                if resAtom not in atomTypes.keys() or atom.get_occupancy() == 0:
+                if resAtom not in atomTypesMapGlobal.keys() or atom.get_occupancy() == 0:
                     continue
 
                 ## Calculate atom clouds
-                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[atomTypes[resAtom]], densityObj.densityCutoff)
+                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[atomTypesMapGlobal[resAtom]], densityObj.densityCutoff)
                 if len(atomClouds) == 0:
                     continue
                 elif len(atomClouds) == 1:
@@ -324,7 +324,7 @@ class DensityAnalysis(object):
                     aCloud.atoms = [atom]
                 residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
 
-                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomTypes[resAtom], bestAtomCloud.totalDensity / atomTypeElectrons[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), atomTypeElectrons[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
+                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, atomTypesMapGlobal[resAtom], bestAtomCloud.totalDensity / atomTypeElectronsGlobal[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), atomTypeElectronsGlobal[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
             ## End atom loop
 
             ## Group connected residue density clouds together from individual atom clouds
@@ -352,7 +352,7 @@ class DensityAnalysis(object):
 
             for cloud in resClouds:
                 if len(cloud.atoms) >= minResAtoms:
-                    totalElectrons = sum([atomTypeElectrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+                    totalElectrons = sum([atomTypeElectronsGlobal[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
                     residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectrons, len(cloud.crsList), totalElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
@@ -387,7 +387,7 @@ class DensityAnalysis(object):
         totalDensity = 0
         for cloud in chainClouds:
             atom = cloud.atoms[0]
-            chainElectrons = sum([atomTypeElectrons[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+            chainElectrons = sum([atomTypeElectronsGlobal[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
             totalElectrons += chainElectrons
             numVoxels += len(cloud.crsList)
             totalDensity += cloud.totalDensity
@@ -664,12 +664,12 @@ class DensityAnalysis(object):
 
         totalElectrons = 0
         for residue in list(biopdbObj.get_residues()):
-            if residue.resname in aaElectrons.keys():
-                totalElectrons += aaElectrons[residue.resname]
+            if residue.resname in residueElectronsGlobal.keys():
+                totalElectrons += residueElectronsGlobal[residue.resname]
             else:
                 for atom in list(residue.get_atoms()):
-                    if atom.name in elementElectrons.keys():
-                        totalElectrons += elementElectrons[atom.name]
+                    if atom.name in elementElectronsGlobal.keys():
+                        totalElectrons += elementElectronsGlobal[atom.name]
                 totalElectrons += len(list(residue.get_atoms()))  # Add an estimate number of H
 
         totalElectrons *= len(pdbObj.header.rotationMats)

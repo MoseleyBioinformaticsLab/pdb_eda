@@ -99,13 +99,6 @@ def parse(handle, pdbid, verbose=False):
     densities = struct.unpack(endian + numBytes * 'f', mapData)
     origin = header.origin
 
-    # Calculate some statistics
-    #sigma = np.std(densities)
-    #mean = np.mean(densities)
-    #median = np.median(densities)
-    #mode = 0  # statistics.mode(densities)
-    #print('mean, median, mode, sigma, header rmsd, difference of the last two: ', mean, median, mode, sigma, header.rmsd, sigma - header.rmsd)
-
     return DensityMatrix(header, origin, densities, pdbid)
 
 

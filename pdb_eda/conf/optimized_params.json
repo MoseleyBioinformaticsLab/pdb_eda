@@ -1,5 +1,5 @@
 {
-  "aaElectrons": {
+  "residue_electrons": {
     "ALA": 38,
     "ARG": 83,
     "ASN": 60,
@@ -22,7 +22,7 @@
     "TYR": 86,
     "VAL": 54
   },
-  "atomTypes": {
+  "atom_types_map": {
     "ALA_C": "C_double_bb",
     "ALA_CA": "C_single_bb",
     "ALA_CB": "C_single",
@@ -211,7 +211,7 @@
     "VAL_O": "O_double_bb",
     "VAL_OXT": "O_intermediate"
   },
-  "atomTypeElectrons": {
+  "atom_type_electrons": {
     "ALA_C": 6,
     "ALA_CA": 7,
     "ALA_CB": 9,
@@ -400,7 +400,7 @@
     "VAL_O": 8,
     "VAL_OXT": 8
   },
-  "elementElectrons": {
+  "element_electrons": {
     "AL": 13,
     "AU": 79,
     "BA": 56,
