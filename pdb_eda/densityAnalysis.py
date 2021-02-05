@@ -10,15 +10,16 @@ import copy
 import urllib.request
 import os.path
 
+import itertools
 import json
 import numpy as np
 import Bio.PDB as biopdb
 import scipy.spatial
 from scipy import stats
 
+
 from . import ccp4
 from . import pdbParser
-from . import validationStats
 
 try:
     from . import cutils as utils
@@ -161,11 +162,12 @@ class DensityAnalysis(object):
         self._greenBlobList = None
         self._redBlobList = None
         self._blueBlobList = None
+        self._fc = None
+
         self.medians = None
         self.atomList = None
         self.residueList = None
         self.chainList = None
-        self.statistics = None
         self.f000 = None
         self.densityElectronRatio = None
         self.chainNvoxel = None
@@ -227,39 +229,107 @@ class DensityAnalysis(object):
             self._blueBlobList = self.createFullBlobList(self.densityObj, self.densityObj.densityCutoff)
         return self._blueBlobList
 
-    def validation(self, densityObj=None, diffDensityObj=None, biopdbObj=None, recalculate=False):
+    @property
+    def fc(self):
+        if self._fc == None:
+            self._fc = copy.deepcopy(self.densityObj)
+            self._fc.density = self.densityObj.density - self.diffDensityObj.density * 2
+        return self._fc
+
+    @property
+    def fo(self):
+            return self.densityObj # using the 2Fo-Fc as the Fo map.
+
+    def medianAbsFoFc(self):
         """
-        Populate `DensityAnalysis.statistics` data member with RSR and RSCC.
-        Leave `densityObj`, `diffDensityObj`, `biopdbObj` and `pdbObj` as :py:obj:`None` to be read in,
-        and it will use its own data member.
+        Calculate and compare median absolute values for the Fo and Fc maps less than 1 sigma.
+        These values should be comparable, i.e. low relative difference, for RSCC and RSR metric calculations.
 
-        :param str pdbid: PDB id
-        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param diffDensityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param biopdbObj: Optional `bio.PDB` object.
-        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
-        :type recalculate: :py:obj:`True` or :py:obj:`False`
-
-        :return: :py:obj:`None`
+        :return: validation_tuple
+        :rtype: :py:obj:`tuple`
         """
-        if self.statistics and not recalculate:
-            return None
-        if not densityObj:
-            densityObj = self.densityObj
-        if not diffDensityObj:
-            diffDensityObj = self.diffDensityObj
-        if not biopdbObj:
-            biopdbObj = self.biopdbObj
+        fo = self.fo
+        fc = self.fc
+        foDensityCutoff = fo.meanDensity + 1.0 * fo.stdDensity
+        fcDensityCutoff = fc.meanDensity + 1.0 * fc.stdDensity
+        ncrs = fo.header.uniqueNcrs
+        densityPairs = [ (density, diffDensity) for density, diffDensity in ((fo.getPointDensityFromCrs(crs),fc.getPointDensityFromCrs(crs)) for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])))
+          if abs(density) < foDensityCutoff and abs(diffDensity) < fcDensityCutoff ]
 
-        valid = validationStats.validationStats(self.pdbid)
-        fo = copy.deepcopy(densityObj)
-        fc = copy.deepcopy(densityObj)
+        foValues = np.asarray([pair[0] for pair in densityPairs])
+        fcValues = np.asarray([pair[1] for pair in densityPairs])
+        return (np.median(np.abs(foValues)),np.median(np.abs(fcValues)))
 
-        fc.density = densityObj.density - diffDensityObj.density * 2
-        sigma3 = 0
+    residueMetricsHeaderList = ['chain', 'residue_number', 'residue_name', "rscc", "rsr", "mean_occupancy", "occupancy_weighted_mean_bfactor"]
+    def residueMetrics(self, residueList=None):
+        """
+        RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+        """
+        resolution = self.biopdbObj.header['resolution']
+        radius = 0.7
+        if 0.6 <= resolution <= 3:
+            radius = (resolution - 0.6) / 3 + 0.7
+        elif resolution > 3:
+            radius = resolution * 0.5
 
-        self.statistics = valid.getStats(biopdbObj, fc, fo, sigma3)
+        if residueList == None:
+            residueList = list(self.biopdbObj.get_residues())
+
+        residueResults = []
+        for residue in residueList:
+            crsList = set()
+            bfactorWeightedSum = occupancySum = 0.0
+            for atom in residue.child_list:
+                crsList.update(self.fo.getSphereCrsFromXyz(atom.coord, radius, 0.0))
+                bfactorWeightedSum += atom.get_bfactor() * atom.get_occupancy()
+                occupancySum += atom.get_occupancy()
+
+            (rscc, rsr) = self.calculateRsccRsrMetrics(crsList)
+            residueResults.append([residue.parent.id, residue.id[1], residue.resname, rscc, rsr, occupancySum / len(residue.child_list), bfactorWeightedSum / occupancySum])
+
+        return residueResults
+
+    atomMetricsHeaderList = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "xyz", "rscc", "rsr", "occupancy", "bfactor"]
+    def atomMetrics(self, atomList=None):
+        """
+        RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+        """
+        resolution = self.biopdbObj.header['resolution']
+        radius = 0.7
+        if 0.6 <= resolution <= 3:
+            radius = (resolution - 0.6) / 3 + 0.7
+        elif resolution > 3:
+            radius = resolution * 0.5
+
+        if atomList == None:
+            atomList = self.asymmetryAtoms
+
+        atomResults = []
+        for atom in atomList:
+            crsList = set(self.fo.getSphereCrsFromXyz(atom.coord, radius, 0.0))
+            (rscc, rsr) = self.calculateRsccRsrMetrics(crsList)
+            atomResults.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, rscc, rsr, atom.get_occupancy(), atom.get_bfactor()])
+
+        return atomResults
+
+    def calculateRsccRsrMetrics(self, crsList):
+        """
+        Calculates and returns RSCC and RSR metrics.
+        This method of calculating RSCC and RSR assumes that the Fo and Fc maps are appropriately scaled.
+        Comparison of median absolute values below one sigma should be quite similar between Fo and Fc maps.
+
+        :param crsList:
+        :return: rscc_rsr_tuple
+        :rtype: :py:obj:`tuple`
+        """
+        fo = self.fo
+        fc = self.fc
+        foDensity = np.asarray([fo.getPointDensityFromCrs(i) for i in crsList])
+        fcDensity = np.asarray([fc.getPointDensityFromCrs(i) for i in crsList])
+
+        rscc = stats.stats.pearsonr(foDensity, fcDensity)[0]
+        rsr = sum(abs(foDensity - fcDensity)) / sum(abs(foDensity + fcDensity))
+        return (rscc,rsr)
 
     residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume']
     chainListHeader = residueListHeader
@@ -465,9 +535,9 @@ class DensityAnalysis(object):
         ncrs = densityMatrixObj.header.uniqueNcrs
 
         if cutoff > 0:
-            crsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if densityMatrixObj.getPointDensityFromCrs([i, j, k]) >= cutoff ]
+            crsList = [ crs for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])) if densityMatrixObj.getPointDensityFromCrs(crs) >= cutoff ]
         elif cutoff < 0:
-            crsList = [[i, j, k] for i in range(ncrs[0]) for j in range(ncrs[1]) for k in range(ncrs[2]) if densityMatrixObj.getPointDensityFromCrs([i, j, k]) <= cutoff ]
+            crsList = [ crs for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])) if densityMatrixObj.getPointDensityFromCrs(crs) <= cutoff ]
         else:
             return None
 
@@ -512,9 +582,9 @@ class DensityAnalysis(object):
 
         self._symmetryAtoms = allAtoms
         self._symmetryAtomCoords = np.asarray([atom.coord for atom in allAtoms])
-        self._symmetryOnlyAtoms = [atom for atom in allAtoms if atom.symmetry != [0,0,0,0]]
+        self._symmetryOnlyAtoms = [atom for atom in allAtoms if atom.symmetry != (0,0,0,0)]
         self._symmetryOnlyAtomCoords = np.asarray([atom.coord for atom in self._symmetryOnlyAtoms])
-        self._asymmetryAtoms = [atom for atom in allAtoms if atom.symmetry == [0,0,0,0]]
+        self._asymmetryAtoms = [atom for atom in allAtoms if atom.symmetry == (0,0,0,0)]
         self._asymmetryAtomCoords = np.asarray([atom.coord for atom in self._asymmetryAtoms])
 
     blobStatisticsHeader = ['distance_to_atom', 'sign', 'electrons_of_discrepancy', 'num_voxels', 'volume', 'chain', 'residue_number', 'residue_name', 'atom_name', 'atom_symmetry', 'atom_xyz', 'centroid_xyz']
@@ -546,8 +616,8 @@ class DensityAnalysis(object):
     # Headers that match the order of the results
     regionDiscrepancyHeader = [ "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
                  "expected_abs_significant_regional_discrepancy", "num_electrons_expected_abs_significant_regional_discrepancy" ]
-    atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy"] + regionDiscrepancyHeader
-    residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "min_occupancy"] + regionDiscrepancyHeader
+    atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDiscrepancyHeader
+    residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDiscrepancyHeader
 
     def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
         """
@@ -558,7 +628,7 @@ class DensityAnalysis(object):
         :param str type: residue type to filter on.
         :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`tuple`
+        :rtype: :py:obj:`list`
         """
         biopdbObj = self.biopdbObj
         atoms = list(biopdbObj.get_atoms())
@@ -581,7 +651,7 @@ class DensityAnalysis(object):
         :param str type: residue type to filter on.
         :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`tuple`
+        :rtype: :py:obj:`list`
         """
         biopdbObj = self.biopdbObj
 
@@ -592,9 +662,9 @@ class DensityAnalysis(object):
         for residue in residues:
             atoms = [atom for atom in residue.get_atoms()]
             xyzCoordList = [atom.coord for atom in atoms]
-            minOccupancy = min([atom.get_occupancy() for atom in atoms])
+            meanOccupancy = np.mean([atom.get_occupancy() for atom in atoms])
             result = self.calculateRegionDiscrepancy(xyzCoordList, radius, numSD, params)
-            results.append([residue.parent.id, residue.id[1], residue.resname, minOccupancy ] + result)
+            results.append([residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
 
         return results
 
@@ -608,7 +678,7 @@ class DensityAnalysis(object):
         :param float numSD: number of standard deviations of significance.
         :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`tuple`
+        :rtype: :py:obj:`list`
         """
         if not self.densityElectronRatio:
             self.aggregateCloud(params)

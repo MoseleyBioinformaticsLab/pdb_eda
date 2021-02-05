@@ -268,7 +268,7 @@ class DensityHeader(object):
             if crsCoord[ind] < 0 or crsCoord[ind] >= self.ncrs[ind]:
                 crsCoord[ind] -= int(np.floor(crsCoord[ind] / self.crsInterval[ind]) * self.crsInterval[ind])
 
-            if self.ncrs[ind] <= crsCoord[ind] < self.crsInterval[ind]:
+            if self.ncrs[ind] <= crsCoord[ind] < self.crsInterval[ind]: # think this should include "or crsCoord[ind] < 0"
                 return False
 
         return True
@@ -346,6 +346,7 @@ class DensityMatrix:
         :param crsCoord: crs coordinates.
         :type crsCoord: A :py:obj:`list` of :py:obj:`int`
         """
+        crsCoord = list(crsCoord)
         return self.density[crsCoord[2], crsCoord[1], crsCoord[0]] if self.header.validCRS(crsCoord) else 0
 
     def getPointDensityFromXyz(self, xyzCoord):

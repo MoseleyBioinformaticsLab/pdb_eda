@@ -44,8 +44,8 @@ class validationStats(object):
             rscc = pearsonr(foDensity, fcDensity)[0]
             rsr = sum(abs(np.array(foDensity) - np.array(fcDensity))) / sum(abs(np.array(foDensity) + np.array(fcDensity)))
 
-            # residue num, residue name, rscc, rsr, occupancy-weighted average B factor, number of involving grid points
-            statsList.append(", ".join([residue.parent.id, str(residue.id[1]), residue.resname, str(rscc), str(rsr), str(bfactor / occupancy), str(len(crsLists))]))
+            # chain, residue num, residue name, rscc, rsr, occupancy-weighted average B factor, number of involving grid points
+            statsList.append([residue.parent.id, residue.id[1], residue.resname, rscc, rsr, bfactor / occupancy, len(crsLists)])
 
         return statsList
 

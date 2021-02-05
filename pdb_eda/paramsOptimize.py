@@ -77,7 +77,8 @@ def main():
             analyzer = densityAnalysis.fromPDBid(pdbid)
             if not analyser:
                 continue
-            #for residue in analyzer.
+            #for residue in analyzer.biopdbObj:
+            #  %%%%%%%%%%%Continue Here
 
     else:
         with open(args["<log-file>"], 'w') as logFile:

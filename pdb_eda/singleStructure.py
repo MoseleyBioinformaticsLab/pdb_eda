@@ -10,7 +10,7 @@ Usage:
     pdb_eda single <pdbid> <out-file> difference (--atom | --residue) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> symmetry-atoms [--radii-param=<paramfile>] [--out-format=<format>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> statistics [--out-format=<format>] (--atom | --residue) [--include-pdbid] [--print-validation]
 
 Options:
     -h, --help                      Show this screen.
@@ -20,9 +20,9 @@ Options:
     --include-pdbid                 Include PDB ID at the beginning of each result.
     --density                       Output the density Fo-Fc map in jsonpickle format.
     --diff-density                  Output the difference density 2Fo-Fc map in jsonpickle format.
-    --atom                          Aggregate and print results by atom.
-    --residue                       Aggregate and print results by residue.
-    --chain                         Aggregate and print results by chain.
+    --atom                          Calculate results for each atom.
+    --residue                       Calculate results for each residue.
+    --chain                         Calculate results for each chain.
     --green                         Calculate green (positive) difference map blobs.
     --red                           Calculate red (negative) difference map blobs.
     --blue                          Calculate blue (positive) density map blobs. Default option if red/green not selected.  However, this option uses a LOT OF MEMORY at 1.5sd.
@@ -30,7 +30,7 @@ Options:
     --num-sd=<num-sd>               Number of standard deviation units to use as a significant discrepancy cutoff. Default is 3.0 for atom, residue, green, and red.  Default is 1.5 for blue.
     --type=<type>                   Residue type or atom type to filter by.
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
-    --symmetry-atoms                Calculate and print results of all symmetry atoms.
+    --print-validation              Print comparison of median absolute values below 1 sigma for Fo and Fc maps, which should be very similar.
 """
 
 import docopt
@@ -106,11 +106,23 @@ def main():
             blueBlobList = analyzer.createFullBlobList(analyzer.densityObj, analyzer.densityObj.meanDensity + args["--num-sd"] * analyzer.densityObj.stdDensity)
             result.extend(analyzer.calculateAtomSpecificBlobStatistics(blueBlobList, params))
         for blobInfo in result:
+            blobInfo[9]  = [ val for val in blobInfo[9] ]
             blobInfo[10] = [ float(val) for val in blobInfo[10] ]
             blobInfo[11] = [ float(val) for val in blobInfo[11] ]
-    elif args["symmetry-atoms"]:
-        headerList = ['chain', 'residue_number', 'residue_name', "atom_name", "min_occupancy", "atom_symmetry", "atom_xyz"]
-        result = [[atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(), atom.symmetry, [float(c) for c in atom.coord]] for atom in analyzer.symmetryAtoms]
+    elif args["statistics"]:
+        if args["--print-validation"]:
+            (medianAbsFo,medianAbsFc) = analyzer.medianAbsFoFc()
+            print("Median abs Fo(<1sd):", medianAbsFo, "Median abs Fc(<1sd):", medianAbsFc,"Relative Difference:",(medianAbsFo - medianAbsFc)/max(medianAbsFo,medianAbsFc))
+
+        if args["--residue"]:
+            headerList = analyzer.residueMetricsHeaderList
+            result = analyzer.residueMetrics()
+        elif args["--atom"]:
+            headerList = analyzer.atomMetricsHeaderList
+            result = analyzer.atomMetrics()
+            for atomInfo in result:
+                atomInfo[4] = [x for x in atomInfo[4]]
+                atomInfo[5] = [float(x) for x in atomInfo[5]]
 
     if args["--include-pdbid"]:
         headerList = ["pdbid"] + headerList
