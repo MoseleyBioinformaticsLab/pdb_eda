@@ -26,7 +26,7 @@ def createCrsLists(crsList):
 
     :param crsList: a crs list.
     :return: crsLists is a list of crsList.
-    :rtype: A :py:obj:`list`
+    :rtype: :py:obj:`list`
     """
     crsArray = np.matrix(crsList)
     distances = scipy.spatial.distance.cdist(crsArray, crsArray)
@@ -48,6 +48,18 @@ def createCrsLists(crsList):
 
 import itertools
 def createSymmetryAtoms(atomList, rotationMats, orthoMat, xs, ys, zs):
+    """
+    Creates and returns a list of all symmetry atoms.
+
+    :param :py:obj:`list` atomList:
+    :param rotationMats:
+    :param orthoMat:
+    :param xs:
+    :param ys:
+    :param zs:
+    :return: allAtoms
+    :rtype: :py:obj:`list`
+    """
     allAtoms = []
     for symmetry in itertools.product([-1, 0, 1],[-1, 0, 1],[-1, 0, 1],range(len(rotationMats))):
         if symmetry == (0,0,0,0):
@@ -81,3 +93,40 @@ class SymAtom:
     def __getattr__(self, attr):
         return getattr(self.atom, attr)
 
+def getPointDensityFromCrs(densityMatrix, crsCoord):
+    """
+    Get the density of a point.
+
+    :param crsCoord: crs coordinates.
+    :type crsCoord: A :py:obj:`list` of :py:obj:`int`
+    :return: density
+    :rtype: float
+    """
+    crsCoord = list(crsCoord)
+    header = densityMatrix.header
+    for ind in range(3):
+        if crsCoord[ind] < 0 or crsCoord[ind] >= header.ncrs[ind]:
+            crsCoord[ind] -= int(np.floor(crsCoord[ind] / header.crsInterval[ind]) * header.crsInterval[ind])
+
+        if header.ncrs[ind] <= crsCoord[ind] < header.crsInterval[ind]: # think this should include "or crsCoord[ind] < 0"
+            return 0
+
+    return densityMatrix.density[crsCoord[2], crsCoord[1], crsCoord[0]]
+
+def createFullCrsList(densityMatrix, cutoff):
+    """
+    Returns full crs list for the density matrix.
+
+    :param densityMatrix:
+    :param float cutoff:
+    :return: crsList
+    :rtype: :py:obj:`list`
+    """
+    ## only explore the non-repeating part (<= # xyz intervals) of the density map for blobs
+    ncrs = densityMatrix.header.uniqueNcrs
+    if cutoff > 0:
+        return [ crs for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])) if getPointDensityFromCrs(densityMatrix, crs) >= cutoff ]
+    elif cutoff < 0:
+        return [ crs for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])) if getPointDensityFromCrs(densityMatrix, crs) <= cutoff ]
+    else:
+        return None

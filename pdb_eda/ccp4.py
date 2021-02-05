@@ -257,22 +257,6 @@ class DensityHeader(object):
 
         return origin
 
-    def validCRS(self, crsCoord):
-        """
-        Check if the crs coordinate is valid (within the range of data).
-
-        :param crsCoord: crs coordinates.
-        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
-        """
-        for ind in range(3):
-            if crsCoord[ind] < 0 or crsCoord[ind] >= self.ncrs[ind]:
-                crsCoord[ind] -= int(np.floor(crsCoord[ind] / self.crsInterval[ind]) * self.crsInterval[ind])
-
-            if self.ncrs[ind] <= crsCoord[ind] < self.crsInterval[ind]: # think this should include "or crsCoord[ind] < 0"
-                return False
-
-        return True
-
     def xyz2crsCoord(self, xyzCoord):
         """
         Convert the xyz coordinates into crs coordinates.
@@ -346,8 +330,7 @@ class DensityMatrix:
         :param crsCoord: crs coordinates.
         :type crsCoord: A :py:obj:`list` of :py:obj:`int`
         """
-        crsCoord = list(crsCoord)
-        return self.density[crsCoord[2], crsCoord[1], crsCoord[0]] if self.header.validCRS(crsCoord) else 0
+        return utils.getPointDensityFromCrs(self,crsCoord)
 
     def getPointDensityFromXyz(self, xyzCoord):
         """
@@ -356,7 +339,7 @@ class DensityMatrix:
         :param xyzCoord: xyz coordinates.
         :type xyzCoord: A :py:obj:`list` of :py:obj:`float`
         """
-        return self.getPointDensityFromCrs(self.header.xyz2crsCoord(xyzCoord))
+        return utils.getPointDensityFromCrs(self, self.header.xyz2crsCoord(xyzCoord))
 
     def getSphereCrsFromXyz(self, xyzCoord, radius, densityCutoff=0):
         """
@@ -378,7 +361,7 @@ class DensityMatrix:
         for crs in itertools.product(range(crsCoord[0] - crsRadius[0]-1, crsCoord[0] + crsRadius[0]+1),
                                      range(crsCoord[1] - crsRadius[1]-1, crsCoord[1] + crsRadius[1]+1),
                                      range(crsCoord[2] - crsRadius[2]-1, crsCoord[2] + crsRadius[2]+1)):
-            density = self.getPointDensityFromCrs(crs)
+            density = utils.getPointDensityFromCrs(self,crs)
             if 0 < densityCutoff < density or density < densityCutoff < 0 or densityCutoff == 0:
                 xyz = self.header.crs2xyzCoord(crs)
                 if np.sqrt((xyz[0] - xyzCoord[0])**2 + (xyz[1] - xyzCoord[1])**2 + (xyz[2] - xyzCoord[2])**2) <= radius:
@@ -399,7 +382,7 @@ class DensityMatrix:
                 If cutoff > 0, include only points with density > cutoff.
         """
         crsCoordList = self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)
-        return sum(self.getPointDensityFromCrs(crs) for crs in crsCoordList)
+        return sum(utils.getPointDensityFromCrs(self, crs) for crs in crsCoordList)
 
     def findAberrantBlobs(self, xyzCoords, radius, densityCutoff=0):
         """
@@ -418,13 +401,24 @@ class DensityMatrix:
         """
         if not isinstance(xyzCoords[0], (np.floating, float)): # test if xyzCoords is a single xyzCoord or a list of them.
             if len(xyzCoords) > 1:
-                crsCoordList = list({tuple(crsCoord) for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)})
+                crsCoordList = list({crsCoord for xyzCoord in xyzCoords for crsCoord in self.getSphereCrsFromXyz(xyzCoord, radius, densityCutoff)})
             else:
                 crsCoordList = self.getSphereCrsFromXyz(xyzCoords[0], radius, densityCutoff)
         else:
             crsCoordList = self.getSphereCrsFromXyz(xyzCoords, radius, densityCutoff)
 
         return self.createBlobList(crsCoordList)
+
+    def createFullBlobList(self, cutoff):
+        """
+        Aggregate the density map into positive (green or blue) or negative (red) blobs.
+
+        :param float cutoff: density cutoff to use to filter voxels.
+        :return blobList: list of DensityBlobs
+        :rtype: :py:obj:`list`
+        """
+        crsList = utils.createFullCrsList(self, cutoff)
+        return self.createBlobList(crsList) if crsList != None else None
 
     def createBlobList(self, crsList):
         """

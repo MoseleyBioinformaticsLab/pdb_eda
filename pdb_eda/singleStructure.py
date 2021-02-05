@@ -97,13 +97,13 @@ def main():
         headerList = densityAnalysis.DensityAnalysis.blobStatisticsHeader
         result = []
         if args["--green"]:
-            greenBlobList = analyzer.createFullBlobList(analyzer.diffDensityObj, analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity)
+            greenBlobList = analyzer.diffDensityObj.createFullBlobList(analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity)
             result.extend(analyzer.calculateAtomSpecificBlobStatistics(greenBlobList, params))
         if args["--red"]:
-            redBlobList = analyzer.createFullBlobList(analyzer.diffDensityObj, -1 * (analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity))
+            redBlobList = analyzer.diffDensityObj.createFullBlobList(-1 * (analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity))
             result.extend(analyzer.calculateAtomSpecificBlobStatistics(redBlobList, params))
         if not args["--green"] and not args["--red"]: # args["--blue"] by default
-            blueBlobList = analyzer.createFullBlobList(analyzer.densityObj, analyzer.densityObj.meanDensity + args["--num-sd"] * analyzer.densityObj.stdDensity)
+            blueBlobList = analyzer.densityObj.createFullBlobList(analyzer.densityObj.meanDensity + args["--num-sd"] * analyzer.densityObj.stdDensity)
             result.extend(analyzer.calculateAtomSpecificBlobStatistics(blueBlobList, params))
         for blobInfo in result:
             blobInfo[9]  = [ val for val in blobInfo[9] ]

@@ -214,19 +214,19 @@ class DensityAnalysis(object):
     @property
     def greenBlobList(self):
         if self._greenBlobList == None:
-            self._greenBlobList = self.createFullBlobList(self.diffDensityObj, self.diffDensityObj.diffDensityCutoff)
+            self._greenBlobList = self.diffDensityObj.createFullBlobList(self.diffDensityObj.diffDensityCutoff)
         return self._greenBlobList
 
     @property
     def redBlobList(self):
         if self._redBlobList == None:
-            self._redBlobList = self.createFullBlobList(self.diffDensityObj, -1 * self.diffDensityObj.diffDensityCutoff)
+            self._redBlobList = self.diffDensityObj.createFullBlobList(-1 * self.diffDensityObj.diffDensityCutoff)
         return self._redBlobList
 
     @property
     def blueBlobList(self):
         if self._blueBlobList == None:
-            self._blueBlobList = self.createFullBlobList(self.densityObj, self.densityObj.densityCutoff)
+            self._blueBlobList = self.densityObj.createFullBlobList(self.densityObj.densityCutoff)
         return self._blueBlobList
 
     @property
@@ -253,7 +253,7 @@ class DensityAnalysis(object):
         foDensityCutoff = fo.meanDensity + 1.0 * fo.stdDensity
         fcDensityCutoff = fc.meanDensity + 1.0 * fc.stdDensity
         ncrs = fo.header.uniqueNcrs
-        densityPairs = [ (density, diffDensity) for density, diffDensity in ((fo.getPointDensityFromCrs(crs),fc.getPointDensityFromCrs(crs)) for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])))
+        densityPairs = [ (density, diffDensity) for density, diffDensity in ((utils.getPointDensityFromCrs(fo, crs),utils.getPointDensityFromCrs(fc, crs)) for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])))
           if abs(density) < foDensityCutoff and abs(diffDensity) < fcDensityCutoff ]
 
         foValues = np.asarray([pair[0] for pair in densityPairs])
@@ -324,8 +324,8 @@ class DensityAnalysis(object):
         """
         fo = self.fo
         fc = self.fc
-        foDensity = np.asarray([fo.getPointDensityFromCrs(i) for i in crsList])
-        fcDensity = np.asarray([fc.getPointDensityFromCrs(i) for i in crsList])
+        foDensity = np.asarray([utils.getPointDensityFromCrs(fo,i) for i in crsList])
+        fcDensity = np.asarray([utils.getPointDensityFromCrs(fc, i) for i in crsList])
 
         rscc = stats.stats.pearsonr(foDensity, fcDensity)[0]
         rsr = sum(abs(foDensity - fcDensity)) / sum(abs(foDensity + fcDensity))
@@ -375,7 +375,7 @@ class DensityAnalysis(object):
 
             residuePool = []
             for atom in residue.child_list:
-                resAtom = atom.parent.resname + '_' + atom.name
+                resAtom = residueAtomName(atom)
                 if resAtom not in atomTypesMapGlobal.keys() or atom.get_occupancy() == 0:
                     continue
 
@@ -422,7 +422,7 @@ class DensityAnalysis(object):
 
             for cloud in resClouds:
                 if len(cloud.atoms) >= minResAtoms:
-                    totalElectrons = sum([atomTypeElectronsGlobal[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+                    totalElectrons = sum([atomTypeElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
                     residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectrons, len(cloud.crsList), totalElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
@@ -457,7 +457,7 @@ class DensityAnalysis(object):
         totalDensity = 0
         for cloud in chainClouds:
             atom = cloud.atoms[0]
-            chainElectrons = sum([atomTypeElectronsGlobal[atom.parent.resname + '_' + atom.name] * atom.get_occupancy() for atom in cloud.atoms])
+            chainElectrons = sum([atomTypeElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
             totalElectrons += chainElectrons
             numVoxels += len(cloud.crsList)
             totalDensity += cloud.totalDensity
@@ -520,28 +520,6 @@ class DensityAnalysis(object):
             self.residueList = residueList
         if chainL:
             self.chainList = chainList
-
-
-    def createFullBlobList(self, densityMatrixObj, cutoff):
-        """
-        Aggregate the given density map into positive (green or blue) or negative (red) blobs.
-
-        :param DensityMatrixObj:  :class:`pdb_eda.ccp4.DensityMatrix` object.
-        :param float cutoff: density cutoff to use to filter voxels.
-        :return blobList: list of DensityBlobs
-        :rtype: :py:obj:`list`
-        """
-        ## only explore the non-repeating part (<= # xyz intervals) of the density map for blobs
-        ncrs = densityMatrixObj.header.uniqueNcrs
-
-        if cutoff > 0:
-            crsList = [ crs for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])) if densityMatrixObj.getPointDensityFromCrs(crs) >= cutoff ]
-        elif cutoff < 0:
-            crsList = [ crs for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])) if densityMatrixObj.getPointDensityFromCrs(crs) <= cutoff ]
-        else:
-            return None
-
-        return densityMatrixObj.createBlobList(crsList)
 
 
     def _calculateSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
@@ -747,3 +725,12 @@ class DensityAnalysis(object):
 
         self.f000 = totalElectrons/asuVolume
 
+
+def residueAtomName(atom):
+    """
+    Returns a combined residue and atom name used to select an atom type.
+    :param `BioPDB.atom` atom:
+    :return: name
+    :rtype: str
+    """
+    return atom.parent.resname + '_' + atom.name
