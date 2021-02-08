@@ -8,9 +8,9 @@ Usage:
     pdb_eda --version       for the version of pdb_eda.
     pdb_eda single ...      for single structure analysis mode.
     pdb_eda multiple ...    for multiple structure analysis mode.
-    pdb_eda optimize ...    for radii and slope parameter optimization mode.
     pdb_eda select ...      for PDB entry selection mode.
     pdb_eda contacts ...    for crystal contacts analysis mode.
+    pdb_eda optimize ...    for parameter optimization mode.
 
 For help on a specific mode, use the mode option -h or --help.
 For example:

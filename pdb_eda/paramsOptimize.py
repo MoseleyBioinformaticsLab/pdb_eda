@@ -10,17 +10,18 @@ pdb_eda radii and slope parameter optimization mode command-line interface
 Usage:
     pdb_eda optimize -h | --help
     pdb_eda optimize <pdbid-file> <log-file> <out-params-file> [options]
-    pdb_eda optimize generate <pdbid-file> <out-params-file> [--params=<start-params-file>]
+    pdb_eda optimize <pdbid-file> <out-params-file> --generate [--params=<start-params-file>]
 
 Options:
     -h, --help                          Show this screen.
     --atoms=<atoms-file>                Limit optimization to the list of atoms in the JSON atoms-file. This list overrides what is indicated in the params-file. [default: ]
     --max=<max-radius-change>           Maximum to change the radius at each incremental optimization. [default: 0.2]
     --min=<min-radius-change>           Minimum to change the radius at each incremental optimization. [default: 0.005]
-    --params=<start-params-file>        Starting params filename. [default: ]
+    --params=<start-params-file>        Starting parameters filename. [default: ]
     --radius=<start-radius>             Starting radius for the starting atom-type. [default: 0]
     --start=<start-atom-type>           Starting atom type. [default: ]
     --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0.05]
+    --generate                          Generate template parameters file for new residues detected in the PDB entries.
 """
 import os
 import sys
@@ -30,6 +31,7 @@ import multiprocessing
 import datetime
 import tempfile
 import docopt
+import collections
 
 from pdb_eda import densityAnalysis
 
@@ -71,15 +73,19 @@ def main():
     except:
         sys.exit(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
-    if args["generate"]:
-        residueAtoms = {}
+    if args["--generate"]:
+        newResidueAtoms = collections.defaultdict(set)
         for pdbid in pdbids:
             analyzer = densityAnalysis.fromPDBid(pdbid)
-            if not analyser:
+            if not analyzer:
                 continue
-            #for residue in analyzer.biopdbObj:
-            #  %%%%%%%%%%%Continue Here
 
+            for residue in analyzer.biopdbObj.get_residues():
+                if residue.resname not in params["residue_electrons"]:
+                    newResidueAtoms[residue.resname].update(densityAnalysis.residueAtomName(atom) for atom in residue.get_atoms())
+
+        print(newResidueAtoms)
+        exit(0)
     else:
         with open(args["<log-file>"], 'w') as logFile:
             print(args, file=logFile)
