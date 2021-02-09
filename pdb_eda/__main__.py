@@ -6,11 +6,11 @@ Usage:
     pdb_eda -h | --help     for this screen.
     pdb_eda --full-help     help documentation on all modes.
     pdb_eda --version       for the version of pdb_eda.
-    pdb_eda single ...      for single structure analysis mode.
-    pdb_eda multiple ...    for multiple structure analysis mode.
-    pdb_eda select ...      for PDB entry selection mode.
-    pdb_eda contacts ...    for crystal contacts analysis mode.
-    pdb_eda optimize ...    for parameter optimization mode.
+    pdb_eda single ...      for single structure analysis mode. (Most useful command line mode).
+    pdb_eda multiple ...    for multiple structure analysis mode. (Second most useful command line mode).
+    pdb_eda contacts ...    for crystal contacts analysis mode.  (Third most useful command line mode).
+    pdb_eda generate ...    for generating starting parameters file that then needs to be optimized. (Rarely used mode).
+    pdb_eda optimize ...    for parameter optimization mode. (Rarely used mode).
 
 For help on a specific mode, use the mode option -h or --help.
 For example:
@@ -20,9 +20,9 @@ For example:
 import sys
 from . import singleStructure
 from . import multipleStructures
-from . import paramsOptimize
-from . import selectPDBIDs
 from . import crystalContacts
+from . import generateParams
+from . import paramsOptimize
 from . import __version__
 
 def main():
@@ -32,10 +32,10 @@ def main():
         multipleStructures.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "optimize":
         paramsOptimize.main()
-    elif len(sys.argv) > 1 and sys.argv[1] == "select":
-        selectPDBIDs.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "contacts":
         crystalContacts.main()
+    elif len(sys.argv) > 1 and sys.argv[1] == "generate":
+        generateParams.main()
     elif len(sys.argv) > 1 and (sys.argv[1] == "--version" or sys.argv[1] == "-v") :
         print("Version: ",__version__)
     elif len(sys.argv) > 1 and sys.argv[1] == "--full-help":
@@ -45,9 +45,11 @@ def main():
         print("-"*80)
         print(multipleStructures.__doc__)
         print("-"*80)
-        print(radiiOptimize.__doc__)
+        print(crystalContacts.__doc__)
         print("-"*80)
-        print(selectPDBIDs.__doc__)
+        print(generateParams.__doc__)
+        print("-"*80)
+        print(radiiOptimize.__doc__)
     else:
         print(__doc__)
 

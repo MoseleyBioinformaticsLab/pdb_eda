@@ -10,7 +10,6 @@ pdb_eda radii and slope parameter optimization mode command-line interface
 Usage:
     pdb_eda optimize -h | --help
     pdb_eda optimize <pdbid-file> <log-file> <out-params-file> [options]
-    pdb_eda optimize <pdbid-file> <out-params-file> --generate [--params=<start-params-file>]
 
 Options:
     -h, --help                          Show this screen.
@@ -21,7 +20,6 @@ Options:
     --radius=<start-radius>             Starting radius for the starting atom-type. [default: 0]
     --start=<start-atom-type>           Starting atom type. [default: ]
     --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0.05]
-    --generate                          Generate template parameters file for new residues detected in the PDB entries.
 """
 import os
 import sys
@@ -73,74 +71,60 @@ def main():
     except:
         sys.exit(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
-    if args["--generate"]:
-        newResidueAtoms = collections.defaultdict(set)
-        for pdbid in pdbids:
-            analyzer = densityAnalysis.fromPDBid(pdbid)
-            if not analyzer:
-                continue
+    with open(args["<log-file>"], 'w') as logFile:
+        print(args, file=logFile)
 
-            for residue in analyzer.biopdbObj.get_residues():
-                if residue.resname not in params["residue_electrons"]:
-                    newResidueAtoms[residue.resname].update(densityAnalysis.residueAtomName(atom) for atom in residue.get_atoms())
+        print("Calculating starting median differences: start-time", str(datetime.datetime.now()))
+        print("Calculating starting median differences: start-time", str(datetime.datetime.now()), file=logFile)
+        (bestMedianDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes)
+        print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())))
 
-        print(newResidueAtoms)
-        exit(0)
-    else:
-        with open(args["<log-file>"], 'w') as logFile:
-            print(args, file=logFile)
+        currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y])) if not args["--start"]  else args["--start"]
+        previousRadius = currentRadii[currentAtomType]
 
-            print("Calculating starting median differences: start-time", str(datetime.datetime.now()))
-            print("Calculating starting median differences: start-time", str(datetime.datetime.now()), file=logFile)
-            (bestMedianDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes)
+        if startingRadius > 0:
+            currentRadii[currentAtomType] = startingRadius
+        else:
+            currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
+
+        while True:
+            print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()))
+            print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()), file=logFile)
+
+            (medianDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes })
+            print("Radii: ", currentRadii, file=logFile)
+            print("Median Diffs: ", medianDiffs, file=logFile)
             print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())))
+            print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())), file=logFile)
+            print("Slopes: ", slopes, file=logFile)
 
-            currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y])) if not args["--start"]  else args["--start"]
-            previousRadius = currentRadii[currentAtomType]
+            if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
+                bestMedianDiffs = medianDiffs
+                currentSlopes = slopes
 
-            if startingRadius > 0:
-                currentRadii[currentAtomType] = startingRadius
+                try:
+                    with open(args["<final-params-file>"] + ".temp", 'w') as jsonFile:
+                        print(json.dumps({**params, "radii": currentRadii, "slopes": currentSlopes}, indent=2, sort_keys=True), file=jsonFile)
+                except:
+                    sys.exit(str("Error: unable to create temporary params file \"") + args["<final-params-file>"] + ".temp" + "\".")
             else:
-                currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
+                currentRadii[currentAtomType] = previousRadius
 
-            while True:
-                print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()))
-                print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()), file=logFile)
+            testBestMedianDiffs = { atomType:diff for (atomType,diff) in bestMedianDiffs.items() if atomType in atoms2Optimize } if atoms2Optimize else bestMedianDiffs
+            maxAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]))
+            if stoppingFractionalDifference > 0 and max(map(abs, testBestMedianDiffs.values())) < stoppingFractionalDifference:
+                break
+            elif maxAtomType == currentAtomType:
+                radiusIncrement = radiusIncrement / 2.0
 
-                (medianDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes })
-                print("Radii: ", currentRadii, file=logFile)
-                print("Median Diffs: ", medianDiffs, file=logFile)
-                print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())))
-                print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())), file=logFile)
-                print("Slopes: ", slopes, file=logFile)
-
-                if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
-                    bestMedianDiffs = medianDiffs
-                    currentSlopes = slopes
-
-                    try:
-                        with open(args["<final-params-file>"] + ".temp", 'w') as jsonFile:
-                            print(json.dumps({**params, "radii": currentRadii, "slopes": currentSlopes}, indent=2, sort_keys=True), file=jsonFile)
-                    except:
-                        sys.exit(str("Error: unable to create temporary params file \"") + args["<final-params-file>"] + ".temp" + "\".")
-                else:
-                    currentRadii[currentAtomType] = previousRadius
-
-                testBestMedianDiffs = { atomType:diff for (atomType,diff) in bestMedianDiffs.items() if atomType in atoms2Optimize } if atoms2Optimize else bestMedianDiffs
-                maxAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]))
-                if stoppingFractionalDifference > 0 and max(map(abs, testBestMedianDiffs.values())) < stoppingFractionalDifference:
+                if radiusIncrement < minRadiusIncrement:
+                    radiusIncrement = minRadiusIncrement
+                elif radiusIncrement == minRadiusIncrement:
                     break
-                elif maxAtomType == currentAtomType:
-                    radiusIncrement = radiusIncrement / 2.0
 
-                    if radiusIncrement < minRadiusIncrement:
-                        radiusIncrement = minRadiusIncrement
-                    elif radiusIncrement == minRadiusIncrement:
-                        break
-
-                currentAtomType = maxAtomType
-                previousRadius = currentRadii[currentAtomType]
-                currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
+            currentAtomType = maxAtomType
+            previousRadius = currentRadii[currentAtomType]
+            currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
 
         print("Final Radii: ", currentRadii)
         print("Max Absolute Median Diff", max(map(abs, testBestMedianDiffs.values())))
