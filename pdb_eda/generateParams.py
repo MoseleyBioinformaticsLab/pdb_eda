@@ -3,8 +3,11 @@ generateParams.py
 
 Usage:
     pdb_eda optimize -h | --help
+    pdb_eda generate color [--params=<params-file>]
     pdb_eda generate residue-report <pdbid-file> <out-jsonfile>
 
+Options:
+    --params=<params-file>      Overriding parameters file that includes radii, slopes, etc. [default: ]
 
 
 
@@ -24,45 +27,7 @@ from . import __version__
 from . import densityAnalysis
 
 componentsFilename = "components.cif"
-
-elementElectrons: {
-    "AL": 13,
-    "AU": 79,
-    "BA": 56,
-    "BR": 35,
-    "C": 6,
-    "CA": 20,
-    "CD": 48,
-    "CL": 17,
-    "CO": 27,
-    "CR": 24,
-    "CS": 55,
-    "CU": 29,
-    "F": 9,
-    "FE": 26,
-    "HG": 80,
-    "I": 53,
-    "K": 19,
-    "LI": 3,
-    "MG": 12,
-    "MN": 25,
-    "MO": 42,
-    "N": 7,
-    "NA": 11,
-    "NI": 28,
-    "O": 8,
-    "P": 15,
-    "PT": 78,
-    "RU": 44,
-    "S": 16,
-    "SR": 38,
-    "V": 23,
-    "W": 74,
-    "Y": 39,
-    "YB": 70,
-    "ZN": 30
-  }
-
+defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
 
 def main():
     args = docopt.docopt(__doc__, version=__version__)
@@ -80,7 +45,37 @@ def main():
         with open("components_info.json", 'w') as outFile:
             print(json.dumps(componentsInfo, indent=2, sort_keys=True), file=outFile)
 
-    if args["residue-report"]:
+    paramsFilepath = args["--params"] if args["--params"] else defaultParamsFilepath
+    try:
+        with open(paramsFilepath, 'r') as paramsFile:
+            params = json.load(paramsFile)
+    except:
+        sys.exit(str("Error: params file \"") + paramsFilepath + "\" does not exist or is not parsable.")
+
+
+    if args["color"]:
+        for residue in componentsInfo["residues"].values():
+            residueName = residue["name"].upper()
+            if residueName in params["residue_electrons"]:
+                residue["estimated_electrons"] = 0
+                for atom in residue["atoms"].values():
+                    atom["num_bound_hydrogens"] = sum(1 for atomName,bondType,aromatic,stereo in atom["bonds"] if atomName in residue["atoms"] and residue["atoms"][atomName]["element"] == "H" and residue["atoms"][atomName]["leaving"] == atom["leaving"])
+                    if atom["element"] in params["element_electrons"]:
+                        atom["estimated_electrons"] = params["element_electrons"][atom["element"]] + atom["num_bound_hydrogens"] - float(atom["charge"])
+                        residue["estimated_electrons"] += atom["estimated_electrons"] if atom["leaving"] != "Y" else 0
+                    atom["color"] = atom["name"] + "." + atom["element"] + "." + atom["aromatic"]
+                    atom["element_color"] = atom["element"] + "." + atom["aromatic"]
+                for atom in residue["atoms"].values():
+                    atom["full_bond_colors"] = [ residue["atoms"][atomName]["color"] + "." +  bondType + "." + aromatic for atomName,bondType,aromatic,stereo in atom["bonds"] if atomName in residue["atoms"]]
+                    atom["element_bond_colors"] = [ residue["atoms"][atomName]["element_color"] + "." +  bondType + "." + aromatic for atomName,bondType,aromatic,stereo in atom["bonds"] if atomName in residue["atoms"]]
+                    atom["full_color"] = atom["color"] + "-" + "_".join(sorted(atom["full_bond_colors"]))
+                    atom["full_element_color"] = atom["element_color"] + "#" + "_".join(sorted(atom["element_bond_colors"]))
+                print(residueName, "Estimated Electrons:", params["residue_electrons"][residueName], residue["estimated_electrons"])
+                for atom in residue["atoms"].values():
+                    atomName = residueName + "_" + atom["name"]
+                    if atomName in params["full_atom_name_map_electrons"]:
+                        print(" ", atomName, "\tEstimated Electrons:", params["full_atom_name_map_electrons"][atomName], atom["estimated_electrons"])
+    elif args["residue-report"]:
         try:
             pdbids = []
             with open(args["<pdbid-file>"], "r") as textFile:
@@ -120,7 +115,6 @@ def main():
             print(json.dumps(jsonOutput, indent=2, sort_keys=True), file=outFile)
 
 
-
 def processComponents():
     if not os.path.isfile(componentsFilename):
         urllib.request.urlretrieve("ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif", componentsFilename)
@@ -155,6 +149,3 @@ def processComponents():
 
 
 
-
-if __name__ == "__main__":
-    main()
