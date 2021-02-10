@@ -474,7 +474,7 @@ class DensityAnalysis(object):
 
 
         def calcSlope(data, atom_type):
-            if len(data['chain']) <= 2 or len(np.unique(data['bfactor'])) == 1: ## Less than three data points or all b factors are the same
+            if len(data['chain']) <= 2 or len(np.unique(data['bfactor'])) == 1: ## Less than three data points or all b factors are the same. Should change this to something more robust like 15 unique values.
                 return currentSlopes[atom_type]
 
             slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adj_density_electron_ratio']-densityElectronRatio)/densityElectronRatio)

@@ -27,6 +27,9 @@ Options:
     --min-atoms=<min-atoms>                         Minimum number of atoms analyzed (numAtomsAnalyzed) required. [default: 1000]
     --min-residues=<min-residues>                   Minimum number of residues required of the given residue types separated by commas. [default: 0]
     --min-elements=<min-elements>                   Minimum number of atoms required of the given elements separated by commas. [default: 0]
+
+List of all wwPDB entry IDs along with entry type.
+ftp://ftp.wwpdb.org/pub/pdb/derived_data/pdb_entry_type.txt
 """
 
 import docopt
