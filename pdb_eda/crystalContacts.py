@@ -50,7 +50,7 @@ def main():
 	if not analyzer:
 		sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
 
-	mmcif_file = densityAnalysis.pdbfolder + args["<pdbid>"] + '.cif'
+	mmcif_file = densityAnalysis.pdbfolder + args["<pdbid>"] + '.cif.gz'
 
 	crystalNeighborCoords = simulateCrystalNeighborCoordinates(mmcif_file)
 
@@ -116,7 +116,7 @@ def simulateCrystalNeighborCoordinates(filename):
 	asym_unit = "asym_unit"
 
 	# Load Structure.
-	pymol.cmd.load(spath, format="cif")
+	pymol.cmd.load(spath)
 	pymol.cmd.disable("all")
 	pymol.cmd.enable(sname)
 	pymol.cmd.create(asym_unit, "polymer")

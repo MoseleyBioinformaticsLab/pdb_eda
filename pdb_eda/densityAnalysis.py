@@ -9,6 +9,7 @@ along with methods to analyze its electron density.
 import copy
 import urllib.request
 import os.path
+import gzip
 
 import itertools
 import json
@@ -41,9 +42,10 @@ fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
 fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
-ccp4urlSuffix = ".ccp4"
 ccp4folder = './ccp4_data/'
 pdbfolder = './pdb_data/'
+pdburlPrefix = "http://ftp.rcsb.org/pub/pdb/data/structures/all/pdb/"
+mmcifurlPrefix = "http://ftp.rcsb.org/pub/pdb/data/structures/all/mmCIF/"
 
 
 def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, downloadFile=True, mmcif=False):
@@ -69,6 +71,11 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
     pdbid = pdbid.lower()
     #print("working on " + pdbid + ', ', str(datetime.datetime.now()))
 
+    densityObj = None
+    diffDensityObj = None
+    pdbObj = None
+    biopdbObj = None
+
     try:
         if ccp4density:
             ## ccp4 2Fo - Fc map parser
@@ -78,7 +85,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
 
                 ccp4file = ccp4folder + pdbid + '.ccp4'
                 if not os.path.isfile(ccp4file):
-                    url = ccp4urlPrefix + pdbid + ccp4urlSuffix
+                    url = ccp4urlPrefix + pdbid + '.ccp4'
                     urllib.request.urlretrieve(url, ccp4file)
                 densityObj = ccp4.read(ccp4file, pdbid)
             else:
@@ -94,7 +101,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
 
                 ccp4diffFile = ccp4folder + pdbid + '_diff.ccp4'
                 if not os.path.isfile(ccp4diffFile):
-                    url = ccp4urlPrefix + pdbid + '_diff' + ccp4urlSuffix
+                    url = ccp4urlPrefix + pdbid + '_diff.ccp4'
                     urllib.request.urlretrieve(url, ccp4diffFile)
 
                 diffDensityObj = ccp4.read(ccp4diffFile, pdbid)
@@ -103,34 +110,51 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
             diffDensityObj.diffDensityCutoff = diffDensityObj.meanDensity + 3 * diffDensityObj.stdDensity
 
         if pdbbio or pdbi:
-            pdbfile = pdbfolder + 'pdb' + pdbid + '.ent'
+            pdbfile = pdbfolder + 'pdb' + pdbid + '.ent.gz'
             if not os.path.isfile(pdbfile):
                 if not os.path.exists(pdbfolder):
                     os.makedirs(pdbfolder)
 
-                pdbl = biopdb.PDBList()
-                pdbl.retrieve_pdb_file(pdbid, pdir=pdbfolder, file_format="pdb")
+                url = pdburlPrefix + 'pdb' + pdbid + '.ent.gz'
+                urllib.request.urlretrieve(url, pdbfile)
 
             if pdbbio:
                 # Bio Python PDB parser
-                parser = biopdb.PDBParser(QUIET=True)
-                biopdbObj = parser.get_structure(pdbid, pdbfile)
+                with gzip.open(pdbfile, 'rt') as gzipFile:
+                    parser = biopdb.PDBParser(QUIET=True)
+                    biopdbObj = parser.get_structure(pdbid, gzipFile)
             if pdbi:
-                ## my own PDB parser
-                pdbObj = pdbParser.readPDBfile(pdbfile)
+                with gzip.open(pdbfile, 'rt') as gzipFile:
+                    pdbObj = pdbParser.readPDBfile(gzipFile)
 
         if mmcif and downloadFile:
-            mmcifFile = pdbfolder + pdbid + '.cif'
+            mmcifFile = pdbfolder + pdbid + '.cif.gz'
             if not os.path.isfile(mmcifFile):
                 if not os.path.exists(pdbfolder):
                     os.makedirs(pdbfolder)
 
-                pdbl = biopdb.PDBList()
-                pdbl.retrieve_pdb_file(pdbid, pdir=pdbfolder, file_format="mmCif")
+                url = mmcifurlPrefix + pdbid + '.cif.gz'
+                urllib.request.urlretrieve(url, mmcifFile)
     except:
         return 0
 
     return DensityAnalysis(pdbid, densityObj, diffDensityObj, biopdbObj, pdbObj)
+
+def testCCP4URL(pdbid):
+    try:
+        densityURL = ccp4urlPrefix + pdbid + ccp4urlSuffix
+        request = urllib.request.Request(densityURL)
+        request.get_method = lambda: 'HEAD'
+        urllib.request.urlopen(request)
+
+        diffDensityURL = ccp4urlPrefix + pdbid + '_diff' + ccp4urlSuffix
+        request = urllib.request.Request(densityURL)
+        request.get_method = lambda: 'HEAD'
+        urllib.request.urlopen(request)
+
+        return True
+    except urllib.request.HTTPError:
+        return False
 
 
 class DensityAnalysis(object):

@@ -9,15 +9,17 @@ import re
 import numpy as np
 
 
-def readPDBfile(filename):
+def readPDBfile(file):
     """
     Creates :class:`pdb_eda.pdbParser.PDBentry` object from file name.
 
-    :param str filename: The name of a PDB formated file.
+    :param str file: The name of a PDB formated file or a file handle.
     """
-    with open(filename, "r") as fileHandle:
-        return parse(fileHandle)
-
+    if isinstance(file,str):
+        with open(file, "r") as fileHandle:
+            return parse(fileHandle)
+    else:
+        return parse(file)
 
 def parse(handle, mode='lite'):
     """

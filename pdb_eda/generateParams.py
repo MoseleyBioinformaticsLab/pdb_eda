@@ -17,7 +17,7 @@ Options:
     parameters                              Generate parameters file.
     --params=<params-file>                  Overriding parameters file that includes radii, slopes, etc. [default: ]
     --min-atom-types=<min-atom-types>       Minimum number of a given atom-type required. [default: 5]
-    --min-atoms=<min-atoms>                 Minimum number of parameter atoms required. [default: 300]
+    --min-atoms=<min-atoms>                 Minimum number of parameter atoms required. [default: 500]
     --max-atoms=<max-atoms>                 Maximum number of (all) parameter atoms allowed. Useful to selecting entries that are reasonably fast to analyze [default: 5000]
     --max-resolution=<max-resolution>       Maximum x-ray crystallographic resolution to allow. [default: 3.5]
     --min-resolution=<min-resolution>       Minimum x-ray crystallographic resolution to allow. [default: 0]
@@ -319,7 +319,10 @@ def processFunction(pdbid):
     :return: resultFilename
     :rtype: :py:class:`str`
     """
-    analyzer = densityAnalysis.fromPDBid(pdbid)
+    if not densityAnalysis.testCCP4URL(pdbid):
+        return 0
+
+    analyzer = densityAnalysis.fromPDBid(pdbid, ccp4density=False, ccp4diff=False)
     if not analyzer:
         return 0
 
@@ -327,7 +330,6 @@ def processFunction(pdbid):
     info["pdbid"] = pdbid
     info["properties"] = {property: value for (property, value) in analyzer.biopdbObj.header.items()}
     info["properties"]["resolution"] = float(analyzer.pdbObj.header.resolution)
-    info["properties"]['voxel_volume'] = analyzer.densityObj.header.unitVolume
     info["properties"]['space_group'] = analyzer.pdbObj.header.spaceGroup
     info["full_atom_name_counts"] = collections.Counter(densityAnalysis.residueAtomName(atom) for residue in analyzer.biopdbObj.get_residues() for atom in residue.get_atoms())
     info["element_counts"] = collections.Counter(atom.element for residue in analyzer.biopdbObj.get_residues() for atom in residue.get_atoms())
