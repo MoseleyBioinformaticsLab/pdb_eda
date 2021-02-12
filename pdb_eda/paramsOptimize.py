@@ -14,12 +14,14 @@ Usage:
 Options:
     -h, --help                          Show this screen.
     --atoms=<atoms-file>                Limit optimization to the list of atoms in the JSON atoms-file. This list overrides what is indicated in the params-file. [default: ]
+    --sample=<sample-size>              Use a random sample of PDB ids for optimization. [default: 0]
     --max=<max-radius-change>           Maximum to change the radius at each incremental optimization. [default: 0.2]
     --min=<min-radius-change>           Minimum to change the radius at each incremental optimization. [default: 0.005]
     --params=<start-params-file>        Starting parameters filename. [default: ]
     --radius=<start-radius>             Starting radius for the starting atom-type. [default: 0]
     --start=<start-atom-type>           Starting atom type. [default: ]
     --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0.05]
+    --testing                           Run only a single process for testing purposes.
 """
 import os
 import sys
@@ -29,11 +31,9 @@ import multiprocessing
 import datetime
 import tempfile
 import docopt
-import collections
+import random
 
 from pdb_eda import densityAnalysis
-
-defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
 
 def main():
     args = docopt.docopt(__doc__)
@@ -41,14 +41,18 @@ def main():
     minRadiusIncrement = float(args["--min"])
     stoppingFractionalDifference = float(args["--stop"])
     startingRadius = float(args["--radius"])
+    sampleSize = int(args["--sample"])
 
-    paramsFilepath = args["--params"] if args["--params"] else defaultParamsFilepath
+    paramsFilepath = args["--params"] if args["--params"] else densityAnalysis.paramsPath
     try:
         with open(paramsFilepath, 'r') as jsonFile:
             params = json.load(jsonFile)
             currentRadii = params['radii']
             currentSlopes = params['slopes']
             atoms2Optimize = set(params['optimize']) if 'optimize' in params else []
+
+            if paramsFilepath != densityAnalysis.paramsPath:
+                densityAnalysis.setGlobals(params)
     except:
         sys.exit(str("Error: params file \"") + paramsFilename + "\" does not exist or is not parsable.")
 
@@ -71,13 +75,18 @@ def main():
     except:
         sys.exit(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
+
+    if sampleSize > 0:
+        pdbids = random.sample(pdbids,sampleSize)
+
     with open(args["<log-file>"], 'w') as logFile:
         print(args, file=logFile)
 
+        print("PDB IDs:",",".join(pdbids), file=logFile)
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()))
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()), file=logFile)
-        (bestMedianDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, currentRadii, currentSlopes)
-        print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())))
+        (bestMedianDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"])
+        print("Max Absolute Median Diff: ", max(map(abs, bestMedianDiffs.values())))
 
         currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y])) if not args["--start"]  else args["--start"]
         previousRadius = currentRadii[currentAtomType]
@@ -91,7 +100,7 @@ def main():
             print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()))
             print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()), file=logFile)
 
-            (medianDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes })
+            (medianDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"])
             print("Radii: ", currentRadii, file=logFile)
             print("Median Diffs: ", medianDiffs, file=logFile)
             print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())))
@@ -103,10 +112,10 @@ def main():
                 currentSlopes = slopes
 
                 try:
-                    with open(args["<final-params-file>"] + ".temp", 'w') as jsonFile:
+                    with open(args["<out-params-file>"] + ".temp", 'w') as jsonFile:
                         print(json.dumps({**params, "radii": currentRadii, "slopes": currentSlopes}, indent=2, sort_keys=True), file=jsonFile)
                 except:
-                    sys.exit(str("Error: unable to create temporary params file \"") + args["<final-params-file>"] + ".temp" + "\".")
+                    sys.exit(str("Error: unable to create temporary params file \"") + args["<out-params-file>"] + ".temp" + "\".")
             else:
                 currentRadii[currentAtomType] = previousRadius
 
@@ -136,22 +145,24 @@ def main():
     except:
         sys.exit(str("Error: unable to create params file \"") + args["<out-params-file>"] + "\".")
 
-def calculateMedianDiffsSlopes(pdbids, currentParams):
+def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False):
     """Calculates the median diffs and slopes across a list of pdb entries.
 
     :param :py:class:`list` pdbids: list of pdbids to process.
-    :param :py:class:`dict` currentRadii:  atom type radii to use.
-    :param :py:class:`dict` currentSlopes: atom type b-factor slopes to use.
+    :param :py:class:`dict` currentParams:  parameters.
     :return: diffs_slopes_tuple
     :rtype: :py:class:`tuple`
     """
     currParamsFilename = createTempJSONFile(currentParams, "tempParams_")
 
-    with multiprocessing.Pool() as pool:
-        results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids))
+    if testing:
+        results = [processFunction(pdbid) for pdbid in pdbids]
+    else:
+        with multiprocessing.Pool() as pool:
+            results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids))
 
-    diffs = {atomType: [] for atomType in currentRadii}
-    slopes = {atomType: [] for atomType in currentSlopes}
+    diffs = {atomType: [] for atomType in currentParams["radii"]}
+    slopes = {atomType: [] for atomType in currentParams["slopes"]}
     for resultFilename in results:
         if resultFilename:
             try:
@@ -194,8 +205,9 @@ def processFunction(pdbid, paramsFilepath):
     if not analyzer.densityElectronRatio:
         return 0
 
-    diffs = { atomType:((analyzer.medians.loc[atomType]['corrected_density_electron_ratio'] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio) for atomType in radii if atomType in analyzer.medians.index }
-    newSlopes = { atomType:analyzer.medians.loc[atomType]['slopes'] for atomType in slopes if atomType in analyzer.medians.index }
+    diffs = { atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio) for atomType in params["radii"]
+              if atomType in analyzer.medians['corrected_density_electron_ratio'] }
+    newSlopes = { atomType:analyzer.medians['slopes'][atomType] for atomType in params["slopes"] if atomType in analyzer.medians['slopes'] }
 
     resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes }, "tempResults_")
     return resultFilename

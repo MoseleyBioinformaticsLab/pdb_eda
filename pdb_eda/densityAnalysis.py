@@ -40,6 +40,27 @@ elementElectronsGlobal = paramsGlobal['element_map_electrons']
 residueElectronsGlobal = paramsGlobal['residue_name_map_electrons']
 fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
 fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
+atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomTypeGlobal.values()) + 5
+
+def setGlobals(params):
+    global paramsGlobal
+    global radiiGlobal
+    global slopesGlobal
+    global elementElectronsGlobal
+    global residueElectronsGlobal
+    global fullAtomNameMapElectronsGlobal
+    global fullAtomNameMapAtomTypeGlobal
+    global atomTypeLengthGlobal
+
+    paramsGlobal = params
+    radiiGlobal = paramsGlobal['radii']
+    slopesGlobal = paramsGlobal['slopes']
+    elementElectronsGlobal = paramsGlobal['element_map_electrons']
+    residueElectronsGlobal = paramsGlobal['residue_name_map_electrons']
+    fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
+    fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
+    atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomTypeGlobal.values()) + 5
+
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4folder = './ccp4_data/'
@@ -54,19 +75,13 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
     and the structure has electron density file available.
 
     :param str pdbid: PDB id.
-    :param ccp4density: Whether to generate ccp4 density object. Default is true.
-    :param ccp4diff: Whether to generate in default of ccp4 difference density object. Default is true.
-    :param pdbbio: Whether to generate in default of bio.PDB object. Default is true.
-    :param pdbi: Whether to generate in default of PDB object. Default is true.
-    :param downloadFile: Whether to save the downloaded ccp4 density, ccp4 difference density, and PDB file. Default is true.
-
+    :param bool ccp4density: Whether to generate ccp4 density object. Default is true.
+    :param bool ccp4diff: Whether to generate in default of ccp4 difference density object. Default is true.
+    :param bool pdbbio: Whether to generate in default of bio.PDB object. Default is true.
+    :param bool pdbi: Whether to generate in default of PDB object. Default is true.
+    :param bool downloadFile: Whether to save the downloaded ccp4 density, ccp4 difference density, and PDB file. Default is true.
+    :param bool mmcif: Whether to download the mmCif file. Default is false.
     :return: :class:`pdb_eda.densityAnalysis`
-
-    :type ccp4density: :py:obj:`True` or :py:obj:`False`
-    :type ccp4diff: :py:obj:`True` or :py:obj:`False`
-    :type pdbbio: :py:obj:`True` or :py:obj:`False`
-    :type pdbi: :py:obj:`True` or :py:obj:`False`
-    :type downloadFile: :py:obj:`True` or :py:obj:`False`
     """
     pdbid = pdbid.lower()
     #print("working on " + pdbid + ', ', str(datetime.datetime.now()))
@@ -140,18 +155,17 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
 
     return DensityAnalysis(pdbid, densityObj, diffDensityObj, biopdbObj, pdbObj)
 
+
 def testCCP4URL(pdbid):
+    """
+    Test whether the pdbid has electron density maps by querying if the PDBe API has electron density statistics.
+    :param str pdbid: PDB id
+    :return: bool
+    :rtype: bool
+    """
     try:
-        densityURL = ccp4urlPrefix + pdbid + ccp4urlSuffix
-        request = urllib.request.Request(densityURL)
-        request.get_method = lambda: 'HEAD'
-        urllib.request.urlopen(request)
-
-        diffDensityURL = ccp4urlPrefix + pdbid + '_diff' + ccp4urlSuffix
-        request = urllib.request.Request(densityURL)
-        request.get_method = lambda: 'HEAD'
-        urllib.request.urlopen(request)
-
+        url = "https://www.ebi.ac.uk/pdbe/api/pdb/entry/electron_density_statistics/" + pdbid
+        request = urllib.request.urlopen(url)
         return True
     except urllib.request.HTTPError:
         return False
@@ -262,7 +276,7 @@ class DensityAnalysis(object):
 
     @property
     def fo(self):
-            return self.densityObj # using the 2Fo-Fc as the Fo map.
+        return self.densityObj # using the 2Fo-Fc as the Fo map.
 
     def medianAbsFoFc(self):
         """
@@ -366,13 +380,12 @@ class DensityAnalysis(object):
         :param densityObj: Optional :class:`pdb_eda.ccp4` object.
         :param biopdbObj: Optional `bio.PDB` object.
         :param atomL: Whether or not to calculate statistics for all atoms and assign to `densityAnalysis.atomList`, default as False.
-        :param residueL: Whether or not to calculate statistics for all residues and assign to `densityAnalysis.residueList`, default as False.
-        :param chainL: Whether or not to calculate statistics for all chains and assign to `densityAnalysis.chainList`, default as False.
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
-
         :type atomL: :py:obj:`True` or :py:obj:`False`
+        :param residueL: Whether or not to calculate statistics for all residues and assign to `densityAnalysis.residueList`, default as False.
         :type residueL: :py:obj:`True` or :py:obj:`False`
+        :param chainL: Whether or not to calculate statistics for all chains and assign to `densityAnalysis.chainList`, default as False.
         :type chainL: :py:obj:`True` or :py:obj:`False`
+        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
         :type recalculate: :py:obj:`True` or :py:obj:`False`
 
         :return: :py:obj:`None`
@@ -505,7 +518,7 @@ class DensityAnalysis(object):
             return currentSlopes[atom_type] if p_value > 0.05 else slope
 
         try:
-            dataType = np.dtype([('chain', np.dtype(('U', 10))), ('residue_number',int), ('residue_name',np.dtype(('U', 10)) ), ('atom_name',np.dtype(('U', 10)) ), ('atom_type',np.dtype(('U', 20)) ),
+            dataType = np.dtype([('chain', np.dtype(('U', 20))), ('residue_number',int), ('residue_name',np.dtype(('U', 10)) ), ('atom_name',np.dtype(('U', 10)) ), ('atom_type',np.dtype(('U', atomTypeLengthGlobal)) ),
                                  ('density_electron_ratio',float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('adj_density_electron_ratio', float), ('chain_fraction', float),
                                  ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
             atoms = np.asarray([tuple(atom+[0.0 for x in range(5)]) for atom in atomList],dataType) # must pass in list of tuples to create ndarray correctly.

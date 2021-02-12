@@ -34,6 +34,10 @@ ftp://ftp.wwpdb.org/pub/pdb/derived_data/pdb_entry_type.txt
 # Select only the protein, diffraction entries
 % grep "diffraction" pdb_entry_type.txt | grep "prot" > pdb_prot_diffraction_only.txt
 
+# Faster to download all gzipped compressed PDB entries directly from wwPDB before analyzing
+% cd pdb_data
+% rsync -rLpt -v -z --port=33444 rsync.rcsb.org::ftp_data/structures/all/pdb/ ./
+
 Amino Acid Residues: ALA,ARG,ASN,ASP,CYS,GLN,GLU,GLY,HIS,ILE,LEU,LYS,MET,PHE,PRO,SER,THR,TRP,TYR,VAL
 Nucleic Acid Residues: A,C,G,I,U,DA,DC,DG,DI,DT,DU
 Water: HOH

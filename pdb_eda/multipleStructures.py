@@ -4,7 +4,7 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>]
+    pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>] [--global]
     pdb_eda multiple <in-result-file> <out-pdbid-file> --filter [--out-format=<format>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>] [--min-atoms=<min-atoms>] [--min-residues=<min-residues>] [--min-elements=<min-elements>]
     pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing]
     pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing]
@@ -16,6 +16,7 @@ Options:
     <pdbid-file>                                    Input filename that contains the pdb ids. "-" will read from standard input.
     <out-pdbid-file>                                Output filename that contains the pdb ids. "-" will write to standard output.
     --params=<params-file>                          Overriding parameters file that includes radii, slopes, etc. [default: ]
+    --global                                        Overriding parameters file is set globally.
     --out-format=<format>                           Output file format, available formats: csv, json [default: json].
     --time-out=<seconds>                            Set a maximum time to try to analyze any single pdb entry. [default: 0]
     --testing                                       Run only a single process for testing purposes.
@@ -49,8 +50,6 @@ from . import __version__
 from . import singleStructure
 from . import crystalContacts
 
-defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
-
 globalParams = None
 globalArgs = {}
 
@@ -62,11 +61,14 @@ def main():
         exit(0)
     globalArgs["--time-out"] = int(globalArgs["--time-out"])
 
-    paramsFilepath = globalArgs["--params"] if globalArgs["--params"] else defaultParamsFilepath
+    paramsFilepath = globalArgs["--params"] if globalArgs["--params"] else densityAnalysis.paramsPath
     try:
         with open(paramsFilepath, 'r') as paramsFile:
             global globalParams
             globalParams = json.load(paramsFile)
+
+        if globalArgs["--global"]:
+            densityAnalysis.setGlobals(globalParams)
     except:
         sys.exit(str("Error: params file \"") + paramsFilepath + "\" does not exist or is not parsable.")
 

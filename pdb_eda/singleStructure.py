@@ -6,10 +6,10 @@ pdb_eda single structure analysis mode command-line interface
 Usage:
     pdb_eda single -h | --help
     pdb_eda single <pdbid> <out-file> map (--density | --diff-density)
-    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --chain) [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> difference (--atom | --residue) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --chain) [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> difference (--atom | --residue) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> statistics [--out-format=<format>] (--atom | --residue) [--include-pdbid] [--print-validation]
 
 Options:
@@ -17,6 +17,7 @@ Options:
     <pdbid>                         The PDB ID to download and analyze.
     <out-file>                      Output filename. "-" will write to standard output.
     --params=<params-file>          Overriding parameters file that includes radii, slopes, etc. [default: ]
+    --global                        Overriding parameters file is set globally.
     --include-pdbid                 Include PDB ID at the beginning of each result.
     --density                       Output the density Fo-Fc map in jsonpickle format.
     --diff-density                  Output the difference density 2Fo-Fc map in jsonpickle format.
@@ -61,6 +62,9 @@ def main():
     try:
         with open(paramsFilepath, 'r') as paramsFile:
             params = json.load(paramsFile)
+
+        if args["--global"]:
+            densityAnalysis.setGlobals(params)
     except:
         sys.exit(str("Error: params file \"") + paramsFilepath + "\" does not exist or is not parsable.")
 
