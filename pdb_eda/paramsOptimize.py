@@ -97,8 +97,8 @@ def main():
             currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
 
         while True:
-            print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()))
-            print("Testing AtomType:", currentAtomType, "with radius", currentRadii[currentAtomType], ", increment", radiusIncrement, ", start-time", str(datetime.datetime.now()), file=logFile)
+            print("Testing", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", start-time=", str(datetime.datetime.now()))
+            print("Testing", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", start-time=", str(datetime.datetime.now()), file=logFile)
 
             (medianDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"])
             print("Radii: ", currentRadii, file=logFile)
@@ -107,9 +107,11 @@ def main():
             print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())), file=logFile)
             print("Slopes: ", slopes, file=logFile)
 
+            improved = False
             if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
                 bestMedianDiffs = medianDiffs
                 currentSlopes = slopes
+                improved = True
 
                 try:
                     with open(args["<out-params-file>"] + ".temp", 'w') as jsonFile:
@@ -124,12 +126,12 @@ def main():
             if stoppingFractionalDifference > 0 and max(map(abs, testBestMedianDiffs.values())) < stoppingFractionalDifference:
                 break
             elif maxAtomType == currentAtomType:
-                radiusIncrement = radiusIncrement / 2.0
+                if radiusIncrement == minRadiusIncrement and not improved:
+                    break
 
+                radiusIncrement = radiusIncrement / 2.0
                 if radiusIncrement < minRadiusIncrement:
                     radiusIncrement = minRadiusIncrement
-                elif radiusIncrement == minRadiusIncrement:
-                    break
 
             currentAtomType = maxAtomType
             previousRadius = currentRadii[currentAtomType]
