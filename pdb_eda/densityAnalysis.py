@@ -29,6 +29,7 @@ except ImportError:
 
 ## Starting data originally from https://arxiv.org/pdf/0804.2488.pdf
 paramsPath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
+f000ParamsPath = os.path.join(os.path.dirname(__file__), 'conf/f000_parameters.json.gz')
 
 paramsGlobal = None
 with open(paramsPath, 'r') as fh:
@@ -36,8 +37,8 @@ with open(paramsPath, 'r') as fh:
 
 radiiGlobal = paramsGlobal['radii']
 slopesGlobal = paramsGlobal['slopes']
-elementElectronsGlobal = paramsGlobal['element_map_electrons']
-residueElectronsGlobal = paramsGlobal['residue_name_map_electrons']
+elementElectronsGlobal = None
+masterFullAtomNameMapElectronsGlobal = None
 fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
 fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
 atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomTypeGlobal.values()) + 5
@@ -46,8 +47,6 @@ def setGlobals(params):
     global paramsGlobal
     global radiiGlobal
     global slopesGlobal
-    global elementElectronsGlobal
-    global residueElectronsGlobal
     global fullAtomNameMapElectronsGlobal
     global fullAtomNameMapAtomTypeGlobal
     global atomTypeLengthGlobal
@@ -55,12 +54,20 @@ def setGlobals(params):
     paramsGlobal = params
     radiiGlobal = paramsGlobal['radii']
     slopesGlobal = paramsGlobal['slopes']
-    elementElectronsGlobal = paramsGlobal['element_map_electrons']
-    residueElectronsGlobal = paramsGlobal['residue_name_map_electrons']
     fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
     fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
     atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomTypeGlobal.values()) + 5
 
+
+def loadF000Parameters():
+    """Loads and assigns global parameters needed for F000 estimation."""
+    with gzip.open(f000ParamsPath, 'rt') as gzipFile:
+        f000Params = json.load(gzipFile)
+
+    global elementElectronsGlobal
+    elementElectronsGlobal = f000Params["element_map_electrons"]
+    global masterFullAtomNameMapElectronsGlobal
+    masterFullAtomNameMapElectronsGlobal = f000Params["full_atom_name_map_electrons"]
 
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4folder = './ccp4_data/'
@@ -70,8 +77,7 @@ mmcifurlPrefix = "http://ftp.rcsb.org/pub/pdb/data/structures/all/mmCIF/"
 
 
 def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, downloadFile=True, mmcif=False):
-    """
-    Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
+    """Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
     and the structure has electron density file available.
 
     :param str pdbid: PDB id.
@@ -157,8 +163,7 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
 
 
 def testCCP4URL(pdbid):
-    """
-    Test whether the pdbid has electron density maps by querying if the PDBe API has electron density statistics.
+    """Test whether the pdbid has electron density maps by querying if the PDBe API has electron density statistics.
     :param str pdbid: PDB id
     :return: bool
     :rtype: bool
@@ -175,8 +180,7 @@ class DensityAnalysis(object):
     """DensityAnalysis class that stores the density, difference density, bio.PDB, and PDB objects."""
 
     def __init__(self, pdbid, densityObj=None, diffDensityObj=None, biopdbObj=None, pdbObj=None):
-        """
-        `densityAnalysis` initializer. Leave `densityObj`, `diffDensityObj`, `biopdbObj` and `pdbObj` as :py:obj:`None`
+        """`densityAnalysis` initializer. Leave `densityObj`, `diffDensityObj`, `biopdbObj` and `pdbObj` as :py:obj:`None`
         to be created. They are not required for initialization but could be required for some methods.
 
         :param str pdbid: PDB id.
@@ -206,7 +210,7 @@ class DensityAnalysis(object):
         self.atomList = None
         self.residueList = None
         self.chainList = None
-        self.f000 = None
+        self._F000 = None
         self.densityElectronRatio = None
         self.chainNvoxel = None
         self.chainTotalE = None
@@ -278,9 +282,14 @@ class DensityAnalysis(object):
     def fo(self):
         return self.densityObj # using the 2Fo-Fc as the Fo map.
 
+    @property
+    def F000(self):
+        if self._F000 == None:
+            self._F000 = self.estimateF000()
+        return self._F000
+
     def medianAbsFoFc(self):
-        """
-        Calculate and compare median absolute values for the Fo and Fc maps less than 1 sigma.
+        """Calculate and compare median absolute values for the Fo and Fc maps less than 1 sigma.
         These values should be comparable, i.e. low relative difference, for RSCC and RSR metric calculations.
 
         :return: validation_tuple
@@ -300,8 +309,11 @@ class DensityAnalysis(object):
 
     residueMetricsHeaderList = ['chain', 'residue_number', 'residue_name', "rscc", "rsr", "mean_occupancy", "occupancy_weighted_mean_bfactor"]
     def residueMetrics(self, residueList=None):
-        """
-        RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+        """RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+        :param residueList:
+        :type residueList: list or :py:obj:`None`
+        :return: results
+        :rtype: list
         """
         resolution = self.biopdbObj.header['resolution']
         radius = 0.7
@@ -329,8 +341,11 @@ class DensityAnalysis(object):
 
     atomMetricsHeaderList = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "xyz", "rscc", "rsr", "occupancy", "bfactor"]
     def atomMetrics(self, atomList=None):
-        """
-        RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+        """RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+        :param atomList:
+        :type atomList: list or :py:obj:`None`
+        :return: results
+        :rtype: list
         """
         resolution = self.biopdbObj.header['resolution']
         radius = 0.7
@@ -356,7 +371,7 @@ class DensityAnalysis(object):
         This method of calculating RSCC and RSR assumes that the Fo and Fc maps are appropriately scaled.
         Comparison of median absolute values below one sigma should be quite similar between Fo and Fc maps.
 
-        :param crsList:
+        :param list crsList:
         :return: rscc_rsr_tuple
         :rtype: :py:obj:`tuple`
         """
@@ -372,9 +387,8 @@ class DensityAnalysis(object):
     residueListHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume']
     chainListHeader = residueListHeader
     def aggregateCloud(self, params=None, densityObj=None, biopdbObj=None, atomL=False, residueL=False, chainL=False, recalculate=False, minResAtoms=4, minTotalAtoms=50):
-        """
-        Aggregate the electron density map clouds by atom, residue, and chain.
-        Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data member.
+        """Aggregate the electron density map clouds by atom, residue, and chain.
+        Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data members.
 
         :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
         :param densityObj: Optional :class:`pdb_eda.ccp4` object.
@@ -387,6 +401,8 @@ class DensityAnalysis(object):
         :type chainL: :py:obj:`True` or :py:obj:`False`
         :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
         :type recalculate: :py:obj:`True` or :py:obj:`False`
+        :param int minResAtoms: minimum number of atoms needed to aggregate a residue.
+        :param int minTotalAtoms: miminum total number of atoms to calculate a density-electron ratio.
 
         :return: :py:obj:`None`
         """
@@ -560,8 +576,7 @@ class DensityAnalysis(object):
 
 
     def _calculateSymmetryAtoms(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
-        """
-        Calculate all the symmetry and nearby cells and keep those have at least on atom within 5 grid points of the non-repeating crs boundary.
+        """Calculate all the symmetry and nearby cells and keep those have at least on atom within 5 grid points of the non-repeating crs boundary.
         Ref: Biomolecular Crystallography: Principles, Practice, and Application to Structural Biology by Bernhard Rupp.
         Orthogonalization matrix O and deororthogonalization matrix O' are from :class:`pdb_eda.ccp4` object.
         Rotation matrix R and Translation matrix T is from :class:`pdb_eda.pdbParser` object.
@@ -604,10 +619,11 @@ class DensityAnalysis(object):
 
     blobStatisticsHeader = ['distance_to_atom', 'sign', 'electrons_of_discrepancy', 'num_voxels', 'volume', 'chain', 'residue_number', 'residue_name', 'atom_name', 'atom_symmetry', 'atom_xyz', 'centroid_xyz']
     def calculateAtomSpecificBlobStatistics(self, blobList, params=None):
-        """
-        Calculate atom-specific blob statistics.
+        """Calculate atom-specific blob statistics.
 
         :param :py:obj:`list` blobList: list of blobs to calculate statistics for.
+        :param params: overriding parameters needed for the calculation.
+        :type params: dict or :py:obj:`None`
         :return blobStats: Difference density map statistics.
         :rtype: :py:obj:`list`
         """
@@ -635,13 +651,13 @@ class DensityAnalysis(object):
     residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDiscrepancyHeader
 
     def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
-        """
-        Calculates significant region discrepancies in a given radius of each atom.
+        """Calculates significant region discrepancies in a given radius of each atom.
 
         :param float radius: the search radius.
         :param float numSD: number of standard deviations of significance.
         :param str type: residue type to filter on.
-        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
+        :param params: overriding parameters needed for calculations.
+        :type params: dict or :py:obj:`None`
         :return diffMapRegionStats: Difference density map region header and statistics.
         :rtype: :py:obj:`list`
         """
@@ -658,13 +674,13 @@ class DensityAnalysis(object):
         return results
 
     def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
-        """
-        Calculates significant region discrepancies in a given radius of each residue.
+        """Calculates significant region discrepancies in a given radius of each residue.
 
         :param float radius: the search radius.
         :param float numSD: number of standard deviations of significance.
         :param str type: residue type to filter on.
-        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
+        :param params: overriding parameters needed for calculations.
+        :type params: dict or :py:obj:`None`
         :return diffMapRegionStats: Difference density map region header and statistics.
         :rtype: :py:obj:`list`
         """
@@ -684,14 +700,14 @@ class DensityAnalysis(object):
         return results
 
     def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, params=None):
-        """
-        Calculate region-specific discrepancy from the difference density matrix.
+        """Calculate region-specific discrepancy from the difference density matrix.
 
         :param xyzCoordLists: xyz coordinates.
         :type xyzCoordLists: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.
         :param float radius: the search radius.
         :param float numSD: number of standard deviations of significance.
-        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
+        :param dict params: overriding parameters needed for calculations.
+        :type params: dict or :py:obj:`None`
         :return diffMapRegionStats: Difference density map region header and statistics.
         :rtype: :py:obj:`list`
         """
@@ -721,22 +737,16 @@ class DensityAnalysis(object):
                  expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
 
 
-    def estimateF000(self, densityObj=None, biopdbObj=None, pdbObj=None, recalculate=False):
-        """
-        Estimate the F000 term as sum of all electrons over the unit cell volume
+    def estimateF000(self, densityObj=None, biopdbObj=None, pdbObj=None):
+        """Estimate the F000 term as sum of all electrons over the unit cell volume
 
         :param densityObj: Optional :class:`pdb_eda.ccp4` object.
         :param biopdbObj: Optional `bio.PDB` object.
         :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
-        :type recalculate: :py:obj:`True` or :py:obj:`False`
 
-        :return: :py:obj:`None`
+        :return: estimatedF000
+        :rtype: float
         """
-
-        if self.f000 and not recalculate:
-            return None
-
         if not densityObj:
             densityObj = self.densityObj
         if not biopdbObj:
@@ -744,28 +754,27 @@ class DensityAnalysis(object):
         if not pdbObj:
             pdbObj = self.pdbObj
 
-        if not self.f000 or recalculate:
-            pass
+        if not elementElectronsGlobal:
+            loadF000Parameters()
 
         totalElectrons = 0
-        for residue in list(biopdbObj.get_residues()):
-            if residue.resname in residueElectronsGlobal.keys():
-                totalElectrons += residueElectronsGlobal[residue.resname]
+
+        allAtoms = list(biopdbObj.get_atoms())
+        for atom in allAtoms:
+            fullAtomName = residueAtomName(atom)
+            if fullAtomName in masterFullAtomNameMapElectronsGlobal:
+                totalElectrons += masterFullAtomNameMapElectronsGlobal[fullAtomName]
             else:
-                for atom in list(residue.get_atoms()):
-                    if atom.name in elementElectronsGlobal.keys():
-                        totalElectrons += elementElectronsGlobal[atom.name]
-                totalElectrons += len(list(residue.get_atoms()))  # Add an estimate number of H
+                totalElectrons += elementElectronsGlobal[atom.element] + 1 # + 1 as an estimate for the number of H.
 
         totalElectrons *= len(pdbObj.header.rotationMats)
         asuVolume = densityObj.header.unitVolume * densityObj.header.nintervalX * densityObj.header.nintervalY * densityObj.header.nintervalZ
 
-        self.f000 = totalElectrons/asuVolume
+        return totalElectrons/asuVolume
 
 
 def residueAtomName(atom):
-    """
-    Returns a combined residue and atom name used to select an atom type.
+    """Returns a combined residue and atom name used to select an atom type.
     :param `BioPDB.atom` atom:
     :return: name
     :rtype: str

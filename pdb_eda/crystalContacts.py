@@ -82,8 +82,7 @@ def main():
 
 
 def findCoordContacts(coordList1, coordList2, distanceCutoff=5.0):
-	"""
-	Find contacts in coordList1 to coordList2 at the given distance cutoff.
+	"""Find contacts in coordList1 to coordList2 at the given distance cutoff.
 
 	:param :py:obj:`list` coordList1: list of coordinates.
 	:param :py:obj:`list` coordList2: list of coordinates.
@@ -96,8 +95,7 @@ def findCoordContacts(coordList1, coordList2, distanceCutoff=5.0):
 
 
 def simulateCrystalNeighborCoordinates(filename):
-	"""
-	RETURN a list of atom coordinates of the simulated crystal environment surrounding the X-Ray
+	"""RETURN a list of atom coordinates of the simulated crystal environment surrounding the X-Ray
 	Diffraction asymmetric unit (excluding heteroatoms). Requires a file path instead of a
 	structure because the bulk of this is handled by Pymol.
 	NOTE: This will only work with PDB structures resolved with X-RAY DIFFRACTION.

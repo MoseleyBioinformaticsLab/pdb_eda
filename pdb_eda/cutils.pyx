@@ -1,10 +1,13 @@
+"""
+Cythonized Utilities pdb_eda.cutils
+
 # Compile using:
 # $ python3 cutils_setup.py build_ext --inplace
 # $ cp build/lib.linux-x86_64-3.6/pdb_eda/cutils.cpython-36m-x86_64-linux-gnu.so cutils.so
+"""
 
 def testOverlap(selfBlob, otherBlob):
-    """
-    Check if two blobs overlaps or right next to each other.
+    """Check if two blobs overlaps or right next to each other.
 
     :param selfBlob: A :class:`pdb_eda.ccp4.DensityBlob` object.
     :param otherBlob: A :class:`pdb_eda.ccp4.DensityBlob` object.
@@ -14,14 +17,20 @@ def testOverlap(selfBlob, otherBlob):
 
 
 def sumOfAbs(array, float cutoff):
+    """Return sum of absolute values above a cutoff.
+
+    :param iterable array:
+    :param float cutoff:
+    :return: value
+    :rtype: float
+    """
     return sum(abs(value) for value in array if abs(value) > cutoff)
 
 import numpy as np
 import scipy.spatial
 dcutoff = np.sqrt(3)  ## the points are considered to be adjacent if one is in the one layer outer box with the other one in the center
 def createCrsLists(crsList):
-    """
-    Calculates a list of crsLists from a given crsList.
+    """Calculates a list of crsLists from a given crsList.
     This is a preparation step for creating blobs.
 
     :param crsList: a crs list.
@@ -48,6 +57,17 @@ def createCrsLists(crsList):
 
 import itertools
 def createSymmetryAtoms(list atomList, rotationMats, orthoMat, list xs, list ys, list zs):
+    """Creates and returns a list of all symmetry atoms.
+
+    :param :py:obj:`list` atomList:
+    :param list rotationMats:
+    :param list orthoMat:
+    :param list xs:
+    :param list ys:
+    :param list zs:
+    :return: allAtoms
+    :rtype: :py:obj:`list`
+    """
     allAtoms = []
     for symmetry in itertools.product([-1, 0, 1],[-1, 0, 1],[-1, 0, 1],range(len(rotationMats))):
         if symmetry == (0,0,0,0):
@@ -62,9 +82,7 @@ def createSymmetryAtoms(list atomList, rotationMats, orthoMat, list xs, list ys,
     return allAtoms
 
 class SymAtom:
-    """
-    A wrapper class to the `BioPDB.atom` class, delegating all BioPDB atom class methods and data members except having its own symmetry and coordination.
-    """
+    """A wrapper class to the `BioPDB.atom` class, delegating all BioPDB atom class methods and data members except having its own symmetry and coordination."""
 
     def __init__(self, atom, coord, symmetry):
         """
@@ -82,8 +100,7 @@ class SymAtom:
         return getattr(self.atom, attr)
 
 def getPointDensityFromCrs(densityMatrix, crsCoord):
-    """
-    Get the density of a point.
+    """Get the density of a point.
 
     :param crsCoord: crs coordinates.
     :type crsCoord: A :py:obj:`list` of :py:obj:`int`
@@ -103,8 +120,7 @@ def getPointDensityFromCrs(densityMatrix, crsCoord):
 
 
 def createFullCrsList(densityMatrix, float cutoff):
-    """
-    Returns full crs list for the density matrix.
+    """Returns full crs list for the density matrix.
 
     :param densityMatrix:
     :param float cutoff:

@@ -43,9 +43,6 @@ import numpy
 from . import densityAnalysis
 from . import __version__
 
-defaultParamsFilepath = os.path.join(os.path.dirname(__file__), 'conf/optimized_params.json')
-
-
 def main():
     args = docopt.docopt(__doc__, version=__version__)
     if args["--help"]:
@@ -58,7 +55,7 @@ def main():
         args["--num-sd"] = 3.0 if args["--green"] or args["--red"] or args["difference"] else 1.5
     args["--num-sd"] = float(args["--num-sd"])
 
-    paramsFilepath = args["--params"] if args["--params"] else defaultParamsFilepath
+    paramsFilepath = args["--params"] if args["--params"] else densityAnalysis.paramsPath
     try:
         with open(paramsFilepath, 'r') as paramsFile:
             params = json.load(paramsFile)

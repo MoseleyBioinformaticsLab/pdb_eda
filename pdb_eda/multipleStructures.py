@@ -172,8 +172,7 @@ def main():
 
 
 def singleModeFunction(pdbid):
-    """
-    Execute pdb_eda single mode on a given pdbid.
+    """Execute pdb_eda single mode on a given pdbid.
 
     :param str pdbid:
     :return: 0
@@ -198,8 +197,7 @@ def singleModeFunction(pdbid):
 
 
 def contactsModeFunction(pdbid):
-    """
-    Execute pdb_eda contacts mode on a given pdbid.
+    """Execute pdb_eda contacts mode on a given pdbid.
 
     :param str pdbid:
     :return: 0
@@ -224,8 +222,7 @@ def contactsModeFunction(pdbid):
 
 
 def multipleModeFunction(pdbid):
-    """
-    Analyze a single pdbid.
+    """Analyze a single pdbid.
 
     :param str pdbid:
     :return: resultFilename or 0
@@ -255,14 +252,13 @@ def analyzePDBID(pdbid):
         return 0
 
     analyzer.aggregateCloud(globalParams, atomL=True, residueL=True, chainL=True)
-    analyzer.estimateF000()
     if not analyzer.densityElectronRatio:
         return 0
 
     diffs = { atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio)
               if atomType in analyzer.medians['corrected_density_electron_ratio'] else 0 for atomType in sorted(globalParams["radii"]) }
 
-    stats = { 'density_electron_ratio' : analyzer.densityElectronRatio, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.f000, 'chain_num_voxel' : analyzer.chainNvoxel,
+    stats = { 'density_electron_ratio' : analyzer.densityElectronRatio, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.F000, 'chain_num_voxel' : analyzer.chainNvoxel,
         'chain_total_electrons' : analyzer.chainTotalE, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
         'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomList),
         'num_residues_analyzed' : len(analyzer.residueList), 'num_chains_analyzed' : len(analyzer.chainList)  }
@@ -293,9 +289,7 @@ def createTempJSONFile(data, filenamePrefix):
 
 
 class timeout:
-    """
-    Implements a timeout context manager to work with a with statement.
-    """
+    """Implements a timeout context manager to work with a with statement."""
     def __init__(self, seconds=1, error_message='Timeout'):
         self.seconds = seconds
         self.error_message = error_message

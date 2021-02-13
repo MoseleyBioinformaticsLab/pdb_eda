@@ -10,8 +10,7 @@ import numpy as np
 
 
 def readPDBfile(file):
-    """
-    Creates :class:`pdb_eda.pdbParser.PDBentry` object from file name.
+    """Creates :class:`pdb_eda.pdbParser.PDBentry` object from file name.
 
     :param str file: The name of a PDB formated file or a file handle.
     """
@@ -22,8 +21,7 @@ def readPDBfile(file):
         return parse(file)
 
 def parse(handle, mode='lite'):
-    """
-    Creates :class:`pdb_eda.pdbParser.PDBentry` object from file handle object.
+    """Creates :class:`pdb_eda.pdbParser.PDBentry` object from file handle object.
 
     :param handle: The file handle of a PDB formated file.
     :param str mode: Whether of not to parse all the atoms, default as 'lite' (not parse).

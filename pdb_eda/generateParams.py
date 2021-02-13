@@ -3,7 +3,7 @@ generateParams.py
 
 Usage:
     pdb_eda optimize -h | --help
-    pdb_eda generate atom-type <out-jsonfile> [--residues=<comma-separated-residues>] [--allow-errors] [--default-slope=<default-slope>]
+    pdb_eda generate atom-type <out-jsonfile> [--residues=<comma-separated-residues>] [--allow-errors] [--default-slope=<default-slope>] [--F000]
     pdb_eda generate prevalence <pdbid-file> <out-jsonfile> [--testing]
     pdb_eda generate parameters <in-atom-types> <in-prevalence-file> <out-params-file> <out-pdbid-file> [--params=<params-file>] [--min-atom-types=<min-atom-types>] [--min-atoms=<min-atoms>] [--max-atoms=<max-atoms>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>]
 
@@ -12,10 +12,11 @@ Options:
     --residues=<comma-separated-residues>   Limit residues and atom-types to the given comma-separated residues. [default: ]
     --allow-errors                          Allow residues with errors.
     --default-slope=<default-slope>         Default b-factor correction slope to start with. [default: -0.5]
+    --F000                                  Generate parameters for F000 calculations.
     prevalence                              Generate prevalence report of residues and atoms across a set of pdbids.
     --testing                               Run only a single process for testing purposes.
     parameters                              Generate parameters file.
-    --params=<params-file>                  Overriding parameters file that includes radii, slopes, etc. [default: ]
+    --params=<params-file>                  Overriding parameters file that includes radii, slopes, etc. Useful for including currently optimized atom types. [default: ]
     --min-atom-types=<min-atom-types>       Minimum number of a given atom-type required. [default: 5]
     --min-atoms=<min-atoms>                 Minimum number of parameter atoms required. [default: 500]
     --max-atoms=<max-atoms>                 Maximum number of (all) parameter atoms allowed. Useful to selecting entries that are reasonably fast to analyze [default: 5000]
@@ -95,7 +96,13 @@ def main():
         componentsInfo["errors"] = set(componentsInfo["errors"])
         allowedResidueTypes = set(args["--residues"].split(",")) if args["--residues"] else set()
         args["--default-slope"] = float(args["--default-slope"])
-        initialParams = { "residue_name_map_electrons" : {}, "full_atom_name_map_atom_type" : {}, "full_atom_name_map_electrons" : {}, "element_map_electrons" : elementElectrons, "leaving_atoms" : [], "radii" : {}, "slopes" : {} }
+
+        if args["--F000"]:
+            initialParams = {"full_atom_name_map_electrons": {}, "element_map_electrons": elementElectrons }
+        else:
+            initialParams = { "full_atom_name_map_atom_type" : {}, "full_atom_name_map_electrons" : {}, "leaving_atoms" : [], "radii" : {}, "slopes" : {} }
+
+        fullAtomName2AtomType = {}
 
         for residue in componentsInfo["residues"].values():
             residue["estimated_electrons"] = 0
@@ -143,22 +150,23 @@ def main():
                     residue["estimated_electrons"] += atom["estimated_electrons"] if atom["leaving"] != "Y" else 0
                 residue["estimated_electrons"] = float(np.round(residue["estimated_electrons"]))
 
-                initialParams["residue_name_map_electrons"][residue["name"]] = residue["estimated_electrons"]
                 if not allowedResidueTypes or residue["name"] in allowedResidueTypes: # only add certain residues
                     for atom in residue["atoms"].values():
                         if atom["element"] != "H":
                             fullAtomName = residue["name"] + "_" + atom["name"]
-                            initialParams["full_atom_name_map_atom_type"][fullAtomName] = atom["full_element_color"]
-                            initialParams["radii"][atom["full_element_color"]] = elementAtomicRadii[atom["element"]]
-                            initialParams["slopes"][atom["full_element_color"]] = args["--default-slope"]
                             initialParams["full_atom_name_map_electrons"][fullAtomName] = atom["estimated_electrons"]
-                            if atom["leaving"] == "Y":
-                                initialParams["leaving_atoms"].append(fullAtomName)
+                            fullAtomName2AtomType[fullAtomName] = atom["full_element_color"]
+                            if not args["--F000"]:
+                                initialParams["full_atom_name_map_atom_type"][fullAtomName] = atom["full_element_color"]
+                                initialParams["radii"][atom["full_element_color"]] = elementAtomicRadii[atom["element"]]
+                                initialParams["slopes"][atom["full_element_color"]] = args["--default-slope"]
+                                if atom["leaving"] == "Y":
+                                    initialParams["leaving_atoms"].append(fullAtomName)
 
         # Print report
-        print("Unique Residue Types:",len(set(name.split("_")[0] for name in initialParams["full_atom_name_map_atom_type"].keys())))
-        print("Unique Full Atom Names:",len(set(initialParams["full_atom_name_map_atom_type"].keys())))
-        print("Unique Atom Types:",len(set(initialParams["full_atom_name_map_atom_type"].values())))
+        print("Unique Residue Types:",len(set(name.split("_")[0] for name in fullAtomName2AtomType.keys())))
+        print("Unique Full Atom Names:",len(set(fullAtomName2AtomType.keys())))
+        print("Unique Atom Types:",len(set(fullAtomName2AtomType.values())))
         # testElectrons = collections.defaultdict(set)
         # for name,value in initialParams["full_atom_name_map_atom_type"].items():
         #     testElectrons[value].add(initialParams["full_atom_name_map_electrons"][name])
@@ -274,12 +282,18 @@ def main():
             leavingAtoms = set(initialParams["leaving_atoms"])
             leavingAtoms.update(overrideParams["leaving_atoms"])
             initialParams["leaving_atoms"] = list(leavingAtoms)
+            initialParams["optimize"] = [atomType for atomType in initialParams["radii"].keys() if atomType not in overrideParams["radii"]]
 
         with open(args["<out-params-file>"], 'w') if args["<out-params-file>"] != "-" else sys.stdout as outFile:
             print(json.dumps(initialParams, indent=2, sort_keys=True), file=outFile)
 
 
 def processComponents():
+    """Retrieves and extracts residues, atoms, and bonds from the wwPDB chemical components Cif file.
+
+    :return: component information
+    :rtype: dict
+    """
     if not os.path.isfile(componentsFilename):
         urllib.request.urlretrieve("ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif", componentsFilename)
 
@@ -314,10 +328,17 @@ def processComponents():
 
 
 def bondTyping(bondType,aromatic):
+    """Returns type of bond based on given bondType and whether it was marked aromatic.
+
+    :param str bondType:
+    :param str aromatic:
+    :return: bondType
+    :rtype: str
+    """
     return bondType if aromatic == "N" else "AROM"
 
 def processFunction(pdbid):
-    """Process function to analyze a single pdb entry.
+    """Process function for multiprocessing to analyze a single pdb entry.
 
     :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
     :return: resultFilename
