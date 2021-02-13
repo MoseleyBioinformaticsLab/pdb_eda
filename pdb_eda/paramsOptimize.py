@@ -22,6 +22,7 @@ Options:
     --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0.02]
     --testing                           Run only a single process for testing purposes.
 
+
 This mode is often run multiple times using the output parameter file generated in one cycle as the starting parameter file in the next cycle.
 Typically, it is good to start with the following series of cycles.
 1) --sample=50 --max=0.5 --min=0.01 --stop=0.1 (kill it if it appears to thrash without stopping in a couple hours).
@@ -85,13 +86,13 @@ def main():
         print("PDB IDs:",",".join(pdbids), file=logFile)
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()))
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()), file=logFile)
-        (bestMedianDiffs, meanDiffs, stdDevDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"])
+        (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
         print("Max Absolute Median Diff: ", max(map(abs, bestMedianDiffs.values())),
               "Max Abs Diff Mean-Median: ", max([ abs(mean-median) for (mean,median) in zip(bestMedianDiffs.values(), meanDiffs.values())]),
-              "Max Diff StdDev: ", max(stdDevDiffs.values()))
+              "Overall Diff StdDev: ", overallStdDevDiffs)
         print("Max Absolute Median Diff: ", max(map(abs, bestMedianDiffs.values())),
               "Max Abs Diff Mean-Median: ", max([ abs(mean-median) for (mean,median) in zip(bestMedianDiffs.values(), meanDiffs.values())]),
-              "Max Diff StdDev: ", max(stdDevDiffs.values()), file=logFile)
+              "Overall Diff StdDev: ", overallStdDevDiffs, file=logFile)
 
         currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y])) if not args["--start"]  else args["--start"]
         previousRadius = currentRadii[currentAtomType]
@@ -107,15 +108,15 @@ def main():
             print("Testing", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", start-time=", str(datetime.datetime.now()))
             print("Testing", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", start-time=", str(datetime.datetime.now()), file=logFile)
 
-            (medianDiffs, meanDiffs, stdDevDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"])
+            (medianDiffs, meanDiffs, overallStdDevDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"], args["<pdbid-file>"]+".execution_times")
             print("Radii: ", currentRadii, file=logFile)
             print("Median Diffs: ", medianDiffs, file=logFile)
             print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())),
                   "Max Abs Diff Mean-Median: ", max([abs(mean - median) for (mean, median) in zip(medianDiffs.values(), meanDiffs.values())]),
-                  "Max Diff StdDev: ", max(stdDevDiffs.values()))
+                  "Overall Diff StdDev: ", overallStdDevDiffs)
             print("Max Absolute Median Diff: ", max(map(abs, medianDiffs.values())),
                   "Max Abs Diff Mean-Median: ", max([abs(mean - median) for (mean, median) in zip(medianDiffs.values(), meanDiffs.values())]),
-                  "Max Diff StdDev: ", max(stdDevDiffs.values()), file=logFile)
+                  "Overall Diff StdDev: ", overallStdDevDiffs, file=logFile)
             print("Slopes: ", slopes, file=logFile)
 
             improved = False
@@ -164,7 +165,7 @@ def main():
     except:
         sys.exit(str("Error: unable to create params file \"") + args["<out-params-file>"] + "\".")
 
-def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False):
+def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTimesFilename=None):
     """Calculates the median diffs and slopes across a list of pdb entries.
 
     :param :py:class:`list` pdbids: list of pdbids to process.
@@ -199,14 +200,20 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False):
 
     os.remove(currParamsFilename)
 
-    pdbids.sort(key=lambda x : executionTimes[x] if x in executionTimes else 0, reverse=True) # put longest running jobs at the beginning.
+    # put longest running jobs at the beginning to improve the running time of each iteration.
+    pdbids.sort(key=lambda x : executionTimes[x] if x in executionTimes else 0, reverse=True)
+
+    # print execution times
+    if executionTimesFilename:
+        with open(executionTimesFilename, "w") as txtFile:
+            print("\n".join(pdbid + "  - " + str(executionTimes[pdbid]) for pdbid in pdbids if pdbid in executionTimes), file=txtFile)
 
     medianDiffs = {key: np.nanmedian(value) for (key, value) in diffs.items()}
     meanDiffs = {key: np.mean(value) for (key, value) in diffs.items()}
-    stdDevDiffs = {key: np.std(value) for (key, value) in diffs.items()}
+    overallStdDevDiffs = np.std([item for values in diffs.values() for item in values])
     medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
 
-    return (medianDiffs, meanDiffs, stdDevDiffs, medianSlopes)
+    return (medianDiffs, meanDiffs, overallStdDevDiffs, medianSlopes)
 
 def processFunction(pdbid, paramsFilepath):
     """Process function to analyze a single pdb entry.
