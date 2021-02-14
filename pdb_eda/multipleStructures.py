@@ -6,6 +6,7 @@ Usage:
     pdb_eda multiple -h | --help
     pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>] [--global]
     pdb_eda multiple <in-result-file> <out-pdbid-file> --filter [--out-format=<format>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>] [--min-atoms=<min-atoms>] [--min-residues=<min-residues>] [--min-elements=<min-elements>]
+    pdb_eda multiple <pdbid-file> --reload
     pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing]
     pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing]
 
@@ -28,13 +29,14 @@ Options:
     --min-atoms=<min-atoms>                         Minimum number of atoms analyzed (numAtomsAnalyzed) required. [default: 300]
     --min-residues=<min-residues>                   Minimum number of residues required of the given residue types separated by commas. [default: 0]
     --min-elements=<min-elements>                   Minimum number of atoms required of the given elements separated by commas. [default: 0]
+    --reload                                        Test that each pdbid loads and try to download again any pdbid that fail.
 
 List of all wwPDB entry IDs along with entry type.
 ftp://ftp.wwpdb.org/pub/pdb/derived_data/pdb_entry_type.txt
 """
 
-import docopt
 import os
+import gc
 import time
 import sys
 
@@ -44,6 +46,7 @@ import multiprocessing
 import tempfile
 import signal
 import collections
+import docopt
 
 from . import densityAnalysis
 from . import __version__
@@ -113,6 +116,23 @@ def main():
         else:
             with open(globalArgs['<out-pdbid-file>'], "w") if globalArgs["<out-pdbid-file>"] != "-" else sys.stdout as txtFile:
                 print("\n".join(pdbids), file=txtFile)
+    elif globalArgs["--reload"]:
+        try:
+            pdbids = []
+            with open(globalArgs["<pdbid-file>"], "r") if globalArgs["<pdbid-file>"] != "-" else sys.stdin as textFile:
+                for pdbid in textFile:
+                    pdbids.append(pdbid[0:4])
+        except:
+            sys.exit(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
+
+        badPDBids = [pdbid for pdbid in pdbids if not testPDBIDLoad(pdbid)]
+        for pdbid in badPDBids:
+            densityAnalysis.cleanPDBid(pdbid)
+        badPDBids = [pdbid for pdbid in badPDBids if not testPDBIDLoad(pdbid)]
+        for pdbid in badPDBids:
+            densityAnalysis.cleanPDBid(pdbid)
+        if badPDBids:
+            print("Bad PDBids:",",".join(badPDBids))
     else:
         try:
             pdbids = []
@@ -143,7 +163,7 @@ def main():
             results = [ processFunction(pdbid) for pdbid in pdbids ]
         else:
             with multiprocessing.Pool() as pool:
-                results = pool.map(processFunction, pdbids)
+                results = pool.map(processFunction, pdbids, chunksize=1)
 
         if not globalArgs["--single-mode"] and not globalArgs["--contacts-mode"]: # skip generating results if running in another mode or submode.
             fullResults = {}
@@ -193,6 +213,7 @@ def singleModeFunction(pdbid):
         except:
             pass
 
+    gc.collect()
     return 0
 
 
@@ -218,6 +239,7 @@ def contactsModeFunction(pdbid):
         except:
             pass
 
+    gc.collect()
     return 0
 
 
@@ -235,6 +257,16 @@ def multipleModeFunction(pdbid):
             return 0
     else:
         return analyzePDBID(pdbid)
+
+def testPDBIDLoad(pdbid):
+    """Returns whether the pdbid downloads and loads correctly.
+
+    :param str pdbid:
+    :return: bool
+    :rtype: bool
+    """
+    analyzer = densityAnalysis.fromPDBid(pdbid)
+    return False if not analyzer else True
 
 
 def analyzePDBID(pdbid):
@@ -269,6 +301,8 @@ def analyzePDBID(pdbid):
 
     elapsedTime = time.process_time() - startTime
     resultFilename = createTempJSONFile({ "pdbid" : analyzer.pdbid, "diffs" : diffs, "stats" : stats, "execution_time" : elapsedTime, "properties" : properties }, "tempResults_")
+    analyzer = 0
+    gc.collect()
     return resultFilename
 
 

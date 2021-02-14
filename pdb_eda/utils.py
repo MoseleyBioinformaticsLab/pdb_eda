@@ -1,7 +1,9 @@
 """
-Utilities pdb_eda.utils
-   Show not be used, but is a fallback if cutils.pyx cannot be cythonized.
+Utilities (pdb_eda.utils)
+-------------------------
 
+Contains low-level functions used in pdb_eda.ccp4 and pdb_eda.densityAnalysis.
+Show not be used, but is a fallback if cutils.pyx cannot be cythonized.
 """
 def testOverlap(selfBlob, otherBlob):
     """Check if two blobs overlaps or right next to each other.

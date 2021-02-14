@@ -21,8 +21,8 @@ sys.path.insert(0, os.path.abspath('../'))
 # -- Project information -----------------------------------------------------
 
 project = 'pdb_eda'
-copyright = '2019, Sen Yao'
-author = 'Sen Yao'
+copyright = '2021, Sen Yao, Hunter N.B. Moseley'
+author = 'Sen Yao, Hunter N.B. Moseley'
 
 # The short X.Y version
 version = ''

@@ -30,3 +30,11 @@ PDB Parser
    :private-members:
    :exclude-members: __weakref__
 
+Utilities
+----------
+.. automodule:: pdb_eda.utils
+   :member-order: bysource
+   :members:
+   :special-members:
+   :private-members:
+   :exclude-members: __weakref__

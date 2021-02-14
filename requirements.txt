@@ -1,6 +1,7 @@
-biopython >= 1.73
+biopython >= 1.77
 docopt >= 0.6.2
-jsonpickle >= 1.1
+jsonpickle >= 1.4.1
 numpy >= 1.16.2
-pandas >= 0.24.1
 scipy >= 1.2.1
+PyCifRW >= 4.4.2
+cython >= 0.29.21

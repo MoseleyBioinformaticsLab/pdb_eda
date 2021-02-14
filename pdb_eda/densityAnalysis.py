@@ -3,7 +3,7 @@ PDB Electron Density Analysis (pdb_eda.densityAnalysis)
 -------------------------------------------------------
 
 This module provides methods for the creation of the :class:`pdb_eda.densityAnalysis` class given a PDB id,
-along with methods to analyze its electron density.
+along with methods to analyze its 2Fo-Fc and Fo-Fc electron density maps.
 """
 
 import copy
@@ -44,6 +44,10 @@ fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
 atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomTypeGlobal.values()) + 5
 
 def setGlobals(params):
+    """Sets global parameters.  Typically used for optimizing parameters.
+
+    :param dict params:
+    """
     global paramsGlobal
     global radiiGlobal
     global slopesGlobal
@@ -57,7 +61,6 @@ def setGlobals(params):
     fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
     fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
     atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomTypeGlobal.values()) + 5
-
 
 def loadF000Parameters():
     """Loads and assigns global parameters needed for F000 estimation."""
@@ -161,6 +164,33 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
 
     return DensityAnalysis(pdbid, densityObj, diffDensityObj, biopdbObj, pdbObj)
 
+def cleanPDBid(pdbid):
+    """Removes PDB entry, ccp4, and mmcif files associated with a PDB id.
+
+    :param str pdbid:
+    :return: bool whether the operation was successful.
+    :rtype: bool
+    """
+    pdbid = pdbid.lower()
+    try:
+        ccp4file = ccp4folder + pdbid + '.ccp4'
+        if os.path.isfile(ccp4file):
+            os.remove(ccp4file)
+
+        ccp4diffFile = ccp4folder + pdbid + '_diff.ccp4'
+        if os.path.isfile(ccp4diffFile):
+            os.remove(ccp4diffFile)
+
+        pdbfile = pdbfolder + 'pdb' + pdbid + '.ent.gz'
+        if os.path.isfile(pdbfile):
+            os.remove(pdbfile)
+
+        mmcifFile = pdbfolder + pdbid + '.cif.gz'
+        if os.path.isfile(mmcifFile):
+            os.remove(mmcifFile)
+    except:
+        return False
+    return True
 
 def testCCP4URL(pdbid):
     """Test whether the pdbid has electron density maps by querying if the PDBe API has electron density statistics.
@@ -171,9 +201,9 @@ def testCCP4URL(pdbid):
     try:
         url = "https://www.ebi.ac.uk/pdbe/api/pdb/entry/electron_density_statistics/" + pdbid
         request = urllib.request.urlopen(url)
-        return True
     except urllib.request.HTTPError:
         return False
+    return True
 
 
 class DensityAnalysis(object):

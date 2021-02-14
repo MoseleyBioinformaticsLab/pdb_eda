@@ -33,6 +33,7 @@ Typically, it is good to start with the following series of cycles.
 If you need to kill the run, don't worry, there is a temp output parameter file with the last improvement.
 """
 import os
+import gc
 import sys
 import time
 import json
@@ -125,8 +126,8 @@ def main():
                 currentSlopes = slopes
                 improved = True
 
-                print(currentAtomType, "New Radius Accepted: ", currentRadii[currentAtomType])
-                print(currentAtomType, "New Radius Accepted: ", currentRadii[currentAtomType], file=logFile)
+                print("       ", currentAtomType, "New Radius Accepted: ", currentRadii[currentAtomType])
+                print("       ", currentAtomType, "New Radius Accepted: ", currentRadii[currentAtomType], file=logFile)
 
                 try:
                     with open(args["<out-params-file>"] + ".temp", 'w') as jsonFile:
@@ -134,8 +135,8 @@ def main():
                 except:
                     sys.exit(str("Error: unable to create temporary params file \"") + args["<out-params-file>"] + ".temp" + "\".")
             else:
-                print(currentAtomType, "New Radius Rejected: ", currentRadii[currentAtomType])
-                print(currentAtomType, "New Radius Rejected: ", currentRadii[currentAtomType], file=logFile)
+                print("       ", currentAtomType, "New Radius Rejected: ", currentRadii[currentAtomType])
+                print("       ", currentAtomType, "New Radius Rejected: ", currentRadii[currentAtomType], file=logFile)
                 currentRadii[currentAtomType] = previousRadius
 
             testBestMedianDiffs = { atomType:diff for (atomType,diff) in bestMedianDiffs.items() if atomType in atomsTypes2Optimize } if atomsTypes2Optimize else bestMedianDiffs
@@ -179,7 +180,7 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
         results = [processFunction(pdbid) for pdbid in pdbids]
     else:
         with multiprocessing.Pool() as pool:
-            results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids))
+            results = pool.starmap(processFunction, ((pdbid, currParamsFilename) for pdbid in pdbids), chunksize=1)
 
     diffs = {atomType: [] for atomType in currentParams["radii"]}
     slopes = {atomType: [] for atomType in currentParams["slopes"]}
@@ -206,7 +207,7 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
     # print execution times
     if executionTimesFilename:
         with open(executionTimesFilename, "w") as txtFile:
-            print("\n".join(pdbid + "  - " + str(executionTimes[pdbid]) for pdbid in pdbids if pdbid in executionTimes), file=txtFile)
+            print("\n".join(pdbid + "  - " + str(executionTimes[pdbid] if pdbid in executionTimes else 0) for pdbid in pdbids), file=txtFile)
 
     medianDiffs = {key: np.nanmedian(value) for (key, value) in diffs.items()}
     meanDiffs = {key: np.mean(value) for (key, value) in diffs.items()}
@@ -245,6 +246,8 @@ def processFunction(pdbid, paramsFilepath):
 
     elapsedTime = time.process_time() - startTime
     resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime }, "tempResults_")
+    analyzer=0
+    gc.collect()
     return resultFilename
 
 def createTempJSONFile(data, filenamePrefix):
