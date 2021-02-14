@@ -14,10 +14,22 @@ available from the world wide Protein Data Bank (PDB_).
 The `pdb_eda` package currently provides facilities that can:
     * Parse .ccp4 format file into their object representation.
     * Parse .pdb format file to get information that complimentary to the Bio.PDB module in BioPython_ package.
-    * Analyze the electron density maps on atom/residue/chain level and
-      interpret the electron densities in terms of number of electrons.
+    * Analyze the electron density maps on atom/residue/chain levels and
+      interpret the electron densities in terms of number of electrons by estimating a density-electron ratio.
 
 Full API documentation, user guide, and tutorial can be found on readthedocs_
+
+Citation
+--------
+Please cite the following papers when using pdb_eda:
+
+Sen Yao and Hunter N.B. Moseley. "A chemical interpretation of protein electron density maps in the worldwide protein data
+bank" *PLOS One* 15, e0236894 (2020).
+https://doi.org/10.1371/journal.pone.0236894
+
+Sen Yao and Hunter N.B. Moseley. "Finding high-quality metal ion-centric regions across the worldwide Protein Data Bank"
+*Molecules* 24, 3179 (2019).
+https://doi.org/10.3390/molecules24173179
 
 Installation
 ------------
@@ -46,53 +58,122 @@ Dependencies
 `pdb_eda` requires the following Python libraries:
 
    * Biopython_ for creating and analyzing the `pdb_eda` atom objects.
-   * pandas_ for calculating aggregated results.
+   * Cython_ for cythonizing low-level utility functions to improve computational performance.
    * numpy_ and scipy_ for mathmatical calculations.
    * docopt_ for better command line interface.
    * jsonpickle_ for formatted and reusable output.
+   * PyCifRW_ for reading Cif formatted files.
+   * pymol_ for calculating crystal contacts. (This package is not required, except for this functionality).
+
 
 To install dependencies manually:
 
 .. code:: bash
 
    pip3 install biopython
-   pip3 install pandas
+   pip3 install cython
    pip3 install numpy
    pip3 install scipy
    pip3 install docopt
    pip3 install jsonpickle
+   pip3 install PyCifRW
 
 
 Basic usage
 -----------
-The `pdb_eda` package can be used in several ways:
+The :mod:`pdb_eda` package can be used in several ways:
 
-   * As a library for accessing and manipulating data in PDB or CCP4 format files.
+    * As a library for accessing and manipulating data in PDB and CCP4 format files.
 
-      * Create the `pdb_eda.densityAnalysis.fromPDBid` generator function that will generate
-        (yield) single `pdb_eda.densityAnalysis` instance at a time.
+        * Use the :class:`~pdb_eda.densityAnalysis.fromPDBid` generator function that will generate
+          (yield) a single :class:`~pdb_eda.densityAnalysis` instance at a time.
 
-      * Process each `pdb_eda.densityAnalysis` instance:
+        * Process each :class:`~pdb_eda.densityAnalysis` instance:
 
-         * Generate symmetry atoms.
-         * Generate red (negative density) or green (positive density) blob lists.
-         * Process PDB structures to aggregate cloud.
-         * Calculate atom blob list and statistics.
+        * Generate symmetry atoms.
+        * Generate red (negative density) or green (positive density) blob lists.
+        * Process PDB structures to aggregate cloud.
+        * Calculate atom blob list and statistics.
+        * Calculate atom regional discrepancies and statistics.
+        * Calculate residue regional discrepancies and statistics.
 
-   * As a command-line tool:
+    * As a command-line tool:
 
-      * Calculate statistics of a single PDB structure.
-      * Calculate aggregated statistics of multiple PDB structures.
+        * For single-structure mode:
+            * Convert electron density map CCP4 files into its equivalent JSON file format.
+            * Aggregate electron density map by atom, residue, and chain, and return the results in
+              either JSON or csv format.
+            * Aggregate difference electron density map into green (positive) or red (negative) blobs,
+              and return the object or statistics results in either JSON or csv format.
+            * Aggregate difference electron density map for atom and residue specific regions and return
+              results in either JSON or csv format.
+            * Return traditional quality metrics and statistics for atoms and residues.
 
+        * For multiple-structure mode:
+            * Analyze and return cumulative statistics for a given list of PDB IDs.
+            * Filter list of PDB IDs by cumulative statistic criteria.
+            * Check and redownload problematic PDB entries.
+            * Run single structure mode with multicore processing.
+            * Run crystal contacts mode with multicore processing.
 
+        * For crystal contacts mode:
+            * Analyze and return atoms with crystal contacts.
+            * This mode requires pymol to be installed.
 
+        * For parameter generation mode: (rarely used mode)
+            * Downloads PDB chemical component list and extracts information to create atom type parameters.
+            * Analyzes list of PDB IDs for specific atom types.
+            * Generates atom type parameter file and list of PDB IDs for their optimization.
+
+        * For parameter optimization mode: (rarely used mode)
+            * Optimizes atom type radii and b-factor density correction slopes using a given list of PDB IDs.
+
+License
+-------
+A modified Clear BSD License
+
+Copyright (c) 2019, Sen Yao, Hunter N.B. Moseley
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the disclaimer
+below) provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the copyright holder nor the names of its contributors may be used
+  to endorse or promote products derived from this software without specific
+  prior written permission.
+
+* If the source code is used in a published work, then proper citation of the source
+  code must be included with the published work.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
+LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.
 
 .. _readthedocs: https://pdb-eda.readthedocs.io/en/latest/
 .. _PDB: https://www.wwpdb.org/
 .. _BioPython: https://biopython.org/
+.. _Cython: https://cython.readthedocs.io/en/latest/index.html
 .. _git: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git/
-.. _pandas: http://pandas.pydata.org/
 .. _numpy: http://www.numpy.org/
 .. _scipy: https://scipy.org/scipylib/index.html
 .. _docopt: http://docopt.org/
 .. _jsonpickle: https://github.com/jsonpickle/jsonpickle
+.. _PyCifRW: https://pypi.org/project/PyCifRW/4.3/
+.. _pymol: https://pymol.org/2/

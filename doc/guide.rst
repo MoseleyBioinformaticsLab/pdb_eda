@@ -9,9 +9,18 @@ available from the world wide Protein Data Bank (PDB_).
 The :mod:`pdb_eda` package currently provides facilities that can:
     * Parse .ccp4 format file into their object representation.
     * Parse .pdb format file to get information that is complimentary to the Bio.PDB module in BioPython_ package.
-    * Analyze the electron density maps at the atom/residue/chain level and
-      interpret the electron densities in terms of number of electrons.
+    * Analyze the electron density maps at the atom/residue/chain levels and
+      interpret the electron densities in terms of number of electrons by estimating a density-electron ratio.
 
+Citation
+--------
+Please cite the following papers when using pdb_eda:
+
+Sen Yao and Hunter N.B. Moseley. "A chemical interpretation of protein electron density maps in the worldwide protein data bank" PLOS One 15, e0236894 (2020).
+https://doi.org/10.1371/journal.pone.0236894
+
+Sen Yao and Hunter N.B. Moseley. "Finding high-quality metal ion-centric regions across the worldwide Protein Data Bank" Molecules 24, 3179 (2019).
+https://doi.org/10.3390/molecules24173179
 
 Installation
 ------------
@@ -39,8 +48,13 @@ Dependencies
 
 :mod:`pdb_eda` requires the following Python libraries:
 
-   * Biopython_ for creating and analyzing the :mod:`pdb_eda` atom objects.
+   * Biopython_ for creating and analyzing the `pdb_eda` atom objects.
+   * Cython_ for cythonizing low-level utility functions to improve computational performance.
    * numpy_ and scipy_ for mathmatical calculations.
+   * docopt_ for better command line interface.
+   * jsonpickle_ for formatted and reusable output.
+   * PyCifRW_ for reading Cif formatted files.
+   * pymol_ for calculating crystal contacts. (This package is not required, except for this functionality).
 
 To install dependencies manually:
 
@@ -104,8 +118,52 @@ The :mod:`pdb_eda` package can be used in several ways:
         * For parameter optimization mode: (rarely used mode)
             * Optimizes atom type radii and b-factor density correction slopes using a given list of PDB IDs.
 
+License
+-------
+A modified Clear BSD License
+
+Copyright (c) 2019, Sen Yao, Hunter N.B. Moseley
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the disclaimer
+below) provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+* Neither the name of the copyright holder nor the names of its contributors may be used
+  to endorse or promote products derived from this software without specific
+  prior written permission.
+
+* If the source code is used in a published work, then proper citation of the source
+  code must be included with the published work.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED BY THIS
+LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.
+
+.. _readthedocs: https://pdb-eda.readthedocs.io/en/latest/
 .. _PDB: https://www.wwpdb.org/
 .. _BioPython: https://biopython.org/
+.. _Cython: https://cython.readthedocs.io/en/latest/index.html
 .. _git: https://git-scm.com/book/en/v2/Getting-Started-Installing-Git/
 .. _numpy: http://www.numpy.org/
 .. _scipy: https://scipy.org/scipylib/index.html
+.. _docopt: http://docopt.org/
+.. _jsonpickle: https://github.com/jsonpickle/jsonpickle
+.. _PyCifRW: https://pypi.org/project/PyCifRW/4.3/
+.. _pymol: https://pymol.org/2/

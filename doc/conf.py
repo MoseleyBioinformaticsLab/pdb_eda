@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath('../'))
 # -- Project information -----------------------------------------------------
 
 project = 'pdb_eda'
-copyright = '2021, Sen Yao, Hunter N.B. Moseley'
+copyright = '2019, Sen Yao, Hunter N.B. Moseley'
 author = 'Sen Yao, Hunter N.B. Moseley'
 
 # The short X.Y version
@@ -145,7 +145,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'electronDensityAnalysis.tex', 'electronDensityAnalysis Documentation',
-     'Sen Yao', 'manual'),
+     'Sen Yao, Hunter N.B. Moseley', 'manual'),
 ]
 
 
