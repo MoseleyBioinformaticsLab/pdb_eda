@@ -2,7 +2,8 @@ include README.rst LICENSE
 include requirements.txt
 include docs/Makefile
 recursive-include docs *.rst *.txt *.py *.png
-recursive-include pdb_eda *.py
+recursive-include pdb_eda *.py *.pyx
 exclude pdb_eda/test*.py
+exclude pdb_eda/pdb_eda/cutils_setup.py
 include pdb_data/pdb1cbs.ent.gz
 include ccp4_data/1cbs.ccp4 ccp4_data/1cbs_diff.ccp4
