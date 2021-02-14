@@ -360,7 +360,7 @@ class DensityAnalysis(object):
             crsList = set()
             bfactorWeightedSum = occupancySum = 0.0
             for atom in residue.child_list:
-                crsList.update(self.fo.getSphereCrsFromXyz(atom.coord, radius, 0.0))
+                crsList.update(utils.getSphereCrsFromXyz(self.fo, atom.coord, radius, 0.0))
                 bfactorWeightedSum += atom.get_bfactor() * atom.get_occupancy()
                 occupancySum += atom.get_occupancy()
 
@@ -389,7 +389,7 @@ class DensityAnalysis(object):
 
         atomResults = []
         for atom in atomList:
-            crsList = set(self.fo.getSphereCrsFromXyz(atom.coord, radius, 0.0))
+            crsList = set(utils.getSphereCrsFromXyz(self.fo, atom.coord, radius, 0.0))
             (rscc, rsr) = self.calculateRsccRsrMetrics(crsList)
             atomResults.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, rscc, rsr, atom.get_occupancy(), atom.get_bfactor()])
 
@@ -401,7 +401,8 @@ class DensityAnalysis(object):
         This method of calculating RSCC and RSR assumes that the Fo and Fc maps are appropriately scaled.
         Comparison of median absolute values below one sigma should be quite similar between Fo and Fc maps.
 
-        :param list crsList:
+        :param crsList:
+        :type: list or set
         :return: rscc_rsr_tuple
         :rtype: :py:obj:`tuple`
         """
@@ -678,6 +679,7 @@ class DensityAnalysis(object):
     regionDiscrepancyHeader = [ "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
                  "expected_abs_significant_regional_discrepancy", "num_electrons_expected_abs_significant_regional_discrepancy" ]
     atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDiscrepancyHeader
+    symmetryAtomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "atom_xyz", "fully_within_density_map"] + regionDiscrepancyHeader
     residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDiscrepancyHeader
 
     def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
@@ -700,6 +702,28 @@ class DensityAnalysis(object):
         for atom in atoms:
             result = self.calculateRegionDiscrepancy([atom.coord], radius, numSD, params)
             results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
+
+        return results
+
+    def calculateSymmetryAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
+        """Calculates significant region discrepancies in a given radius of each atom.
+
+        :param float radius: the search radius.
+        :param float numSD: number of standard deviations of significance.
+        :param str type: residue type to filter on.
+        :param params: overriding parameters needed for calculations.
+        :type params: dict or :py:obj:`None`
+        :return diffMapRegionStats: Difference density map region header and statistics.
+        :rtype: :py:obj:`list`
+        """
+        atoms = self.symmetryAtoms
+        if type:
+            atoms = [atom for atom in atoms if atom.name == type]
+
+        results = []
+        for atom in atoms:
+            (result,valid) = self.calculateRegionDiscrepancy([atom.coord], radius, numSD, params, testValidCrs=True)
+            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, valid] + result)
 
         return results
 
@@ -729,7 +753,7 @@ class DensityAnalysis(object):
 
         return results
 
-    def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, params=None):
+    def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, params=None, testValidCrs=False):
         """Calculate region-specific discrepancy from the difference density matrix.
 
         :param xyzCoordLists: xyz coordinates.
@@ -739,7 +763,7 @@ class DensityAnalysis(object):
         :param dict params: overriding parameters needed for calculations.
         :type params: dict or :py:obj:`None`
         :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`list`
+        :rtype: :py:obj:`list` or :py:obj:`tuple`
         """
         if not self.densityElectronRatio:
             self.aggregateCloud(params)
@@ -755,16 +779,20 @@ class DensityAnalysis(object):
         num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / densityElectronRatio
 
         # expected absolute significant regional discrepancy
-        total_abs_sig_discrep = utils.sumOfAbs(diffDensityObj.densityArray, diffDensityCutoff)
+        total_abs_sig_discrep = diffDensityObj.getTotalAbsDensity(diffDensityCutoff)
         total_voxel_count = len(diffDensityObj.densityArray)
         avg_abs_vox_discrep = total_abs_sig_discrep / total_voxel_count
-        crsCoordList = {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in diffDensityObj.getSphereCrsFromXyz(xyzCoord, radius)}
-        regional_voxel_count = len(crsCoordList)
+        regional_voxel_count = len(utils.getSphereCrsFromXyzList(diffDensityObj, xyzCoordList, radius))
         expected_abs_sig_regional_discrep = avg_abs_vox_discrep * regional_voxel_count
         num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / densityElectronRatio
 
-        return [ actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
+        result = [ actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
                  expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
+
+        if testValidCrs:
+            return (result, utils.testValidXyzList(diffDensityObj, xyzCoordList, radius))
+        else:
+            return result
 
 
     def estimateF000(self, densityObj=None, biopdbObj=None, pdbObj=None):

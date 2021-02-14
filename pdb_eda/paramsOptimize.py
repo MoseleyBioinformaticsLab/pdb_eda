@@ -29,7 +29,7 @@ Typically, it is good to start with the following series of cycles.
 2) --sample=100 --max=0.2 --min=0.005 --stop=0.05  (kill it if appears to thrash after a few hours).
 3) --sample=200 --max=0.05 --min=0.001 --stop=0.03  (kill it if appears to thrash after a few hours).
 4) --sample=400 --max=0.05 --min=0.001 --stop=0.02  (kill it if appears to thrash after a few hours).
-5) use 1000-2000 pdbids --max=0.02 --min=0.001 --stop=0.01  (kill after a day or two it if appears to thrash without stopping).
+5) (use 1000-2000 pdbids) --max=0.02 --min=0.001 --stop=0.015  (kill after a day or two it if appears to thrash without stopping).
 If you need to kill the run, don't worry, there is a temp output parameter file with the last improvement.
 """
 import os
@@ -155,6 +155,7 @@ def main():
             previousRadius = currentRadii[currentAtomType]
             currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
             previousDirection = bestMedianDiffs[currentAtomType] < 0
+            gc.collect() # force garbage collection to decrease memory use.
 
         print("Final Radii: ", currentRadii)
         print("Max Absolute Median Diff", max(map(abs, testBestMedianDiffs.values())))
@@ -246,8 +247,13 @@ def processFunction(pdbid, paramsFilepath):
 
     elapsedTime = time.process_time() - startTime
     resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime }, "tempResults_")
+
+    # force garbage collection to decrease memory use.
     analyzer=0
+    diffs=0
+    newSlopes=0
     gc.collect()
+
     return resultFilename
 
 def createTempJSONFile(data, filenamePrefix):

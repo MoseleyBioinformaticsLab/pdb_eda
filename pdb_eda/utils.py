@@ -9,9 +9,10 @@ The cythonized version provide a 3- to 4-fold improvement in execution performan
 def testOverlap(selfBlob, otherBlob):
     """Check if two blobs overlaps or right next to each other.
 
-    :param selfBlob: A :class:`pdb_eda.ccp4.DensityBlob` object.
-    :param otherBlob: A :class:`pdb_eda.ccp4.DensityBlob` object.
-    :return: :py:obj:`True` or :py:obj:`False`.
+    :param :class:`pdb_eda.ccp4.DensityBlob` selfBlob:
+    :param :class:`pdb_eda.ccp4.DensityBlob` otherBlob:
+    :return: bool
+    :rtype: bool
     """
     return True if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in selfBlob.crsList for y in otherBlob.crsList) else False
 
@@ -33,9 +34,9 @@ def createCrsLists(crsList):
     """Calculates a list of crsLists from a given crsList.
     This is a preparation step for creating blobs.
 
-    :param crsList: a crs list.
+    :param list crsList: a crs list.
     :return: crsLists is a list of crsList.
-    :rtype: :py:obj:`list`
+    :rtype: list
     """
     crsArray = np.matrix(crsList)
     distances = scipy.spatial.distance.cdist(crsArray, crsArray)
@@ -59,14 +60,14 @@ import itertools
 def createSymmetryAtoms(atomList, rotationMats, orthoMat, xs, ys, zs):
     """Creates and returns a list of all symmetry atoms.
 
-    :param :py:obj:`list` atomList:
+    :param list atomList:
     :param list rotationMats:
     :param list orthoMat:
     :param list xs:
     :param list ys:
     :param list zs:
     :return: allAtoms
-    :rtype: :py:obj:`list`
+    :rtype: list
     """
     allAtoms = []
     for symmetry in itertools.product([-1, 0, 1],[-1, 0, 1],[-1, 0, 1],range(len(rotationMats))):
@@ -85,8 +86,7 @@ class SymAtom:
     """A wrapper class to the `BioPDB.atom` class, delegating all BioPDB atom class methods and data members except having its own symmetry and coordination."""
 
     def __init__(self, atom, coord, symmetry):
-        """
-        `pdb_eda.densityAnalysis.symAtom` initializer.
+        """`pdb_eda.densityAnalysis.symAtom` initializer.
 
         :param `BioPDB.atom` atom: atom object.
         :param :py:obj:`list` coord: x,y,z coordinates.
@@ -102,8 +102,9 @@ class SymAtom:
 def getPointDensityFromCrs(densityMatrix, crsCoord):
     """Get the density of a point.
 
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param crsCoord: crs coordinates.
-    :type crsCoord: A :py:obj:`list` of :py:obj:`int`
+    :type: list or set
     :return: density
     :rtype: float
     """
@@ -113,15 +114,45 @@ def getPointDensityFromCrs(densityMatrix, crsCoord):
         if crsCoord[ind] < 0 or crsCoord[ind] >= header.ncrs[ind]:
             crsCoord[ind] -= int(np.floor(crsCoord[ind] / header.crsInterval[ind]) * header.crsInterval[ind])
 
-        if header.ncrs[ind] <= crsCoord[ind] < header.crsInterval[ind]: # think this should include "or crsCoord[ind] < 0"
+        if (header.ncrs[ind] <= crsCoord[ind] < header.crsInterval[ind]) or crsCoord[ind] < 0:
             return 0
 
     return densityMatrix.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
+def testValidCrs(densityMatrix,crsCoord):
+    """Get the density of a point.
+
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param list crsCoord: crs coordinates.
+    :return: bool
+    :rtype: bool
+    """
+    crsCoord = list(crsCoord)
+    header = densityMatrix.header
+    for ind in range(3):
+        if crsCoord[ind] < 0 or crsCoord[ind] >= header.ncrs[ind]:
+            crsCoord[ind] -= int(np.floor(crsCoord[ind] / header.crsInterval[ind]) * header.crsInterval[ind])
+
+        if (header.ncrs[ind] <= crsCoord[ind] < header.crsInterval[ind]) or crsCoord[ind] < 0:
+            return False
+
+    return True
+
+def testValidCrsList(densityMatrix, crsList):
+    """Get the density of a point.
+
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param crsList: list of crs coordinates.
+    :type: list or set
+    :return: bool
+    :rtype: bool
+    """
+    return not any(not testValidCrs(densityMatrix,crs) for crs in crsList)
+
 def createFullCrsList(densityMatrix, cutoff):
     """Returns full crs list for the density matrix.
 
-    :param densityMatrix:
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param float cutoff:
     :return: crsList
     :rtype: :py:obj:`list`
@@ -134,3 +165,84 @@ def createFullCrsList(densityMatrix, cutoff):
         return [ crs for crs in itertools.product(range(ncrs[0]),range(ncrs[1]),range(ncrs[2])) if getPointDensityFromCrs(densityMatrix, crs) <= cutoff ]
     else:
         return None
+
+def _testXyzWithinDistance(xyzCoord1, xyzCoord2, distance):
+    """Test whether two xyzCoords are within a certain distance.
+
+    :param list xyzCoord1:
+    :param list xyzCoord2:
+    :param float radius:
+    :return: bool
+    :rtype: bool
+    """
+    return np.sqrt((xyzCoord2[0] - xyzCoord1[0])**2 + (xyzCoord2[1] - xyzCoord1[1])**2 + (xyzCoord2[2] - xyzCoord1[2])**2) <= distance
+
+def getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff=0):
+    """Calculate a list of crs coordinates that within a given distance of a xyz point.
+
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param list xyzCoord: xyz coordinates.
+    :param float radius: the radius.
+    :param float densityCutoff: a density cutoff for all the points wants to be included.
+            Default 0 means include every point within the radius.
+            If cutoff < 0, include only points with density < cutoff.
+            If cutoff > 0, include only points with density > cutoff.
+
+    :return: crsCoordList of crs coordinates
+    :rtype: list
+    """
+    crsCoord = densityMatrix.header.xyz2crsCoord(xyzCoord)
+    crsRadius = densityMatrix.header.xyz2crsCoord(densityMatrix.origin + [radius, radius, radius])
+    crsCoordList = []
+    for crs in itertools.product(range(crsCoord[0] - crsRadius[0]-1, crsCoord[0] + crsRadius[0]+1),
+                                 range(crsCoord[1] - crsRadius[1]-1, crsCoord[1] + crsRadius[1]+1),
+                                 range(crsCoord[2] - crsRadius[2]-1, crsCoord[2] + crsRadius[2]+1)):
+        density = getPointDensityFromCrs(densityMatrix,crs)
+        if ((0 < densityCutoff < density) or (density < densityCutoff < 0) or densityCutoff == 0) and _testXyzWithinDistance(xyzCoord,densityMatrix.header.crs2xyzCoord(crs),radius):
+            crsCoordList.append(crs)
+
+    return crsCoordList
+
+def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, radius, densityCutoff=0):
+    """Calculate a list of crs coordinates that within a given distance from a list of xyz points.
+
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param list xyzCoord: xyz coordinates.
+    :param float radius: the radius.
+    :param float densityCutoff: a density cutoff for all the points wants to be included.
+            Default 0 means include every point within the radius.
+            If cutoff < 0, include only points with density < cutoff.
+            If cutoff > 0, include only points with density > cutoff.
+
+    :return: crsCoordList of crs coordinates
+    :rtype: set
+    """
+    return {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff)}
+
+def testValidXyz(densityMatrix, xyzCoord, radius):
+    """Test whether all crs coordinates within a given distance of a xyzCoord is within the densityMatrix.
+
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param list xyzCoord: xyz coordinates.
+    :param float radius: the radius.
+    :return: bool
+    :rtype: bool
+    """
+    crsCoord = densityMatrix.header.xyz2crsCoord(xyzCoord)
+    crsRadius = densityMatrix.header.xyz2crsCoord(densityMatrix.origin + [radius, radius, radius])
+    return not any(not testValidCrs(densityMatrix, crs)
+                   for crs in itertools.product(range(crsCoord[0] - crsRadius[0]-1, crsCoord[0] + crsRadius[0]+1),
+                                                range(crsCoord[1] - crsRadius[1]-1, crsCoord[1] + crsRadius[1]+1),
+                                                range(crsCoord[2] - crsRadius[2]-1, crsCoord[2] + crsRadius[2]+1))
+                   if _testXyzWithinDistance(xyzCoord, densityMatrix.header.crs2xyzCoord(crs), radius))
+
+def testValidXyzList(densityMatrix, xyzCoordList, radius):
+    """Test whether all crs coordinates within a given distance of a set of xyzCoords is within the densityMatrix.
+
+    :param `pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param list xyzCoordList: list of xyz coordinates.
+    :param float radius: the radius.
+    :return: bool
+    :rtype: bool
+    """
+    return not any(not testValidXyz(densityMatrix,xyzCoord,radius) for xyzCoord in xyzCoordList)

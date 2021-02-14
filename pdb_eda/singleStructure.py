@@ -7,7 +7,7 @@ Usage:
     pdb_eda single -h | --help
     pdb_eda single <pdbid> <out-file> map (--density | --diff-density)
     pdb_eda single <pdbid> <out-file> density (--atom | --residue | --chain) [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> difference (--atom | --residue) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> difference (--atom | --residue | --symmetry-atom) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> statistics [--out-format=<format>] (--atom | --residue) [--include-pdbid] [--print-validation]
@@ -23,6 +23,7 @@ Options:
     --diff-density                  Output the difference density 2Fo-Fc map in jsonpickle format.
     --atom                          Calculate results for each atom.
     --residue                       Calculate results for each residue.
+    --symmetry-atom                 Calculate results for each symmetry atom.
     --chain                         Calculate results for each chain.
     --green                         Calculate green (positive) difference map blobs.
     --red                           Calculate red (negative) difference map blobs.
@@ -94,6 +95,12 @@ def main():
         elif args["--residue"]:
             headerList = densityAnalysis.DensityAnalysis.residueRegionDiscrepancyHeader
             result = analyzer.calculateResidueRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
+        elif args["--symmetry-atom"]:
+            headerList = densityAnalysis.DensityAnalysis.symmetryAtomRegionDiscrepancyHeader
+            result = analyzer.calculateSymmetryAtomRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
+            for atomInfo in result:
+                atomInfo[4] = [val for val in atomInfo[4]]
+                atomInfo[5] = [float(val) for val in atomInfo[5]]
     elif args['blob']:
         headerList = densityAnalysis.DensityAnalysis.blobStatisticsHeader
         result = []
