@@ -45,8 +45,8 @@ EXTENSIONS = [
 setup(
     name='pdb_eda',
     version=find_version(),
-    author='Sen Yao',
-    author_email='yaosen1313@gmail.com',
+    author='Sen Yao, Hunter N.B. Moseley',
+    author_email='hunter.moseley@gmail.com',
     description='Methods for analyzing electron density maps in wwPDB',
     keywords='PDB, electron densiy map',
     license='Modified Clear BSD License',
