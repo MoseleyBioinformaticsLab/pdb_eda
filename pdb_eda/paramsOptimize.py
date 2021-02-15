@@ -211,8 +211,8 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
         with open(executionTimesFilename, "w") as txtFile:
             print("\n".join(pdbid + "  - " + str(executionTimes[pdbid] if pdbid in executionTimes else 0) for pdbid in pdbids), file=txtFile)
 
-    medianDiffs = {key: np.nanmedian(value) for (key, value) in diffs.items() if value else 0 }
-    meanDiffs = {key: np.nanmean(value) for (key, value) in diffs.items() if value else 0 }
+    medianDiffs = {key: (np.nanmedian(value) if value else 0) for (key, value) in diffs.items() }
+    meanDiffs = {key: (np.nanmean(value) if value else 0) for (key, value) in diffs.items() }
     overallStdDevDiffs = np.nanstd([item for values in diffs.values() for item in values])
     medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
 
