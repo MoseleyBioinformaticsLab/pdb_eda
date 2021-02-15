@@ -25,7 +25,7 @@ Options:
 
 This mode is often run multiple times using the output parameter file generated in one cycle as the starting parameter file in the next cycle.
 Typically, it is good to start with the following series of cycles.
-1) --sample=50 --max=0.5 --min=0.01 --stop=0.1 (kill it if it appears to thrash without stopping in a couple hours).
+1) --sample=50 --max=0.2 --min=0.01 --stop=0.1 (kill it if it appears to thrash without stopping in a couple hours).
 2) --sample=100 --max=0.2 --min=0.005 --stop=0.05  (kill it if appears to thrash after a few hours).
 3) --sample=200 --max=0.05 --min=0.001 --stop=0.03  (kill it if appears to thrash after a few hours).
 4) --sample=400 --max=0.05 --min=0.001 --stop=0.02  (kill it if appears to thrash after a few hours).
@@ -95,7 +95,8 @@ def main():
               "Max Abs Diff Mean-Median: ", max([ abs(mean-median) for (mean,median) in zip(bestMedianDiffs.values(), meanDiffs.values())]),
               "Overall Diff StdDev: ", overallStdDevDiffs, file=logFile)
 
-        currentAtomType = max(bestMedianDiffs, key=lambda y: abs(bestMedianDiffs[y])) if not args["--start"]  else args["--start"]
+        testBestMedianDiffs = {atomType: diff for (atomType, diff) in bestMedianDiffs.items() if atomType in atomsTypes2Optimize} if atomsTypes2Optimize else bestMedianDiffs
+        currentAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y])) if not args["--start"]  else args["--start"]
         previousRadius = currentRadii[currentAtomType]
 
         if startingRadius > 0:
@@ -210,9 +211,9 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
         with open(executionTimesFilename, "w") as txtFile:
             print("\n".join(pdbid + "  - " + str(executionTimes[pdbid] if pdbid in executionTimes else 0) for pdbid in pdbids), file=txtFile)
 
-    medianDiffs = {key: np.nanmedian(value) for (key, value) in diffs.items()}
-    meanDiffs = {key: np.mean(value) for (key, value) in diffs.items()}
-    overallStdDevDiffs = np.std([item for values in diffs.values() for item in values])
+    medianDiffs = {key: np.nanmedian(value) for (key, value) in diffs.items() if value else 0 }
+    meanDiffs = {key: np.nanmean(value) for (key, value) in diffs.items() if value else 0 }
+    overallStdDevDiffs = np.nanstd([item for values in diffs.values() for item in values])
     medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
 
     return (medianDiffs, meanDiffs, overallStdDevDiffs, medianSlopes)

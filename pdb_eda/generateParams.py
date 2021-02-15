@@ -153,7 +153,7 @@ def main():
                 if not allowedResidueTypes or residue["name"] in allowedResidueTypes: # only add certain residues
                     for atom in residue["atoms"].values():
                         if atom["element"] != "H":
-                            fullAtomName = residue["name"] + "_" + atom["name"]
+                            fullAtomName = residue["name"].strip() + "_" + atom["name"]
                             initialParams["full_atom_name_map_electrons"][fullAtomName] = atom["estimated_electrons"]
                             fullAtomName2AtomType[fullAtomName] = atom["full_element_color"]
                             if not args["--F000"]:
@@ -249,9 +249,8 @@ def main():
                            if info["properties"]["resolution"] >= args["--min-resolution"] and info["properties"]["resolution"] <= args["--max-resolution"] }
 
         testingFullAtomNames = [fullAtomName for fullAtomName in initialParams["full_atom_name_map_atom_type"].keys()
-                                if fullAtomName not in initialParams["leaving_atoms"] and (not overrideParams or fullNameAtom not in overrideParams["full_atom_name_map_atom_type"])]
+                                if fullAtomName not in initialParams["leaving_atoms"] and (not overrideParams or fullAtomName not in overrideParams["full_atom_name_map_atom_type"])]
         testingAtomTypes = set(initialParams["full_atom_name_map_atom_type"][fullAtomName] for fullAtomName in testingFullAtomNames)
-
 
         allFullAtomNames = list(testingFullAtomNames)
         if overrideParams:
@@ -272,11 +271,8 @@ def main():
             print("\n".join(pdbids), file=txtFile)
 
         if overrideParams:
-            initialParams["residue_name_map_electrons"].update(overrideParams["residue_name_map_electrons"])
             initialParams["full_atom_name_map_atom_type"].update(overrideParams["full_atom_name_map_atom_type"])
-
             initialParams["full_atom_name_map_electrons"].update(overrideParams["full_atom_name_map_electrons"])
-            initialParams["element_map_electrons"].update(overrideParams["element_map_electrons"])
             initialParams["radii"].update(overrideParams["radii"])
             initialParams["slopes"].update(overrideParams["slopes"])
             leavingAtoms = set(initialParams["leaving_atoms"])
@@ -305,7 +301,7 @@ def processComponents():
     errors = set()
     for residueName in components.keys():
         residue = components[residueName]
-        residueName = residueName.upper()
+        residueName = residueName.upper().strip()
         if "_chem_comp_atom.atom_id" in residue and "_chem_comp_atom.charge" in residue and "_chem_comp_atom.type_symbol" in residue and "_chem_comp_atom.pdbx_leaving_atom_flag" in residue and \
                 "_chem_comp_atom.pdbx_aromatic_flag" in residue:
             atoms = { name : {"name": name, "charge": charge, "element" : element, "leaving" : leaving, "aromatic" : aromatic, "bonds" : [] } for (name, charge, element, leaving, aromatic) in \

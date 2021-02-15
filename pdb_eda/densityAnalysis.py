@@ -837,4 +837,4 @@ def residueAtomName(atom):
     :return: name
     :rtype: str
     """
-    return atom.parent.resname + '_' + atom.name
+    return atom.parent.resname.strip() + '_' + atom.name
