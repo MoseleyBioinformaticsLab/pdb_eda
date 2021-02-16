@@ -36,11 +36,11 @@ Options:
 """
 
 import docopt
-import os
 import sys
 import json
 import jsonpickle
 import numpy
+
 from . import densityAnalysis
 from . import __version__
 

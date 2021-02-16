@@ -40,14 +40,15 @@ import json
 import numpy as np
 import multiprocessing
 import datetime
-import tempfile
 import docopt
 import random
 
-from pdb_eda import densityAnalysis
+from . import densityAnalysis
+from . import fileUtils
+from . import __version__
 
 def main():
-    args = docopt.docopt(__doc__)
+    args = docopt.docopt(__doc__, version=__version__)
     maxRadiusIncrement = float(args["--max"])
     radiusIncrement = maxRadiusIncrement
     minRadiusIncrement = float(args["--min"])
@@ -260,7 +261,7 @@ def processFunction(pdbid, paramsFilepath):
     newSlopes = { atomType:analyzer.medians['slopes'][atomType] for atomType in params["slopes"] if atomType in analyzer.medians['slopes'] }
 
     elapsedTime = time.process_time() - startTime
-    resultFilename = createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime }, "tempResults_")
+    resultFilename = fileUtils.createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime }, "tempResults_")
 
     # force garbage collection to decrease memory use.
     analyzer=0
@@ -270,19 +271,4 @@ def processFunction(pdbid, paramsFilepath):
 
     return resultFilename
 
-def createTempJSONFile(data, filenamePrefix):
-    """Creates a temporary JSON file and returns its filename.
-
-    :param data:  data to save into the JSON file.
-    :type data: :py:class:`dict` or :py:class:`list`
-    :param :py:class:`str` filenamePrefix: temporary filename prefix.
-    :return: filename
-    :rtype: :py:class:`str`
-    """
-    dirname = os.getcwd()
-    filename = 0
-    with tempfile.NamedTemporaryFile(mode='w', buffering=1, dir=dirname, prefix=filenamePrefix, delete=False) as tempFile:
-        json.dump(data,tempFile)
-        filename = tempFile.name
-    return filename
 
