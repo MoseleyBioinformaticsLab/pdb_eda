@@ -62,7 +62,7 @@ def read(ccp4Filename, pdbid=None, verbose=False):
 def parse(handle, pdbid, verbose=False):
     """Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
 
-    :param :py:class:`io.IOBase` handle: an I/O handle for .ccp4 file.
+    :param :class:`io.IOBase` handle: an I/O handle for .ccp4 file.
     :return: densityMatrix
     :rtype: :class:`pdb_eda.ccp4.DensityMatrix`
     """

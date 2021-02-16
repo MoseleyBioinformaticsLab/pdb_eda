@@ -148,6 +148,11 @@ def main():
             print(json.dumps(jsonResults, indent=2, sort_keys=True), file=outFile)
 
 def numpyConverter(obj):
+    """Converts numpy objects to standard Python types, otherwise just return the object.
+
+    :param obj:
+    :return: object
+    """
     if isinstance(obj, numpy.integer):
         return int(obj)
     elif isinstance(obj, numpy.floating):

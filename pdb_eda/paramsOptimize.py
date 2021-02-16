@@ -236,8 +236,8 @@ def processFunction(pdbid, paramsFilepath):
 
     :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
     :param :py:class:`str` paramsFilepath: filepath to the radii and slopes parameters.
-    :return: resultFilename
-    :rtype: :py:class:`str` or 0
+    :return: resultFilename or 0
+    :rtype: :py:class:`str` or :py:class:`int`
     """
     try:
         with open(paramsFilepath, 'r') as jsonFile:
@@ -274,6 +274,7 @@ def createTempJSONFile(data, filenamePrefix):
     """Creates a temporary JSON file and returns its filename.
 
     :param data:  data to save into the JSON file.
+    :type data: :py:class:`dict` or :py:class:`list`
     :param :py:class:`str` filenamePrefix: temporary filename prefix.
     :return: filename
     :rtype: :py:class:`str`

@@ -84,11 +84,11 @@ def main():
 def findCoordContacts(coordList1, coordList2, distanceCutoff=5.0):
 	"""Find contacts in coordList1 to coordList2 at the given distance cutoff.
 
-	:param :py:obj:`list` coordList1: list of coordinates.
-	:param :py:obj:`list` coordList2: list of coordinates.
-	:param float distanceCutoff: distance cutoff.
+	:param :py:class:`list` coordList1: list of coordinates.
+	:param :py:class:`list` coordList2: list of coordinates.
+	:param :py:class:`float` distanceCutoff: distance cutoff.
 	:return: contactList of index,minDistance tuples.
-    :rtype: :py:obj:`list`
+    :rtype: :py:class:`list`
 	"""
 	distances = scipy.spatial.distance.cdist(coordList1, coordList2)
 	return [(index,minDistance) for index,minDistance in enumerate(np.min(distances[x]) for x in range(len(coordList1))) if minDistance <= distanceCutoff]
@@ -100,9 +100,9 @@ def simulateCrystalNeighborCoordinates(filename):
 	structure because the bulk of this is handled by Pymol.
 	NOTE: This will only work with PDB structures resolved with X-RAY DIFFRACTION.
 
-	:param str filename:
+	:param :py:class:`str` filename:
 	:return: coordList
-    :rtype: :py:obj:`list`
+    :rtype: :py:class:`list`
 	"""
 	# Launch pymol.
 	pymol.pymol_argv = ['pymol', '-qc']

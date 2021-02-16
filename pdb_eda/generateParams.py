@@ -288,7 +288,7 @@ def processComponents():
     """Retrieves and extracts residues, atoms, and bonds from the wwPDB chemical components Cif file.
 
     :return: component information
-    :rtype: dict
+    :rtype: :py:class:`dict`
     """
     if not os.path.isfile(componentsFilename):
         urllib.request.urlretrieve("ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif", componentsFilename)
@@ -326,10 +326,10 @@ def processComponents():
 def bondTyping(bondType,aromatic):
     """Returns type of bond based on given bondType and whether it was marked aromatic.
 
-    :param str bondType:
-    :param str aromatic:
+    :param :py:class:`str` bondType:
+    :param :py:class:`str` aromatic:
     :return: bondType
-    :rtype: str
+    :rtype: :py:class:`str`
     """
     return bondType if aromatic == "N" else "AROM"
 
@@ -364,6 +364,7 @@ def createTempJSONFile(data, filenamePrefix):
     """Creates a temporary JSON file and returns its filename.
 
     :param data:  data to save into the JSON file.
+    :type data: :py:class:`dict` or :py:class:`list`
     :param :py:class:`str` filenamePrefix: temporary filename prefix.
     :return: filename
     :rtype: :py:class:`str`

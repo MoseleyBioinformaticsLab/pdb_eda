@@ -194,7 +194,7 @@ def main():
 def singleModeFunction(pdbid):
     """Execute pdb_eda single mode on a given pdbid.
 
-    :param str pdbid:
+    :param :py:class:`str` pdbid:
     :return: 0
     """
     singleModeCommandLine = "pdb_eda single " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--single-mode"]
@@ -220,7 +220,7 @@ def singleModeFunction(pdbid):
 def contactsModeFunction(pdbid):
     """Execute pdb_eda contacts mode on a given pdbid.
 
-    :param str pdbid:
+    :param :py:class:`str` pdbid:
     :return: 0
     """
     contactsModeCommandLine = "pdb_eda contacts " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--contacts-mode"]
@@ -246,8 +246,9 @@ def contactsModeFunction(pdbid):
 def multipleModeFunction(pdbid):
     """Analyze a single pdbid.
 
-    :param str pdbid:
+    :param :py:class:`str` pdbid:
     :return: resultFilename or 0
+    :rtype: :py:class:`str` or :py:class:`int`
     """
     if globalArgs["--time-out"]:
         try:
@@ -261,9 +262,9 @@ def multipleModeFunction(pdbid):
 def testPDBIDLoad(pdbid):
     """Returns whether the pdbid downloads and loads correctly.
 
-    :param str pdbid:
+    :param :py:class:`str` pdbid:
     :return: bool
-    :rtype: bool
+    :rtype: :py:class:`bool`
     """
     analyzer = densityAnalysis.fromPDBid(pdbid)
     return False if not analyzer else True
@@ -310,6 +311,7 @@ def createTempJSONFile(data, filenamePrefix):
     """Creates a temporary JSON file and returns its filename.
 
     :param data:  data to save into the JSON file.
+    :type data: :py:class:`dict` or :py:class:`list`
     :param :py:class:`str` filenamePrefix: temporary filename prefix.
     :return: filename
     :rtype: :py:class:`str`
