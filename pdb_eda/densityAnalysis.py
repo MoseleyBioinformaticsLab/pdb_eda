@@ -46,7 +46,7 @@ atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomType
 def setGlobals(params):
     """Sets global parameters.  Typically used for optimizing parameters.
 
-    :param dict params:
+    :param :py:class:`dict` params:
     """
     global paramsGlobal
     global radiiGlobal
@@ -83,14 +83,15 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
     """Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
     and the structure has electron density file available.
 
-    :param str pdbid: PDB id.
-    :param bool ccp4density: Whether to generate ccp4 density object. Default is true.
-    :param bool ccp4diff: Whether to generate in default of ccp4 difference density object. Default is true.
-    :param bool pdbbio: Whether to generate in default of bio.PDB object. Default is true.
-    :param bool pdbi: Whether to generate in default of PDB object. Default is true.
-    :param bool downloadFile: Whether to save the downloaded ccp4 density, ccp4 difference density, and PDB file. Default is true.
-    :param bool mmcif: Whether to download the mmCif file. Default is false.
-    :return: :class:`pdb_eda.densityAnalysis`
+    :param :py:class:`str` pdbid: PDB id.
+    :param :py:class:`bool` ccp4density: Whether to generate ccp4 density object. Default is true.
+    :param :py:class:`bool` ccp4diff: Whether to generate in default of ccp4 difference density object. Default is true.
+    :param :py:class:`bool` pdbbio: Whether to generate in default of bio.PDB object. Default is true.
+    :param :py:class:`bool` pdbi: Whether to generate in default of PDB object. Default is true.
+    :param :py:class:`bool` downloadFile: Whether to save the downloaded ccp4 density, ccp4 difference density, and PDB file. Default is true.
+    :param :py:class:`bool` mmcif: Whether to download the mmCif file. Default is false.
+    :return: densityAnalysis object
+    :rtype: :class:`pdb_eda.densityAnalysis.DensityAnalysis`
     """
     pdbid = pdbid.lower()
     #print("working on " + pdbid + ', ', str(datetime.datetime.now()))
@@ -167,9 +168,9 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
 def cleanPDBid(pdbid):
     """Removes PDB entry, ccp4, and mmcif files associated with a PDB id.
 
-    :param str pdbid:
+    :param :py:class:`str` pdbid:
     :return: bool whether the operation was successful.
-    :rtype: bool
+    :rtype: :py:class:`bool`
     """
     pdbid = pdbid.lower()
     try:
@@ -194,9 +195,9 @@ def cleanPDBid(pdbid):
 
 def testCCP4URL(pdbid):
     """Test whether the pdbid has electron density maps by querying if the PDBe API has electron density statistics.
-    :param str pdbid: PDB id
-    :return: bool
-    :rtype: bool
+    :param :py:class:`str` pdbid: PDB id
+    :return: bool on test success.
+    :rtype: :py:class:`bool`
     """
     try:
         url = "https://www.ebi.ac.uk/pdbe/api/pdb/entry/electron_density_statistics/" + pdbid
@@ -213,11 +214,15 @@ class DensityAnalysis(object):
         """`densityAnalysis` initializer. Leave `densityObj`, `diffDensityObj`, `biopdbObj` and `pdbObj` as :py:obj:`None`
         to be created. They are not required for initialization but could be required for some methods.
 
-        :param str pdbid: PDB id.
-        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param diffDensityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param biopdbObj: Optional `bio.PDB` object.
-        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
+        :param :py:class:`str` pdbid: PDB entry ID.
+        :param densityObj: optional DensityMatrix object.
+        :type densityObj: :class:`pdb_eda.ccp4.DensityMatrix` or :py:obj:`None`
+        :param diffDensityObj: optional DensityMatrix object.
+        :type diffDensityObj: :class:`pdb_eda.ccp4.DensityMatrix` or :py:obj:`None`
+        :param biopdbObj: optional Bio.PDB Structure object.
+        :type biopdbObj: :class:`Bio.PDB.Structure.Structure` or :py:obj:`None`
+        :param pdbObj: optional PDBentry object.
+        :type pdbObj: :class:`pdb_eda.pdbParser.PDBentry` or :py:obj:`None`
         """
         self.pdbid = pdbid
         self.densityObj = densityObj
@@ -249,60 +254,110 @@ class DensityAnalysis(object):
 
     @property
     def symmetryAtoms(self):
+        """Returns list of symmetry atoms.
+
+        :return: symmetryAtoms
+        :rtype: :py:class:`list`
+        """
         if self._symmetryAtoms == None:
             self._calculateSymmetryAtoms()
         return self._symmetryAtoms
 
     @property
     def symmetryOnlyAtoms(self):
+        """Returns list of non-[0,0,0,0] symmetry atoms.
+
+        :return: symmetryAtoms
+        :rtype: :py:class:`list`
+        """
         if self._symmetryOnlyAtoms == None:
             self._calculateSymmetryAtoms()
         return self._symmetryOnlyAtoms
 
     @property
     def asymmetryAtoms(self):
+        """Returns list of [0,0,0,0] symmetry atoms.
+
+        :return: symmetryAtoms
+        :rtype: :py:class:`list`
+        """
         if self._asymmetryAtoms == None:
             self._calculateSymmetryAtoms()
         return self._asymmetryAtoms
 
     @property
     def symmetryAtomCoords(self):
+        """Returns list of symmetry atom xyz coordinates.
+
+        :return: symmetryAtomCoords
+        :rtype: :py:class:`list`
+        """
         if self._symmetryAtoms == None:
             self._calculateSymmetryAtoms()
         return self._symmetryAtomCoords
 
     @property
     def symmetryOnlyAtomCoords(self):
+        """Returns list of non-[0,0,0,0] symmetry atom xyz coordinates.
+
+        :return: symmetryAtomCoords
+        :rtype: :py:class:`list`
+        """
         if self._symmetryOnlyAtoms == None:
             self._calculateSymmetryAtoms()
         return self._symmetryOnlyAtomCoords
 
     @property
     def asymmetryAtomCoords(self):
+        """Returns list of [0,0,0,0] symmetry atom xyz coordinates.
+
+        :return: symmetryAtomCoords
+        :rtype: :py:class:`list`
+        """
         if self._asymmetryAtoms == None:
             self._calculateSymmetryAtoms()
         return self._asymmetryAtomCoords
 
     @property
     def greenBlobList(self):
+        """Returns list of all positive significant difference density blobs.
+
+        :return: greenBlobList
+        :rtype: :py:class:`list`
+        """
         if self._greenBlobList == None:
             self._greenBlobList = self.diffDensityObj.createFullBlobList(self.diffDensityObj.diffDensityCutoff)
         return self._greenBlobList
 
     @property
     def redBlobList(self):
+        """Returns list of all negative significant difference density blobs.
+
+        :return: redBlobList
+        :rtype: :py:class:`list`
+        """
         if self._redBlobList == None:
             self._redBlobList = self.diffDensityObj.createFullBlobList(-1 * self.diffDensityObj.diffDensityCutoff)
         return self._redBlobList
 
     @property
     def blueBlobList(self):
+        """Returns list of all positive significant density blobs.
+
+        :return: blueBlobList
+        :rtype: :py:class:`list`
+        """
         if self._blueBlobList == None:
             self._blueBlobList = self.densityObj.createFullBlobList(self.densityObj.densityCutoff)
         return self._blueBlobList
 
     @property
     def fc(self):
+        """Returns the Fc map = 2Fo-Fc - Fo-Fc.
+
+        :return: fc
+        :rtype: :class:`pdb_eda.ccp4.DensityMatrix`
+        """
         if self._fc == None:
             self._fc = copy.deepcopy(self.densityObj)
             self._fc.density = self.densityObj.density - self.diffDensityObj.density * 2
@@ -310,20 +365,30 @@ class DensityAnalysis(object):
 
     @property
     def fo(self):
+        """Returns the Fo map = 2Fo-Fc.
+
+        :return: fo
+        :rtype: :class:`pdb_eda.ccp4.DensityMatrix`
+        """
         return self.densityObj # using the 2Fo-Fc as the Fo map.
 
     @property
     def F000(self):
+        """Returns estimated F000.  This estimate may not be that accurate.
+
+        :return: F000
+        :rtype: :py:class:`float`
+        """
         if self._F000 == None:
             self._F000 = self.estimateF000()
         return self._F000
 
     def medianAbsFoFc(self):
-        """Calculate and compare median absolute values for the Fo and Fc maps less than 1 sigma.
+        """Calculates and compares median absolute values for the Fo and Fc maps less than 1 sigma.
         These values should be comparable, i.e. low relative difference, for RSCC and RSR metric calculations.
 
-        :return: validation_tuple
-        :rtype: :py:obj:`tuple`
+        :return: tuple of median abs values from fo and fc maps respectively.
+        :rtype: :py:class:`tuple`
         """
         fo = self.fo
         fc = self.fc
@@ -340,10 +405,11 @@ class DensityAnalysis(object):
     residueMetricsHeaderList = ['chain', 'residue_number', 'residue_name', "rscc", "rsr", "mean_occupancy", "occupancy_weighted_mean_bfactor"]
     def residueMetrics(self, residueList=None):
         """RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+
         :param residueList:
-        :type residueList: list or :py:obj:`None`
+        :type residueList: :py:class:`list` or :py:obj:`None`
         :return: results
-        :rtype: list
+        :rtype: :py:class:`list`
         """
         resolution = self.biopdbObj.header['resolution']
         radius = 0.7
@@ -372,10 +438,11 @@ class DensityAnalysis(object):
     atomMetricsHeaderList = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "xyz", "rscc", "rsr", "occupancy", "bfactor"]
     def atomMetrics(self, atomList=None):
         """RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
+
         :param atomList:
-        :type atomList: list or :py:obj:`None`
+        :type atomList: :py:class:`list` or :py:obj:`None`
         :return: results
-        :rtype: list
+        :rtype: :py:class:`list`
         """
         resolution = self.biopdbObj.header['resolution']
         radius = 0.7
@@ -396,14 +463,13 @@ class DensityAnalysis(object):
         return atomResults
 
     def calculateRsccRsrMetrics(self, crsList):
-        """
-        Calculates and returns RSCC and RSR metrics.
+        """Calculates and returns RSCC and RSR metrics.
         This method of calculating RSCC and RSR assumes that the Fo and Fc maps are appropriately scaled.
         Comparison of median absolute values below one sigma should be quite similar between Fo and Fc maps.
 
         :param crsList:
-        :type: list or set
-        :return: rscc_rsr_tuple
+        :type crsList: :py:class:`list` or :py:class:`set`
+        :return: rscc_rsr_arrays_tuple
         :rtype: :py:obj:`tuple`
         """
         fo = self.fo
@@ -421,24 +487,21 @@ class DensityAnalysis(object):
         """Aggregate the electron density map clouds by atom, residue, and chain.
         Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data members.
 
-        :param dict params: radii, slopes, electrons, etc. parameters needed for calculations.
-        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param biopdbObj: Optional `bio.PDB` object.
-        :param atomL: Whether or not to calculate statistics for all atoms and assign to `densityAnalysis.atomList`, default as False.
-        :type atomL: :py:obj:`True` or :py:obj:`False`
-        :param residueL: Whether or not to calculate statistics for all residues and assign to `densityAnalysis.residueList`, default as False.
-        :type residueL: :py:obj:`True` or :py:obj:`False`
-        :param chainL: Whether or not to calculate statistics for all chains and assign to `densityAnalysis.chainList`, default as False.
-        :type chainL: :py:obj:`True` or :py:obj:`False`
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
-        :type recalculate: :py:obj:`True` or :py:obj:`False`
-        :param int minResAtoms: minimum number of atoms needed to aggregate a residue.
-        :param int minTotalAtoms: miminum total number of atoms to calculate a density-electron ratio.
-
-        :return: :py:obj:`None`
+        :param params: optional radii, slopes, electrons, etc. parameters needed for calculations.
+        :type params: :py:class:`dict` or :py:obj:`None`
+        :param densityObj: optional DensityMatrix object.
+        :type densityObj: :class:`pdb_eda.ccp4.DensityMatrix` or py:obj:`None`
+        :param biopdbObj: optional Bio.PDB Structure object.
+        :type biopdbObj: :class:`Bio.PDB.Structure.Structure` or :py:obj:`None`
+        :param :py:class:`bool` atomL: whether or not to calculate statistics for all atoms and assign to atomList data member.
+        :param :py:class:`bool` residueL: whether or not to calculate statistics for all residues and assign to residueList data member.
+        :param :py:class:`bool` chainL: whether or not to calculate statistics for all chains and assign to chainList data member.
+        :param :py:class:`bool` recalculate: whether or not to recalculate if self.densityElectronRatio already exists.
+        :param :py:class:`int` minResAtoms: minimum number of atoms needed to aggregate a residue.
+        :param :py:class:`int` minTotalAtoms: miminum total number of atoms to calculate a density-electron ratio.
         """
         if self.densityElectronRatio and not recalculate:
-            return None
+            return
         if not densityObj:
             densityObj = self.densityObj
         if not biopdbObj:
@@ -550,7 +613,7 @@ class DensityAnalysis(object):
                 chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
         if totalElectrons == 0 or len(atomList) < minTotalAtoms:
-            return 0
+            return
         else:
             densityElectronRatio = totalDensity / totalElectrons
             chainList.sort(key=lambda x: x[3])
@@ -569,18 +632,19 @@ class DensityAnalysis(object):
                                  ('density_electron_ratio',float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('adj_density_electron_ratio', float), ('chain_fraction', float),
                                  ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
             atoms = np.asarray([tuple(atom+[0.0 for x in range(5)]) for atom in atomList],dataType) # must pass in list of tuples to create ndarray correctly.
-            centroidCutoff = np.median(atoms['centroid_distance']) + np.std(atoms['centroid_distance']) * 2
-            atoms = atoms[atoms['centroid_distance'] < centroidCutoff]
+            if not np.isnan(atoms['centroid_distance']).all():
+                centroidCutoff = np.nanmedian(atoms['centroid_distance']) + np.nanstd(atoms['centroid_distance']) * 2
+                atoms = atoms[atoms['centroid_distance'] < centroidCutoff]
             atom_types = np.unique(atoms['atom_type'])
-            medians = { column : {atom_type : np.median(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in ['num_voxels'] }
+            medians = { column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in ['num_voxels'] }
             medians_translator = np.vectorize(lambda column,atom_type : medians[column][atom_type])
 
             ## Normalize by volume (numVoxels)
             atoms['adj_density_electron_ratio'] = atoms['density_electron_ratio'] / atoms['num_voxels'] * medians_translator('num_voxels', atoms['atom_type'])
             atoms['volume'] = atoms['num_voxels'] * densityObj.header.unitVolume
-            medians.update({column : {atom_type : np.median(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
+            medians.update({column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
                          ['density_electron_ratio', 'centroid_distance', 'adj_density_electron_ratio', 'volume']})
-            medians['bfactor'] = {atom_type : np.median(atoms['bfactor'][(atoms['atom_type'] == atom_type) & (atoms['bfactor'] > 0)]) for atom_type in atom_types}
+            medians['bfactor'] = {atom_type : np.nanmedian(atoms['bfactor'][(atoms['atom_type'] == atom_type) & (atoms['bfactor'] > 0)]) for atom_type in atom_types}
             atoms['bfactor'][atoms['bfactor'] <= 0] = medians_translator('bfactor', atoms['atom_type'])[atoms['bfactor'] <= 0]
             medians['slopes'] = {atom_type : calcSlope(atoms[atoms['atom_type'] == atom_type], atom_type) for atom_type in atom_types}
 
@@ -588,10 +652,10 @@ class DensityAnalysis(object):
             atoms['chain_fraction'] = (atoms['adj_density_electron_ratio'] - densityElectronRatio) / densityElectronRatio
             atoms['corrected_fraction'] = atoms['chain_fraction'] - (np.log(atoms['bfactor']) - np.log(medians_translator('bfactor', atoms['atom_type']))) * medians_translator('slopes', atoms['atom_type'])
             atoms['corrected_density_electron_ratio'] = atoms['corrected_fraction'] * densityElectronRatio + densityElectronRatio
-            medians.update({column : {atom_type : np.median(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
+            medians.update({column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
                          ['chain_fraction', 'corrected_fraction', 'corrected_density_electron_ratio']})
         except:
-            return 0
+            return
 
         self.densityElectronRatio = densityElectronRatio
         self.chainNvoxel = numVoxels
@@ -615,15 +679,16 @@ class DensityAnalysis(object):
         X' = O(O'(RX + T) + T') = OO'(RX+T) + OT' = RX + T + O[-1/0/1,-1/0/1,-1/0/1].
         Assign the list of :class:`pdb_eda.densityAnalysis.symAtom` instances to `densityAnalysis.symmetryAtoms` data member
 
-        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param biopdbObj: Optional `bio.PDB` object.
-        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
-        :param recalculate: Whether or not to recalculate if `densityAnalysis.statistics` already exist.
-        :type recalculate: :py:obj:`True` or :py:obj:`False`
-        :return: :py:obj:`None`
+        :param densityObj: optional DensityMatrix object.
+        :type densityObj: :class:`pdb_eda.ccp4.DensityMatrix` or py:obj:`None`
+        :param biopdbObj: optional Bio.PDB Structure object.
+        :type biopdbObj: :class:`Bio.PDB.Structure.Structure` or :py:obj:`None`
+        :param pdbObj: optional PDBentry object.
+        :type pdbObj: :class:`pdb_eda.pdbParser.PDBentry` or :py:obj:`None`
+        :param :py:class:`bool` recalculate: whether or not to recalculate if self._symmetryAtoms already exist.
         """
         if self._symmetryAtoms and not recalculate:
-            return None
+            return
 
         if not densityObj:
             densityObj = self.densityObj
@@ -652,11 +717,11 @@ class DensityAnalysis(object):
     def calculateAtomSpecificBlobStatistics(self, blobList, params=None):
         """Calculate atom-specific blob statistics.
 
-        :param :py:obj:`list` blobList: list of blobs to calculate statistics for.
-        :param params: overriding parameters needed for the calculation.
-        :type params: dict or :py:obj:`None`
+        :param :py:class:`list` blobList: list of blobs to calculate statistics for.
+        :param params: optional overriding parameters needed for the calculation.
+        :type params: :py:class:`dict` or :py:obj:`None`
         :return blobStats: Difference density map statistics.
-        :rtype: :py:obj:`list`
+        :rtype: :py:class:`list`
         """
         symmetryAtoms = self.symmetryAtoms
         symmetryAtomCoords = self.symmetryAtomCoords
@@ -685,13 +750,13 @@ class DensityAnalysis(object):
     def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
         """Calculates significant region discrepancies in a given radius of each atom.
 
-        :param float radius: the search radius.
-        :param float numSD: number of standard deviations of significance.
-        :param str type: residue type to filter on.
-        :param params: overriding parameters needed for calculations.
-        :type params: dict or :py:obj:`None`
-        :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`list`
+        :param :py:class:`float`:py:class:`float` radius: the search radius.
+        :param :py:class:`float` numSD: number of standard deviations of significance.
+        :param :py:class:`str` type: atom type to filter on.
+        :param params: optional overriding parameters needed for calculations.
+        :type params: :py:class:`dict` or :py:obj:`None`
+        :return diffMapRegionStats: Difference density map region statistics per atom.
+        :rtype: :py:class:`list`
         """
         biopdbObj = self.biopdbObj
         atoms = list(biopdbObj.get_atoms())
@@ -706,15 +771,15 @@ class DensityAnalysis(object):
         return results
 
     def calculateSymmetryAtomRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
-        """Calculates significant region discrepancies in a given radius of each atom.
+        """Calculates significant region discrepancies in a given radius of each symmetry atom.
 
-        :param float radius: the search radius.
-        :param float numSD: number of standard deviations of significance.
-        :param str type: residue type to filter on.
-        :param params: overriding parameters needed for calculations.
-        :type params: dict or :py:obj:`None`
-        :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`list`
+        :param :py:class:`float` radius: the search radius.
+        :param :py:class:`float` numSD: number of standard deviations of significance.
+        :param :py:class:`str` type: atom type to filter on.
+        :param params: optional overriding parameters needed for calculations.
+        :type params: :py:class:`dict` or :py:obj:`None`
+        :return diffMapRegionStats: Difference density map region statistics per atom.
+        :rtype: :py:class:`list`
         """
         atoms = self.symmetryAtoms
         if type:
@@ -730,13 +795,13 @@ class DensityAnalysis(object):
     def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type="", params=None):
         """Calculates significant region discrepancies in a given radius of each residue.
 
-        :param float radius: the search radius.
-        :param float numSD: number of standard deviations of significance.
-        :param str type: residue type to filter on.
-        :param params: overriding parameters needed for calculations.
-        :type params: dict or :py:obj:`None`
-        :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`list`
+        :param :py:class:`float` radius: the search radius.
+        :param :py:class:`float` numSD: number of standard deviations of significance.
+        :param :py:class:`str` type: residue type to filter on.
+        :param params: optional overriding parameters needed for calculations.
+        :type params: :py:class:`dict` or :py:obj:`None`
+        :return diffMapRegionStats: Difference density map region statistics per residue.
+        :rtype: :py:class:`list`
         """
         biopdbObj = self.biopdbObj
 
@@ -756,14 +821,13 @@ class DensityAnalysis(object):
     def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, params=None, testValidCrs=False):
         """Calculate region-specific discrepancy from the difference density matrix.
 
-        :param xyzCoordLists: xyz coordinates.
-        :type xyzCoordLists: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.
-        :param float radius: the search radius.
-        :param float numSD: number of standard deviations of significance.
-        :param dict params: overriding parameters needed for calculations.
-        :type params: dict or :py:obj:`None`
-        :return diffMapRegionStats: Difference density map region header and statistics.
-        :rtype: :py:obj:`list` or :py:obj:`tuple`
+        :param :py:class:`list` xyzCoordLists: single xyz coordinate or a list of xyz coordinates.
+        :param :py:class:`float` radius: the search radius.
+        :param :py:class:`float` numSD: number of standard deviations of significance.
+        :param params: optional overriding parameters needed for calculations.
+        :type params: :py:class:`dict` or :py:obj:`None`
+        :return diffMapRegionStats: Difference density map region statistics and optional validCrs result.
+        :rtype: :py:class:`list` or :py:class:`tuple`
         """
         if not self.densityElectronRatio:
             self.aggregateCloud(params)
@@ -798,12 +862,14 @@ class DensityAnalysis(object):
     def estimateF000(self, densityObj=None, biopdbObj=None, pdbObj=None):
         """Estimate the F000 term as sum of all electrons over the unit cell volume
 
-        :param densityObj: Optional :class:`pdb_eda.ccp4` object.
-        :param biopdbObj: Optional `bio.PDB` object.
-        :param pdbObj: Optional :class:`pdb_eda.pdbParser.PDBentry` object.
-
+        :param densityObj: optional DensityMatrix object.
+        :type densityObj: :class:`pdb_eda.ccp4.DensityMatrix` or py:obj:`None`
+        :param biopdbObj: optional Bio.PDB Structure object.
+        :type biopdbObj: :class:`Bio.PDB.Structure.Structure` or :py:obj:`None`
+        :param pdbObj: optional PDBentry object.
+        :type pdbObj: :class:`pdb_eda.pdbParser.PDBentry` or :py:obj:`None`
         :return: estimatedF000
-        :rtype: float
+        :rtype: :py:class:`float`
         """
         if not densityObj:
             densityObj = self.densityObj
@@ -833,8 +899,9 @@ class DensityAnalysis(object):
 
 def residueAtomName(atom):
     """Returns a combined residue and atom name used to select an atom type.
-    :param `BioPDB.atom` atom:
-    :return: name
-    :rtype: str
+
+    :param :class:`Bio.PDB.atom` atom:
+    :return: fullAtomName
+    :rtype: :py:class:`str`
     """
     return atom.parent.resname.strip() + '_' + atom.name

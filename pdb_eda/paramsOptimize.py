@@ -48,7 +48,8 @@ from pdb_eda import densityAnalysis
 
 def main():
     args = docopt.docopt(__doc__)
-    radiusIncrement = float(args["--max"])
+    maxRadiusIncrement = float(args["--max"])
+    radiusIncrement = maxRadiusIncrement
     minRadiusIncrement = float(args["--min"])
     stoppingFractionalDifference = float(args["--stop"])
     startingRadius = float(args["--radius"])
@@ -87,13 +88,17 @@ def main():
         print("PDB IDs:",",".join(pdbids), file=logFile)
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()))
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()), file=logFile)
+
         (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
-        print("Max Absolute Median Diff: ", max([abs(bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-              "Max Abs Diff Mean-Median: ", max([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-              "Overall Diff StdDev: ", overallStdDevDiffs)
-        print("Max Absolute Median Diff: ", max([abs(bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-              "Max Abs Diff Mean-Median: ", max([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-              "Overall Diff StdDev: ", overallStdDevDiffs, file=logFile)
+
+        print("Radii:", currentRadii, file=logFile)
+        print("Median Diffs:", bestMedianDiffs, file=logFile)
+        print("Max Absolute Median Diff:", max([abs(bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+              "Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+              "Overall Diff StdDev:", overallStdDevDiffs)
+        print("Max Absolute Median Diff:", max([abs(bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+              "Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+              "Overall Diff StdDev:", overallStdDevDiffs, file=logFile)
 
         testBestMedianDiffs = {atomType: diff for (atomType, diff) in bestMedianDiffs.items() if atomType in atomTypes2Optimize} if atomTypes2Optimize else bestMedianDiffs
         currentAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y])) if not args["--start"]  else args["--start"]
@@ -107,29 +112,31 @@ def main():
             previousDirection = bestMedianDiffs[currentAtomType] < 0
 
         while True:
-            print("Testing", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", start-time=", str(datetime.datetime.now()))
-            print("Testing", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", start-time=", str(datetime.datetime.now()), file=logFile)
+            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", current median difference=",bestMedianDiffs[currentAtomType])
+            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", current median difference=",bestMedianDiffs[currentAtomType], file=logFile)
+            print("Calculating new median differences: start-time", str(datetime.datetime.now()))
+            print("Calculating new median differences: start-time", str(datetime.datetime.now()), file=logFile)
 
             (medianDiffs, meanDiffs, overallStdDevDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"], args["<pdbid-file>"]+".execution_times")
 
-            print("Radii: ", currentRadii, file=logFile)
-            print("Median Diffs: ", medianDiffs, file=logFile)
-            print("Max Absolute Median Diff: ", max([abs(medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-                  "Max Abs Diff Mean-Median: ", max([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-                  "Overall Diff StdDev: ", overallStdDevDiffs)
-            print("Max Absolute Median Diff: ", max([abs(medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-                  "Max Abs Diff Mean-Median: ", max([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
-                  "Overall Diff StdDev: ", overallStdDevDiffs, file=logFile)
-            print("Slopes: ", slopes, file=logFile)
+            print("Radii:", currentRadii, file=logFile)
+            print("Median Diffs:", medianDiffs, file=logFile)
+            print("Max Absolute Median Diff:", max([abs(medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                  "Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                  "Overall Diff StdDev:", overallStdDevDiffs)
+            print("Max Absolute Median Diff:", max([abs(medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                  "Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                  "Overall Diff StdDev:", overallStdDevDiffs, file=logFile)
+            print("Slopes:", slopes, file=logFile)
 
             improved = False
-            if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
+            if abs(medianDiffs[currentAtomType]) <= abs(bestMedianDiffs[currentAtomType]):
                 bestMedianDiffs = medianDiffs
                 currentSlopes = slopes
-                improved = True
+                improved = True if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]) else 2
 
-                print("       ", currentAtomType, "New Radius Accepted: ", currentRadii[currentAtomType])
-                print("       ", currentAtomType, "New Radius Accepted: ", currentRadii[currentAtomType], file=logFile)
+                print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType])
+                print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType], file=logFile)
 
                 try:
                     with open(args["<out-params-file>"] + ".temp", 'w') as jsonFile:
@@ -137,21 +144,26 @@ def main():
                 except:
                     sys.exit(str("Error: unable to create temporary params file \"") + args["<out-params-file>"] + ".temp" + "\".")
             else:
-                print("       ", currentAtomType, "New Radius Rejected: ", currentRadii[currentAtomType])
-                print("       ", currentAtomType, "New Radius Rejected: ", currentRadii[currentAtomType], file=logFile)
+                print("Rejected", currentAtomType, ": new radius=", currentRadii[currentAtomType])
+                print("Rejected", currentAtomType, ": new radius=", currentRadii[currentAtomType], file=logFile)
                 currentRadii[currentAtomType] = previousRadius
 
             testBestMedianDiffs = { atomType:diff for (atomType,diff) in bestMedianDiffs.items() if atomType in atomTypes2Optimize } if atomTypes2Optimize else bestMedianDiffs
             maxAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]))
             if stoppingFractionalDifference > 0 and max(map(abs, testBestMedianDiffs.values())) < stoppingFractionalDifference:
                 break
-            elif maxAtomType == currentAtomType and (not improved or previousDirection != (bestMedianDiffs[currentAtomType] < 0)):
-                if radiusIncrement == minRadiusIncrement:
-                    break
+            elif maxAtomType == currentAtomType:
+                if not improved or previousDirection != (bestMedianDiffs[currentAtomType] < 0):
+                    if radiusIncrement == minRadiusIncrement:
+                        break
 
-                radiusIncrement = radiusIncrement / 2.0
-                if radiusIncrement < minRadiusIncrement:
-                    radiusIncrement = minRadiusIncrement
+                    radiusIncrement = radiusIncrement / 2.0
+                    if radiusIncrement < minRadiusIncrement:
+                        radiusIncrement = minRadiusIncrement
+                elif improved == 2:
+                    radiusIncrement = radiusIncrement * 1.5
+                    if radiusIncrement > maxRadiusIncrement:
+                        radiusIncrement = maxRadiusIncrement
 
             currentAtomType = maxAtomType
             previousRadius = currentRadii[currentAtomType]
@@ -159,8 +171,8 @@ def main():
             previousDirection = bestMedianDiffs[currentAtomType] < 0
             gc.collect() # force garbage collection to decrease memory use.
 
-        print("Final Radii: ", currentRadii)
-        print("Max Absolute Median Diff", max(map(abs, testBestMedianDiffs.values())))
+        print("Final Radii:", currentRadii)
+        print("Max Absolute Median Diff:", max(map(abs, testBestMedianDiffs.values())))
         outParams = {**params, "radii" : currentRadii, "slopes" : currentSlopes }
 
     try:

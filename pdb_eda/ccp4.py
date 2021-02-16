@@ -24,19 +24,21 @@ urlSuffix = ".ccp4"
 
 
 def readFromPDBID(pdbid, verbose=False):
-    """
-    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
+    """Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
 
-    :param str pdbid: PDB id.
+    :param :py:class:`str` pdbid: PDB id.
+    :return: densityMatrix
+    :rtype: :class:`pdb_eda.ccp4.DensityMatrix`
     """
     return readFromURL(urlPrefix + pdbid.lower() + urlSuffix, pdbid, verbose)
 
 
 def readFromURL(url, pdbid=None, verbose=False):
-    """
-    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
+    """Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
 
-    :param str url: url.
+    :param :py:class:`str` url:
+    :return: densityMatrix
+    :rtype: :class:`pdb_eda.ccp4.DensityMatrix`
     """
     if not pdbid:
         pdbid = url
@@ -45,10 +47,11 @@ def readFromURL(url, pdbid=None, verbose=False):
 
 
 def read(ccp4Filename, pdbid=None, verbose=False):
-    """
-    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
+    """Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
 
-    :param str ccp4Filename: .ccp4 filename including path.
+    :param :py:class:`str` ccp4Filename: .ccp4 filename including path.
+    :return: densityMatrix
+    :rtype: :class:`pdb_eda.ccp4.DensityMatrix`
     """
     if not pdbid:
         pdbid = ccp4Filename
@@ -57,10 +60,11 @@ def read(ccp4Filename, pdbid=None, verbose=False):
 
 
 def parse(handle, pdbid, verbose=False):
-    """
-    Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
+    """Creates :class:`pdb_eda.ccp4.DensityMatrix` object.
 
-    :param handle: a file handle for .ccp4 file.
+    :param :py:class:`io.IOBase` handle: an I/O handle for .ccp4 file.
+    :return: densityMatrix
+    :rtype: :class:`pdb_eda.ccp4.DensityMatrix`
     """
     header = DensityHeader.fromFileHeader(handle.read(1024))
     endian = header.endian
@@ -109,8 +113,9 @@ class DensityHeader(object):
     def fromFileHeader(cls, fileHeader):
         """RETURNS :class:`pdb_eda.ccp4.DensityHeader` object given the fileHeader.
 
-        :param fileHeader: ccp4 file header.
-        :type fileHeader: binary header section of a ccp4 file
+        :param :py:class:`bytes` fileHeader: ccp4 file header.
+        :return: densityHeader
+        :rtype: :class:`pdb_eda.ccp4.DensityHeader`
         """
 
         # Test for endianness
@@ -128,13 +133,12 @@ class DensityHeader(object):
         return header
 
     def __init__(self, headerTuple, labels, endian):
-        """
-        Initialize the :class:`pdb_eda.ccp4.DensityHeader` object, assign values to data members accordingly,
+        """Initialize the :class:`pdb_eda.ccp4.DensityHeader` object, assign values to data members accordingly,
          and calculate some metrics that will be used frequently.
 
-        :param headerTuple: The ccp4 header information (excluding labels) in a tuple.
-        :param labels: The labels field in a ccp4 header.
-        :param endian: The endianness of the file.
+        :param :py:class:`tuple` headerTuple: The ccp4 header information (excluding labels) in a tuple.
+        :param :py:class:`bytes` labels: The labels field in a ccp4 header.
+        :param :py:class:`str` endian: The endianness of the file.
         """
         self.ncrs = headerTuple[0:3]
         #Number of Columns    (fastest changing in map)
@@ -241,11 +245,10 @@ class DensityHeader(object):
 
 
     def _calculateOrigin(self):
-        """
-        Calculate the xyz coordinates from the header information.
+        """Calculate the xyz coordinates from the header information.
 
         :return: xyz coordinates.
-        :rtype: A :py:obj:`list` of :py:obj:`float`.
+        :rtype: :py:class:`list` of :py:class:`float`.
         """
         # Orthogonalization matrix for calculation between fractional coordinates and orthogonal coordinates
         # Formula based on 'Biomolecular Crystallography' by Bernhard Rupp, p233
@@ -258,15 +261,12 @@ class DensityHeader(object):
         return origin
 
     def xyz2crsCoord(self, xyzCoord):
-        """
-        Convert the xyz coordinates into crs coordinates.
-
+        """Convert the xyz coordinates into crs coordinates.
 
         :param xyzCoord: xyz coordinates.
-        :type xyzCoord: A :py:obj:`list` of :py:obj:`float`
-
+        :type xyzCoord: :py:class:`list` of :py:class:`float`
         :return: crs coordinates.
-        :rtype: A :py:obj:`list` of :py:obj:`int`.
+        :rtype: A :py:class:`list` of :py:class:`int`.
         """
         if self.alpha == self.beta == self.gamma == 90:
             crsGridPos = [int(round((xyzCoord[i] - self.origin[i]) / self.gridLength[i])) for i in range(3)]
@@ -276,14 +276,12 @@ class DensityHeader(object):
         return [crsGridPos[self.map2crs[i]] for i in range(3)]
 
     def crs2xyzCoord(self, crsCoord):
-        """
-        Convert the crs coordinates into xyz coordinates.
+        """Convert the crs coordinates into xyz coordinates.
 
         :param crsCoord: crs coordinates.
-        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
-
+        :type crsCoord: A :py:obj:`list` of :py:class:`int`
         :return: xyz coordinates.
-        :rtype: A :py:obj:`list` of :py:obj:`float`.
+        :rtype: A :py:class:`list` of :py:class:`float`.
         """
         if self.alpha == self.beta == self.gamma == 90:
             return [crsCoord[self.map2xyz[i]] * self.gridLength[i] + self.origin[i] for i in range(3)]
@@ -295,13 +293,12 @@ class DensityMatrix:
     """:class:`pdb_eda.ccp4.DensityMatrix` that stores data and methods of a ccp4 file."""
 
     def __init__(self, header, origin, density, pdbid):
-        """
-        Initialize the :class:`pdb_eda.ccp4.DensityMatrix` object.
+        """Initialize the :class:`pdb_eda.ccp4.DensityMatrix` object.
 
-        :param header: the :class:`pdb_eda.ccp4.DensityHeader` object of the density matrix.
-        :param origin: the xyz coordinates of the origin of the first number of the density data.
-        :param density: the density data as a 1-d list.
-        :return: :class:`pdb_eda.ccp4.DensityMatrix` object.
+        :param :class:`pdb_eda.ccp4.DensityHeader` header:
+        :param :py:class:`list` origin: the xyz coordinates of the origin of the first number of the density data.
+        :param :py:class:`tuple` density: the density data as a 1-d list.
+        :param :py:class:`str` pdbid:
         """
         self.pdbid = pdbid
         self.header = header
@@ -314,12 +311,22 @@ class DensityMatrix:
 
     @property
     def meanDensity(self):
+        """Returns mean of the density.
+
+        :return: mean
+        :rtype: :py:class:`float`
+        """
         if self._meanDensity == None:
             self._meanDensity = np.mean(self.densityArray)
         return self._meanDensity
 
     @property
     def stdDensity(self):
+        """Returns the standard deviation of the density.
+
+        :return: std
+        :rtype: :py:class:`float`
+        """
         if self._stdDensity == None:
             self._stdDensity = np.std(self.densityArray)
         return self._stdDensity
@@ -327,77 +334,76 @@ class DensityMatrix:
     def getTotalAbsDensity(self, densityCutoff):
         """Returns total absolute Density above a densityCutoff
 
-        :param float densityCutoff:
+        :param :py:class:`float` densityCutoff:
         :return: totalAbsDensity
-        :rtype: float
+        :rtype: :py:class:`float`
         """
         if densityCutoff not in self._totalAbsDensity:
             self._totalAbsDensity[densityCutoff] = utils.sumOfAbs(self.densityArray, densityCutoff)
         return self._totalAbsDensity[densityCutoff]
 
     def getPointDensityFromCrs(self, crsCoord):
-        """
-        Get the density of a point.
+        """Get the density of a point.
 
         :param crsCoord: crs coordinates.
-        :type crsCoord: A :py:obj:`list` of :py:obj:`int`
+        :type crsCoord: A :py:class:`list` of :py:class:`int`
+        :return: pointDensity
+        :rtype: :py:class:`float`
         """
         return utils.getPointDensityFromCrs(self,crsCoord)
 
     def getPointDensityFromXyz(self, xyzCoord):
-        """
-        Get the density of a point.
+        """Get the density of a point.
 
         :param xyzCoord: xyz coordinates.
-        :type xyzCoord: A :py:obj:`list` of :py:obj:`float`
+        :type xyzCoord: A :py:class:`list` of :py:class:`float`
+        :return: pointDensity
+        :rtype: :py:class:`float`
         """
         return utils.getPointDensityFromCrs(self, self.header.xyz2crsCoord(xyzCoord))
 
     def getSphereCrsFromXyz(self, xyzCoord, radius, densityCutoff=0):
-        """
-        Calculate a list of crs coordinates that within a given distance of a point.
+        """Calculate a list of crs coordinates that within a given distance of a point.
 
         :param xyzCoord: xyz coordinates.
-        :type xyzCoord: A :py:obj:`list` of :py:obj:`float`
-        :param float radius: the radius.
-        :param  float densityCutoff: a density cutoff for all the points wants to be included.
+        :type xyzCoord: A :py:class:`list` of :py:class:`float`
+        :param :py:class:`float` radius:
+        :param  :py:class:`float` densityCutoff: a density cutoff for all the points wants to be included.
                 Default 0 means include every point within the radius.
                 If cutoff < 0, include only points with density < cutoff.
                 If cutoff > 0, include only points with density > cutoff.
-
-        :return: A :py:obj:`list` of crs coordinates.
+        :return: crsList
+        :rtype: :py:class:`list`
         """
         return utils.getSphereCrsFromXyz(self,xyzCoord,radius,densityCutoff)
 
     def getTotalDensityFromXyz(self, xyzCoord, radius, densityCutoff=0):
-        """
-        Calculate the total density of a sphere.
+        """Calculate the total density of a sphere.
 
-        :param xyzCoord: xyz coordinates.
-        :type xyzCoord: A :py:obj:`list` of xyz coordinates
-        :param float radius: the radius.
-        :param float densityCutoff: a density cutoff for all the points to include.
+        :param :py:class:`list` xyzCoord: xyz coordinates.
+        :param :py:class:`float` radius:
+        :param :py:class:`float` densityCutoff: a density cutoff for all the points to include.
                 Default 0 means include every point within the radius.
                 If cutoff < 0, include only points with density < cutoff.
                 If cutoff > 0, include only points with density > cutoff.
+        :return: density
+        :rtype: :py:class:`float`
         """
         crsCoordList = utils.getSphereCrsFromXyz(self, xyzCoord, radius, densityCutoff)
         return sum(utils.getPointDensityFromCrs(self, crs) for crs in crsCoordList)
 
     def findAberrantBlobs(self, xyzCoords, radius, densityCutoff=0):
-        """
-        Within a given radius, find and aggregate all neighbouring aberrant points into blobs (red/green meshes).
+        """Within a given radius, find and aggregate all neighbouring aberrant points into blobs (red/green meshes).
 
-        :param xyzCoords: xyz coordinates.
-        :type xyzCoords: A :py:obj:`list` of a single xyz coordinate or a list of xyz coordinates.
-        :param float radius: the search radius.
-        :param float densityCutoff: A density cutoff for all the points wants to be included.
+        :param :py:class:`list` xyzCoords: single xyz coordinate or a list of xyz coordinates.
+        :param :py:class:`float` radius:
+        :param :py:class:`float` densityCutoff: A density cutoff for all the points wants to be included.
                 Default 0 means include every point within the radius.
                 If cutoff < 0, include only points with density < cutoff.
                 If cutoff > 0, include only points with density > cutoff.
 
-        :return: A list of aberrant blobs described by their xyz centroid, total density, and volume.
-        :rtype: A :py:obj:`list` of :class:`pdb_eda.ccp4.DensityBlob` object.
+        :return: blobList  of aberrant blobs described by their xyz centroid, total density, and volume.
+        :rtype: :py:class:`list` of :class:`pdb_eda.ccp4.DensityBlob` objects.
         """
         if not isinstance(xyzCoords[0], (np.floating, float)): # test if xyzCoords is a single xyzCoord or a list of them.
             if len(xyzCoords) > 1:
@@ -410,23 +416,22 @@ class DensityMatrix:
         return self.createBlobList(crsCoordList)
 
     def createFullBlobList(self, cutoff):
-        """
-        Aggregate the density map into positive (green or blue) or negative (red) blobs.
+        """Aggregate the density map into positive (green or blue) or negative (red) blobs.
 
-        :param float cutoff: density cutoff to use to filter voxels.
+        :param :py:class:`float` cutoff: density cutoff to use to filter voxels.
         :return blobList: list of DensityBlobs
-        :rtype: :py:obj:`list`
+        :rtype: :py:class:`list` of :class:`pdb_eda.ccp4.DensityBlob` objects.
         """
         crsList = utils.createFullCrsList(self, cutoff)
         return self.createBlobList(crsList) if crsList != None else None
 
     def createBlobList(self, crsList):
-        """
-        Calculates a list of blobs from a given crsList.
+        """Calculates a list of blobs from a given crsList.
 
         :param crsList: a crs list.
-        :return: blobList is a list of blobs.
-        :rtype: A :py:obj:`list` of :class:`pdb_eda.ccp4.DensityBlob` object.
+        :type crsList: :py:class:`list` or :py:class:`set`
+        :return: blobList
+        :rtype: :py:class:`list` of :class:`pdb_eda.ccp4.DensityBlob` objects.
         """
         crsLists = utils.createCrsLists(crsList)
         return [ DensityBlob.fromCrsList(crs_list, self) for crs_list in crsLists ]
@@ -436,13 +441,12 @@ class DensityBlob:
     """:class:`pdb_eda.ccp4.DensityBlob` that stores data and methods of a electron density blob."""
 
     def __init__(self, centroid, coordCenter, totalDensity, volume, crsList, densityMatrix):
-        """
-        Initialize a :class:`pdb_eda.ccp4.DensityBlob` object.
+        """Initialize a :class:`pdb_eda.ccp4.DensityBlob` object.
 
-        :param list centroid: the centroid of the blob.
-        :param float totalDensity: the totalDensity of the blob.
-        :param float volume: the volume of the blob = number of density units * unit volumes.
-        :param list crsList: the crs list of the blob.
+        :param :py:class:`list` centroid: the centroid of the blob.
+        :param :py:class:`float` totalDensity: the totalDensity of the blob.
+        :param :py:class:`float` volume: the volume of the blob = number of density units * unit volumes.
+        :param :py:class:`list` crsList: the crs list of the blob.
         :param `pdb_eda.ccp4.DensityMatrix` densityMatrix: the entire density map that the blob belongs to.
         :return: densityBlob
         :rtype: :class:`pdb_eda.ccp4.DensityBlob`
@@ -463,7 +467,7 @@ class DensityBlob:
     def fromCrsList(crsList, densityMatrix):
         """The creator of a A :class:`pdb_eda.ccp4.DensityBlob` object.
 
-        :param list crsList: the crs list of the blob.
+        :param :py:class:`list` crsList: the crs list of the blob.
         :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix: the 3-d density matrix to use for calculating centroid etc, so the object does not have to have a density list data member.
         :return: densityBlob
         :rtype: :class:`pdb_eda.ccp4.DensityBlob`
@@ -483,12 +487,11 @@ class DensityBlob:
 
 
     def __eq__(self, otherBlob):
-        """
-        Check if two blobs are the same, and overwrite the '==' operator for the :class:`pdb_eda.ccp4.DensityBlob` object.
+        """Check if two blobs are the same, and overwrite the '==' operator for the :class:`pdb_eda.ccp4.DensityBlob` object.
 
         :param :class:`pdb_eda.ccp4.DensityBlob` otherBlob:
         :return: bool
-        :rtype: bool
+        :rtype: :py:class`bool`
         """
         if abs(self.volume - otherBlob.volume) >= 1e-6: return False
         if abs(self.totalDensity - otherBlob.totalDensity) >= 1e-6: return False
@@ -498,12 +501,11 @@ class DensityBlob:
         return True
 
     def testOverlap(self, otherBlob):
-        """
-        Check if two blobs overlaps or right next to each other.
+        """Check if two blobs overlaps or right next to each other.
 
         :param :class:`pdb_eda.ccp4.DensityBlob` otherBlob:
         :return: bool
-        :rtype: bool
+        :rtype: :py:class`bool`
         """
         #if any(x in self.crsList for x in otherBlob.crsList):
         #    return True
@@ -514,8 +516,7 @@ class DensityBlob:
             return False
 
     def merge(self, otherBlob):
-        """
-        Merge the given blob into the original blob.
+        """Merge the given blob into the original blob.
 
         :param :class:`pdb_eda.ccp4.DensityBlob` otherBlob:
         """
@@ -533,6 +534,5 @@ class DensityBlob:
         # self.header = newBlob.header
         # self.densityMatrix = newBlob.densityMatrix
         # self.atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]
-
 
 
