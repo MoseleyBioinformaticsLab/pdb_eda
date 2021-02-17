@@ -90,7 +90,7 @@ def main():
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()))
         print("Calculating starting median differences: start-time", str(datetime.datetime.now()), file=logFile)
 
-        (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
+        (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes, sizes) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
 
         print("Radii:", currentRadii, file=logFile)
         print("Median Diffs:", bestMedianDiffs, file=logFile)
@@ -113,12 +113,12 @@ def main():
             previousDirection = bestMedianDiffs[currentAtomType] < 0
 
         while True:
-            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", current median difference=",bestMedianDiffs[currentAtomType])
-            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", current median difference=",bestMedianDiffs[currentAtomType], file=logFile)
+            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", current median difference=",bestMedianDiffs[currentAtomType],", size=",sizes[currentAtomType])
+            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement, ", current median difference=",bestMedianDiffs[currentAtomType],", size=",sizes[currentAtomType], file=logFile)
             print("Calculating new median differences: start-time", str(datetime.datetime.now()))
             print("Calculating new median differences: start-time", str(datetime.datetime.now()), file=logFile)
 
-            (medianDiffs, meanDiffs, overallStdDevDiffs, slopes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"], args["<pdbid-file>"]+".execution_times")
+            (medianDiffs, meanDiffs, overallStdDevDiffs, slopes, sizes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"], args["<pdbid-file>"]+".execution_times")
 
             print("Radii:", currentRadii, file=logFile)
             print("Median Diffs:", medianDiffs, file=logFile)
@@ -190,7 +190,7 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
     :return: diffs_slopes_tuple
     :rtype: :py:class:`tuple`
     """
-    currParamsFilename = createTempJSONFile(currentParams, "tempParams_")
+    currParamsFilename = fileUtils.createTempJSONFile(currentParams, "tempParams_")
 
     if testing:
         results = [processFunction(pdbid) for pdbid in pdbids]
@@ -227,10 +227,11 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
 
     medianDiffs = {key: (np.nanmedian(value) if (value and not np.isnan(value).all()) else 0) for (key, value) in diffs.items() }
     meanDiffs = {key: (np.nanmean(value) if (value and not np.isnan(value).all()) else 0) for (key, value) in diffs.items() }
+    sizeDiffs = {key: sum(~np.isnan(value)) for (key, value) in diffs.items() }
     overallStdDevDiffs = np.nanstd([item for values in diffs.values() for item in values])
     medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
 
-    return (medianDiffs, meanDiffs, overallStdDevDiffs, medianSlopes)
+    return (medianDiffs, meanDiffs, overallStdDevDiffs, medianSlopes, sizeDiffs)
 
 def processFunction(pdbid, paramsFilepath):
     """Process function to analyze a single pdb entry.
