@@ -123,11 +123,12 @@ def main():
             currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
             previousDirection = bestMedianDiffs[currentAtomType] < 0
 
+        estimatedRadiusIncrement = {atomType:0 for atomType in currentRadii.keys()}
         while True:
-            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement,
-                  ", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,", size=",sizes[currentAtomType])
-            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", increment=", radiusIncrement,
-                  ", current median difference=",bestMedianDiffs[currentAtomType],", size=",sizes[currentAtomType], file=logFile)
+            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType],
+                  ", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize, str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType])
+            print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType],
+                  ", current median difference=",bestMedianDiffs[currentAtomType], str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType], file=logFile)
             print("Calculating next  median differences: start-time", str(datetime.datetime.now()))
             print("Calculating next  median differences: start-time", str(datetime.datetime.now()), file=logFile)
 
@@ -153,12 +154,18 @@ def main():
 
             improved = False
             if abs(medianDiffs[currentAtomType]) <= abs(bestMedianDiffs[currentAtomType]):
+                if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]) and previousDirection == (medianDiffs[currentAtomType] < 0):
+                    estimatedRadiusIncrement[currentAtomType] = 0.80 * (currentRadii[currentAtomType] - previousRadius) * medianDiffs[currentAtomType] / (bestMedianDiffs[currentAtomType] - medianDiffs[currentAtomType])
+                else:
+                    estimatedRadiusIncrement[currentAtomType] = 0
                 bestMedianDiffs = medianDiffs
                 currentSlopes = slopes
                 improved = True if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]) else 2
 
-                print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType],", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,", size=",sizes[currentAtomType])
-                print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType],", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,", size=",sizes[currentAtomType], file=logFile)
+                print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType],", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,
+                      str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType])
+                print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType],", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,
+                      str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType], file=logFile)
 
                 try:
                     with open(args["<out-params-file>"] + ".temp", 'w') as jsonFile:
@@ -166,6 +173,7 @@ def main():
                 except:
                     sys.exit(str("Error: unable to create temporary params file \"") + args["<out-params-file>"] + ".temp" + "\".")
             else:
+                estimatedRadiusIncrement[currentAtomType] = 0
                 print("Rejected", currentAtomType, ": new radius=", currentRadii[currentAtomType])
                 print("Rejected", currentAtomType, ": new radius=", currentRadii[currentAtomType], file=logFile)
                 currentRadii[currentAtomType] = previousRadius
@@ -190,14 +198,20 @@ def main():
                     if radiusIncrement > maxRadiusIncrement:
                         radiusIncrement = maxRadiusIncrement
 
+                print("New Radius Increment:", radiusIncrement)
+                print("New Radius Increment:", radiusIncrement, file=logFile)
+
             currentAtomType = maxAtomType
             previousRadius = currentRadii[currentAtomType]
-            currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
+            if abs(estimatedRadiusIncrement[currentAtomType]) > 0:
+                currentRadii[currentAtomType] = currentRadii[currentAtomType] + estimatedRadiusIncrement[currentAtomType]
+            else:
+                currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
             previousDirection = bestMedianDiffs[currentAtomType] < 0
             gc.collect() # force garbage collection to decrease memory use.
 
         print("Final Radii:", currentRadii)
-        print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()])
+        print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]))
         outParams = {**params, "radii" : currentRadii, "slopes" : currentSlopes }
 
     try:
@@ -252,7 +266,7 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
     medianDiffs = {key: (np.nanmedian(value) if (value and not np.isnan(value).all()) else 0) for (key, value) in diffs.items() }
     meanDiffs = {key: (np.nanmean(value) if (value and not np.isnan(value).all()) else 0) for (key, value) in diffs.items() }
     sizeDiffs = {key: sum(~np.isnan(value)) for (key, value) in diffs.items() }
-    squaredDiffs = [item ** 2 for values in diffs.values() for item in values[~np.isnan(values)]]
+    squaredDiffs = [item ** 2 for values in diffs.values() for item in values if not np.isnan(item)]
     overallStdDevDiffs = np.sqrt(sum(squaredDiffs)/(len(squaredDiffs)-1))
     medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
 
