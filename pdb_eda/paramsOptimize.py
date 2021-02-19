@@ -155,10 +155,13 @@ def main():
             print("Slopes:", slopes, file=logFile)
 
             improved = False
+            directionChangeByIncrement = (previousDirection != (medianDiffs[currentAtomType] < 0)) and estimatedRadiusIncrement[currentAtomType] == 0
             if abs(medianDiffs[currentAtomType]) <= abs(bestMedianDiffs[currentAtomType]):
                 numAccepted += 1
                 if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
-                    estimatedRadiusIncrement[currentAtomType] = 0.85 * (currentRadii[currentAtomType] - previousRadius) * medianDiffs[currentAtomType] / (bestMedianDiffs[currentAtomType] - medianDiffs[currentAtomType])
+                    estimatedRadiusIncrement[currentAtomType] = 0.9 * (currentRadii[currentAtomType] - previousRadius) * medianDiffs[currentAtomType] / (bestMedianDiffs[currentAtomType] - medianDiffs[currentAtomType])
+                    if abs(estimatedRadiusIncrement[currentAtomType]) < minRadiusIncrement:
+                        estimatedRadiusIncrement[currentAtomType] = 0
                 else:
                     estimatedRadiusIncrement[currentAtomType] = 0
                 bestMedianDiffs = medianDiffs
@@ -187,9 +190,11 @@ def main():
                 maxAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]))
             else:
                 maxAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]) * sizes[y])
+
             if stoppingFractionalDifference > 0 and max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]) < stoppingFractionalDifference:
                 break
-            elif maxAtomType == currentAtomType:
+
+            if maxAtomType == currentAtomType:
                 if not improved or previousDirection != (bestMedianDiffs[currentAtomType] < 0):
                     if radiusIncrement == minRadiusIncrement:
                         break
@@ -204,6 +209,10 @@ def main():
 
                 print("New Radius Increment:", radiusIncrement)
                 print("New Radius Increment:", radiusIncrement, file=logFile)
+            elif directionChangeByIncrement:
+                radiusIncrement = radiusIncrement * 0.9
+                if radiusIncrement < minRadiusIncrement:
+                    break
 
             currentAtomType = maxAtomType
             previousRadius = currentRadii[currentAtomType]
