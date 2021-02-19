@@ -19,19 +19,21 @@ Options:
     --min=<min-radius-change>           Minimum to change the radius at each incremental optimization. [default: 0.001]
     --radius=<start-radius>             Starting radius for the starting atom-type. [default: 0]
     --start=<start-atom-type>           Starting atom type. [default: ]
-    --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0.02]
+    --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0]
     --unweighted                        Pick atom type to optimize next without weighting based on occurrence across PDB entries.
     --testing                           Run only a single process for testing purposes.
 
 
 This mode is often run multiple times using the output parameter file generated in one cycle as the starting parameter file in the next cycle.
-Typically, it is good to start with the following series of cycles.
-1) --sample=50 --max=0.2 --min=0.01 --stop=0.1 (kill it if it appears to thrash without stopping in a couple hours).
-2) --sample=100 --max=0.2 --min=0.005 --stop=0.05  (kill it if appears to thrash after a few hours).
-3) --sample=200 --max=0.05 --min=0.001 --stop=0.03  (kill it if appears to thrash after a few hours).
-4) --sample=400 --max=0.05 --min=0.001 --stop=0.02  (kill it if appears to thrash after a few hours).
-5) (use 1000-2000 pdbids) --max=0.02 --min=0.001 --stop=0.015  (kill after a day or two it if appears to thrash without stopping).
+Typically, it is good to start with the following series of cycles.  You can start with larger sample sizes if you have more than 20 CPU cores available.
+1) --sample=100 --max=0.1 --min=0.001
+2) --sample=100 --max=0.1 --min=0.001 --unweighted
+3) --sample=400 --max=0.1 --min=0.001
+4) --sample=400 --max=0.1 --min=0.001 --unweighted
+5) (use 1000-2000 pdbids) --max=0.1 --min=0.001
+6) (use 1000-2000 pdbids) --max=0.1 --min=0.001 --unweighted
 If you need to kill the run, don't worry, there is a temp output parameter file with the last improvement.
+Also, it is good to add current amino acid optimized atom types to additional atom types being optimized.  See generate mode --params=<params-file> option for details.
 """
 import os
 import gc

@@ -42,6 +42,11 @@ ftp://ftp.wwpdb.org/pub/pdb/derived_data/pdb_entry_type.txt
 Amino Acid Residues: ALA,ARG,ASN,ASP,CYS,GLN,GLU,GLY,HIS,ILE,LEU,LYS,MET,PHE,PRO,SER,THR,TRP,TYR,VAL
 Nucleic Acid Residues: A,C,G,I,U,DA,DC,DG,DI,DT,DU
 Water: HOH
+
+Typical order of use:
+1) atom-type: generate new set of atom types to optimize.
+2) prevalence: analyze a set of PDB entries for atom-type prevalence.
+3) parameters: generate new parameters file and list of PDB IDs for optimization.
 """
 
 import CifFile
