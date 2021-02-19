@@ -227,6 +227,9 @@ def main():
         print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected, file=logFile)
         print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]))
         print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]), file=logFile)
+        print("Optimization end-time=", str(datetime.datetime.now()))
+        print("Optimization end-time=", str(datetime.datetime.now()), file=logFile)
+
         outParams = {**params, "radii" : currentRadii, "slopes" : currentSlopes }
 
     try:
