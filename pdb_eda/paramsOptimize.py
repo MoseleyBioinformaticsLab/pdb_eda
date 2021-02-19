@@ -157,8 +157,8 @@ def main():
             improved = False
             if abs(medianDiffs[currentAtomType]) <= abs(bestMedianDiffs[currentAtomType]):
                 numAccepted += 1
-                if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]) and previousDirection == (medianDiffs[currentAtomType] < 0):
-                    estimatedRadiusIncrement[currentAtomType] = 0.80 * (currentRadii[currentAtomType] - previousRadius) * medianDiffs[currentAtomType] / (bestMedianDiffs[currentAtomType] - medianDiffs[currentAtomType])
+                if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
+                    estimatedRadiusIncrement[currentAtomType] = 0.85 * (currentRadii[currentAtomType] - previousRadius) * medianDiffs[currentAtomType] / (bestMedianDiffs[currentAtomType] - medianDiffs[currentAtomType])
                 else:
                     estimatedRadiusIncrement[currentAtomType] = 0
                 bestMedianDiffs = medianDiffs
