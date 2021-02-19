@@ -207,8 +207,6 @@ def main():
                     if radiusIncrement > maxRadiusIncrement:
                         radiusIncrement = maxRadiusIncrement
 
-                print("New Radius Increment:", radiusIncrement)
-                print("New Radius Increment:", radiusIncrement, file=logFile)
             elif directionChangeByIncrement:
                 radiusIncrement = radiusIncrement * 0.9
                 if radiusIncrement < minRadiusIncrement:
@@ -225,8 +223,8 @@ def main():
 
         print("Final Radii:", currentRadii)
         print("Final Radii:", currentRadii, file=logFile)
-        print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes", numRejected)
-        print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes", numRejected, file=logFile)
+        print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected)
+        print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected, file=logFile)
         print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]))
         print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]), file=logFile)
         outParams = {**params, "radii" : currentRadii, "slopes" : currentSlopes }
