@@ -4,7 +4,7 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>] [--global]
+    pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>]
     pdb_eda multiple <in-result-file> <out-pdbid-file> --filter [--out-format=<format>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>] [--min-atoms=<min-atoms>] [--min-residues=<min-residues>] [--min-elements=<min-elements>]
     pdb_eda multiple <pdbid-file> --reload
     pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing]
@@ -17,7 +17,6 @@ Options:
     <pdbid-file>                                    Input filename that contains the pdb ids. "-" will read from standard input.
     <out-pdbid-file>                                Output filename that contains the pdb ids. "-" will write to standard output.
     --params=<params-file>                          Overriding parameters file that includes radii, slopes, etc. [default: ]
-    --global                                        Overriding parameters file is set globally.
     --out-format=<format>                           Output file format, available formats: csv, json [default: json].
     --time-out=<seconds>                            Set a maximum time to try to analyze any single pdb entry. [default: 0]
     --testing                                       Run only a single process for testing purposes.
@@ -53,7 +52,6 @@ from . import singleStructure
 from . import crystalContacts
 from . import fileUtils
 
-globalParams = None
 globalArgs = {}
 
 def main():
@@ -64,16 +62,13 @@ def main():
         exit(0)
     globalArgs["--time-out"] = int(globalArgs["--time-out"])
 
-    paramsFilepath = globalArgs["--params"] if globalArgs["--params"] else densityAnalysis.paramsPath
-    try:
-        with open(paramsFilepath, 'r') as paramsFile:
-            global globalParams
-            globalParams = json.load(paramsFile)
-
-        if globalArgs["--global"]:
-            densityAnalysis.setGlobals(globalParams)
-    except:
-        sys.exit(str("Error: params file \"") + paramsFilepath + "\" does not exist or is not parsable.")
+    if globalArgs["--params"]:
+        try:
+            with open(globalArgs["--params"], 'r') as paramsFile:
+                params = json.load(paramsFile)
+            densityAnalysis.setGlobals(params)
+        except:
+            sys.exit(str("Error: params file \"") + globalArgs["--params"] + "\" does not exist or is not parsable.")
 
     if globalArgs["--filter"]:
         globalArgs["--max-resolution"] = float(globalArgs["--max-resolution"])
@@ -178,13 +173,13 @@ def main():
                         pass
 
             if globalArgs["--out-format"] == 'csv' or globalArgs["--out-format"] == 'txt':
-                statsHeaders = ['density_electron_ratio', 'voxel_volume', 'f000', 'chain_num_voxel', 'chain_total_electrons', 'density_mean', 'diff_density_mean', 'resolution', 'space_group', 'num_atoms_analyzed', 'num_residues_analyzed', 'num_chains_analyzed']
+                statsHeaders = ['density_electron_ratio', 'voxel_volume', 'f000', 'num_voxels_aggregated', 'total_aggregated_electrons', 'density_mean', 'diff_density_mean', 'resolution', 'space_group', 'num_atoms_analyzed', 'num_residues_analyzed', 'num_chains_analyzed']
                 with open(globalArgs['<out-result-file>'], "w", newline='') if globalArgs["<out-result-file>"] != "-" else sys.stdout as csvFile:
                     writer = csv.writer(csvFile)
-                    writer.writerow(['pdbid'] + statsHeaders + sorted(globalParams["radii"]))
+                    writer.writerow(['pdbid'] + statsHeaders + sorted(densityAnalysis.paramsGlobal["radii"]))
                     for result in fullResults.values():
                         stats = [result["stats"][header] for header in statsHeaders]
-                        diffs = [result["diffs"][atomType] for atomType in sorted(globalParams["radii"])]
+                        diffs = [result["diffs"][atomType] for atomType in sorted(densityAnalysis.paramsGlobal["radii"])]
                         writer.writerow([result['pdbid']] + stats + diffs)
             else:
                 with open(globalArgs['<out-result-file>'], "w") if globalArgs["<out-result-file>"] != "-" else sys.stdout as jsonFile:
@@ -269,7 +264,6 @@ def testPDBIDLoad(pdbid):
     analyzer = densityAnalysis.fromPDBid(pdbid)
     return False if not analyzer else True
 
-
 def analyzePDBID(pdbid):
     """Process function to analyze a single pdb entry.
 
@@ -280,21 +274,16 @@ def analyzePDBID(pdbid):
     startTime = time.process_time()
 
     analyzer = densityAnalysis.fromPDBid(pdbid)
-
-    if not analyzer:
+    if not analyzer or not analyzer.densityElectronRatio:
         return 0
 
-    analyzer.aggregateCloud(globalParams, atomL=True, residueL=True, chainL=True)
-    if not analyzer.densityElectronRatio:
-        return 0
+    diffs = {atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio)
+              if atomType in analyzer.medians['corrected_density_electron_ratio'] else 0 for atomType in sorted(densityAnalysis.paramsGlobal["radii"])}
 
-    diffs = { atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio)
-              if atomType in analyzer.medians['corrected_density_electron_ratio'] else 0 for atomType in sorted(globalParams["radii"]) }
-
-    stats = { 'density_electron_ratio' : analyzer.densityElectronRatio, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.F000, 'chain_num_voxel' : analyzer.chainNvoxel,
-        'chain_total_electrons' : analyzer.chainTotalE, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
-        'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomList),
-        'num_residues_analyzed' : len(analyzer.residueList), 'num_chains_analyzed' : len(analyzer.chainList)  }
+    stats = {'density_electron_ratio' : analyzer.densityElectronRatio, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.F000, 'num_voxels_aggregated' : analyzer.numVoxelsAggregated,
+        'total_aggregated_electrons' : analyzer.totalAggregatedElectrons, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
+        'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomCloudDescriptions),
+        'num_residues_analyzed' : len(analyzer.residueCloudDescriptions), 'num_chains_analyzed' : len(analyzer.chainCloudDescriptions)}
 
     properties = { property : value for (property,value) in analyzer.biopdbObj.header.items() }
     properties['residue_counts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))

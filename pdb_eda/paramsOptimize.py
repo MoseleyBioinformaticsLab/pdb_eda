@@ -303,22 +303,19 @@ def processFunction(pdbid, paramsFilepath):
     try:
         with open(paramsFilepath, 'r') as jsonFile:
             params = json.load(jsonFile)
+        densityAnalysis.setGlobals(params)
     except:
         return 0
 
     startTime = time.process_time()
 
     analyzer = densityAnalysis.fromPDBid(pdbid)
-    if not analyzer:
-        return 0 
-
-    analyzer.aggregateCloud(params)
-    if not analyzer.densityElectronRatio:
+    if not analyzer or not analyzer.densityElectronRatio:
         return 0
 
-    diffs = { atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio) for atomType in params["radii"]
-              if atomType in analyzer.medians['corrected_density_electron_ratio'] and not np.isnan(analyzer.medians['corrected_density_electron_ratio'][atomType]) }
-    newSlopes = { atomType:analyzer.medians['slopes'][atomType] for atomType in params["slopes"] if atomType in analyzer.medians['slopes'] and not np.isnan(analyzer.medians['slopes'][atomType]) }
+    diffs = {atomType:((analyzer.medians['corrected_density_electron_ratio'][atomType] - analyzer.densityElectronRatio) / analyzer.densityElectronRatio) for atomType in params["radii"]
+             if atomType in analyzer.medians['corrected_density_electron_ratio'] and not np.isnan(analyzer.medians['corrected_density_electron_ratio'][atomType])}
+    newSlopes = {atomType:analyzer.medians['slopes'][atomType] for atomType in params["slopes"] if atomType in analyzer.medians['slopes'] and not np.isnan(analyzer.medians['slopes'][atomType])}
 
     elapsedTime = time.process_time() - startTime
     resultFilename = fileUtils.createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime }, "tempResults_")

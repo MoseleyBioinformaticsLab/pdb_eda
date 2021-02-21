@@ -6,10 +6,10 @@ pdb_eda single structure analysis mode command-line interface
 Usage:
     pdb_eda single -h | --help
     pdb_eda single <pdbid> <out-file> map (--density | --diff-density)
-    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --chain) [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> difference (--atom | --residue | --symmetry-atom) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--global] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --chain) [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> difference (--atom | --residue | --symmetry-atom) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> statistics [--out-format=<format>] (--atom | --residue) [--include-pdbid] [--print-validation]
 
 Options:
@@ -17,7 +17,6 @@ Options:
     <pdbid>                         The PDB ID to download and analyze.
     <out-file>                      Output filename. "-" will write to standard output.
     --params=<params-file>          Overriding parameters file that includes radii, slopes, etc. [default: ]
-    --global                        Overriding parameters file is set globally.
     --include-pdbid                 Include PDB ID at the beginning of each result.
     --density                       Output the density Fo-Fc map in jsonpickle format.
     --diff-density                  Output the difference density 2Fo-Fc map in jsonpickle format.
@@ -56,15 +55,13 @@ def main():
         args["--num-sd"] = 3.0 if args["--green"] or args["--red"] or args["difference"] else 1.5
     args["--num-sd"] = float(args["--num-sd"])
 
-    paramsFilepath = args["--params"] if args["--params"] else densityAnalysis.paramsPath
-    try:
-        with open(paramsFilepath, 'r') as paramsFile:
-            params = json.load(paramsFile)
-
-        if args["--global"]:
+    if args["--params"]:
+        try:
+            with open(args["--params"], 'r') as paramsFile:
+                params = json.load(paramsFile)
             densityAnalysis.setGlobals(params)
-    except:
-        sys.exit(str("Error: params file \"") + paramsFilepath + "\" does not exist or is not parsable.")
+        except:
+            sys.exit(str("Error: params file \"") + args["--params"] + "\" does not exist or is not parsable.")
 
     analyzer = densityAnalysis.fromPDBid(args["<pdbid>"])
     if not analyzer:
@@ -78,26 +75,26 @@ def main():
         jsonType = "jsonpickle"
         result = analyzer.diffDensityObj
     elif args["density"]:
-        analyzer.aggregateCloud(params, atomL=True, residueL=True, chainL=True)
+        analyzer.aggregateCloud()
         if args["--atom"]:
-            headerList = list(map(str,list(analyzer.atomList.dtype.names) + ['density_electron_ratio']))
-            result = [ [numpyConverter(element) for element in item] + [analyzer.densityElectronRatio] for item in analyzer.atomList]
+            headerList = list(map(str, list(analyzer.atomCloudDescriptions.dtype.names) + ['density_electron_ratio']))
+            result = [[numpyConverter(element) for element in item] + [analyzer.densityElectronRatio] for item in analyzer.atomCloudDescriptions]
         elif args["--residue"]:
-            headerList = densityAnalysis.DensityAnalysis.residueListHeader + ['density_electron_ratio']
-            result = [ list(item) + [analyzer.densityElectronRatio] for item in analyzer.residueList]
+            headerList = densityAnalysis.DensityAnalysis.residueCloudHeader + ['density_electron_ratio']
+            result = [list(item) + [analyzer.densityElectronRatio] for item in analyzer.residueCloudDescriptions]
         elif args["--chain"]:
-            headerList = densityAnalysis.DensityAnalysis.chainListHeader + ['density_electron_ratio']
-            result = [ list(item) + [analyzer.densityElectronRatio] for item in analyzer.chainList]
+            headerList = densityAnalysis.DensityAnalysis.chainCloudHeader + ['density_electron_ratio']
+            result = [list(item) + [analyzer.densityElectronRatio] for item in analyzer.chainCloudDescriptions]
     elif args["difference"]:
         if args["--atom"]:
             headerList = densityAnalysis.DensityAnalysis.atomRegionDiscrepancyHeader
-            result = analyzer.calculateAtomRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
+            result = analyzer.calculateAtomRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"])
         elif args["--residue"]:
             headerList = densityAnalysis.DensityAnalysis.residueRegionDiscrepancyHeader
-            result = analyzer.calculateResidueRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
+            result = analyzer.calculateResidueRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"])
         elif args["--symmetry-atom"]:
             headerList = densityAnalysis.DensityAnalysis.symmetryAtomRegionDiscrepancyHeader
-            result = analyzer.calculateSymmetryAtomRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"], params)
+            result = analyzer.calculateSymmetryAtomRegionDiscrepancies(args["--radius"], args["--num-sd"], args["--type"])
             for atomInfo in result:
                 atomInfo[4] = [val for val in atomInfo[4]]
                 atomInfo[5] = [float(val) for val in atomInfo[5]]
@@ -106,13 +103,13 @@ def main():
         result = []
         if args["--green"]:
             greenBlobList = analyzer.diffDensityObj.createFullBlobList(analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity)
-            result.extend(analyzer.calculateAtomSpecificBlobStatistics(greenBlobList, params))
+            result.extend(analyzer.calculateAtomSpecificBlobStatistics(greenBlobList))
         if args["--red"]:
             redBlobList = analyzer.diffDensityObj.createFullBlobList(-1 * (analyzer.diffDensityObj.meanDensity + args["--num-sd"] * analyzer.diffDensityObj.stdDensity))
-            result.extend(analyzer.calculateAtomSpecificBlobStatistics(redBlobList, params))
+            result.extend(analyzer.calculateAtomSpecificBlobStatistics(redBlobList))
         if not args["--green"] and not args["--red"]: # args["--blue"] by default
             blueBlobList = analyzer.densityObj.createFullBlobList(analyzer.densityObj.meanDensity + args["--num-sd"] * analyzer.densityObj.stdDensity)
-            result.extend(analyzer.calculateAtomSpecificBlobStatistics(blueBlobList, params))
+            result.extend(analyzer.calculateAtomSpecificBlobStatistics(blueBlobList))
         for blobInfo in result:
             blobInfo[9]  = [ val for val in blobInfo[9] ]
             blobInfo[10] = [ float(val) for val in blobInfo[10] ]
