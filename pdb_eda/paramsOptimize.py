@@ -5,8 +5,6 @@ pdb_eda radii and slope parameter optimization mode command-line interface
   A simple steepest decent optimization approach is utilized.
   This approach is justified by testing and the use of median differences that smooths the error surface.
 
-  Should use a minimum of 1000 PDB entries for optimization.
-
 Usage:
     pdb_eda optimize -h | --help
     pdb_eda optimize <start-params-file> <pdbid-file> <log-file> <out-params-file> [options]
@@ -30,12 +28,10 @@ This mode is often run multiple times using the output parameter file generated 
 Typically, it is good to start with the following series of cycles.  You can start with larger sample sizes if you have more than 20 CPU cores available.
 1) --sample=100 --max=0.1 --min=0.001
 2) --sample=100 --max=0.1 --min=0.001 --unweighted
-3) --sample=400 --max=0.1 --min=0.001
-4) --sample=400 --max=0.1 --min=0.001 --unweighted
-5) (use 1000-2000 pdbids) --max=0.1 --min=0.001
-6) (use 1000-2000 pdbids) --max=0.1 --min=0.001 --unweighted
+5) (use ~1000 pdbids) --max=0.1 --min=0.001
+6) (use ~1000 pdbids) --max=0.1 --min=0.001 --unweighted
 If you need to kill the run, don't worry, there is a temp output parameter file with the last improvement.
-Also, it is good to add current amino acid optimized atom types to additional atom types being optimized.  See generate mode --params=<params-file> option for details.
+Also, it is good to add prior amino acid optimized atom types to additional atom types being optimized.  See generate mode --params=<params-file> option for details.
 """
 import os
 import gc
