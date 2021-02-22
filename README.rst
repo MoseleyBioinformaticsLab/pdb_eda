@@ -128,6 +128,20 @@ The :mod:`pdb_eda` package can be used in several ways:
         * For parameter optimization mode: (rarely used mode)
             * Optimizes atom type radii and b-factor density correction slopes using a given list of PDB IDs.
 
+CHANGELOG
+---------
+Since version 1.0.1, over 2000 lines of new code has been written and most of the code base has been revised and refactored.
+Computationally intensive parts of the code have been cythonized to improve execution performance.
+
+The application programming interface (API) has been greatly expanded and much of the functionality streamlined.
+
+The command line interface has been greatly expanded and now includes single, multiple, contacts, generate, and optimize modes.
+
+The atom types have been systematically generated from the wwPDB master chemical components file.
+Both amino acid and nucleic acid type parameters have been optimized.
+So both protein and nucleic PDB entries can be analyzed now.
+
+
 License
 -------
 A modified Clear BSD License
