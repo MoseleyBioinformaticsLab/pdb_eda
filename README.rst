@@ -59,10 +59,12 @@ Dependencies
 
    * Biopython_ for creating and analyzing the `pdb_eda` atom objects.
    * Cython_ for cythonizing low-level utility functions to improve computational performance.
+      * Requires gcc to be installed for the cythonization process.
    * numpy_ and scipy_ for mathmatical calculations.
    * docopt_ for better command line interface.
    * jsonpickle_ for formatted and reusable output.
    * PyCifRW_ for reading Cif formatted files.
+      * Requires gcc to be installed for compiling components of the package.
    * pymol_ for calculating crystal contacts. (This package is not required, except for this functionality).
 
 
@@ -130,7 +132,7 @@ The :mod:`pdb_eda` package can be used in several ways:
 
 CHANGELOG
 ---------
-Since version 1.0.1, over 2000 lines of new code has been written and most of the code base has been revised and refactored.
+Since version 1.0.1, over 2000 lines of additional code has been written and most of the code base has been revised and refactored.
 Computationally intensive parts of the code have been cythonized to improve execution performance.
 
 The application programming interface (API) has been greatly expanded and much of the functionality streamlined.
@@ -139,7 +141,7 @@ The command line interface has been greatly expanded and now includes single, mu
 
 The atom types have been systematically generated from the wwPDB master chemical components file.
 Both amino acid and nucleic acid type parameters have been optimized.
-So both protein and nucleic PDB entries can be analyzed now.
+So both protein and nucleic acid PDB entries can be analyzed now.
 
 
 License
