@@ -53,7 +53,7 @@ setup(
     url='https://github.com/MoseleyBioinformaticsLab/pdb_eda',
     cmdclass={'build_ext': Cython.Build.build_ext},
     packages=find_packages(),
-    package_data={'pdb_eda': ['conf/*.json']},
+    package_data={'pdb_eda': ['conf/*.json*']},
     platforms='any',
     long_description=readme(),
     setup_requires=SETUP_REQUIRES,
@@ -71,5 +71,6 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Software Development :: Libraries :: Python Modules',
-    ]
+    ],
+    entry_points={"console_scripts": ["pdb_eda = pdb_eda.__main__:main"]},
 )

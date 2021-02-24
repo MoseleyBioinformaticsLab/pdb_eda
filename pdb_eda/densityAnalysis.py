@@ -971,7 +971,7 @@ class DensityAnalysis(object):
             fullAtomName = residueAtomName(atom)
             if fullAtomName in masterFullAtomNameMapElectronsGlobal:
                 totalElectrons += masterFullAtomNameMapElectronsGlobal[fullAtomName]
-            else:
+            elif atom.element in elementElectronsGlobal:
                 totalElectrons += elementElectronsGlobal[atom.element] + 1 # + 1 as an estimate for the number of H.
 
         totalElectrons *= len(pdbObj.header.rotationMats)
