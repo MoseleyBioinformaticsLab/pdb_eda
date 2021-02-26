@@ -170,16 +170,16 @@ def main():
             numRejected = 0
             estimatedRadiusIncrement = {atomType:0 for atomType in currentRadii.keys()}
             while True:
-                print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType],
+                print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", current weighted penalty=", bestPenalties[currentAtomType] * sizes[currentAtomType] / maxSize,
                       ", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize, str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType])
-                print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType],
+                print("Testing ", currentAtomType, ": starting radius=", previousRadius, ", new radius=", currentRadii[currentAtomType], ", current weighted penalty=", bestPenalties[currentAtomType] * sizes[currentAtomType] / maxSize,
                       ", current median difference=",bestMedianDiffs[currentAtomType], str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType], file=logFile)
                 print("Calculating next  median differences: start-time=", str(datetime.datetime.now()), ", current increment=",radiusIncrement)
                 print("Calculating next  median differences: start-time=", str(datetime.datetime.now()), ", current increment=",radiusIncrement, file=logFile)
 
                 (medianDiffs, meanDiffs, overallStdDevDiffs, slopes, sizes, overlapCompleteness) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"],
                                                                                                          args["<pdbid-file>"]+".execution_times")
-                penalties = {atomType: (bestMedianDiffs[atomType] + overlapCompleteness[atomType] - 1.0) for atomType in bestMedianDiffs}
+                penalties = {atomType:(medianDiffs[atomType] + overlapCompleteness[atomType] - 1.0) for atomType in medianDiffs}
 
                 maxSize = max([sizes[atomType] for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
                 print("Radii:", currentRadii, file=logFile)
@@ -215,9 +215,11 @@ def main():
                     currentSlopes = {**slopes, **currentSlopes}
                     improved = True if abs(penalties[currentAtomType]) < abs(bestPenalties[currentAtomType]) else 2
 
-                    print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType],", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,
+                    print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType], ", current weighted penalty=", bestPenalties[currentAtomType] * sizes[currentAtomType] / maxSize,
+                          ", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,
                           str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType])
-                    print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType],", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,
+                    print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType], ", current weighted penalty=", bestPenalties[currentAtomType] * sizes[currentAtomType] / maxSize,
+                          ", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,
                           str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType], file=logFile)
 
                     try:
@@ -379,7 +381,7 @@ def processFunction(pdbid, paramsFilepath):
     newSlopes = {atomType:analyzer.medians['slopes'][atomType] for atomType in params["slopes"] if atomType in analyzer.medians['slopes'] and not np.isnan(analyzer.medians['slopes'][atomType])}
 
     elapsedTime = time.process_time() - startTime
-    resultFilename = fileUtils.createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime
+    resultFilename = fileUtils.createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime,
                                                     "atomtype_overlap_completeness" : analyzer.atomTypeOverlapCompleteness, "atomtype_overlap_incompleteness" : analyzer.atomTypeOverlapIncompleteness }, "tempResults_")
 
     # force garbage collection to decrease memory use.
