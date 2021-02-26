@@ -553,12 +553,12 @@ class DensityAnalysis(object):
 
     residueCloudHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume']
     chainCloudHeader = residueCloudHeader
-    def aggregateCloud(self, minResElectrons=25, minTotalElectrons=400):
+    def aggregateCloud(self, minCloudElectrons=25.0, minTotalElectrons=400.0):
         """Aggregate the electron density map clouds by atom, residue, and chain.
         Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data members.
 
-        :param :py:class:`int` minResAtoms: minimum number of atoms needed to aggregate a residue.
-        :param :py:class:`int` minTotalAtoms: miminum total number of atoms to calculate a density-electron ratio.
+        :param :py:class:`float` minCloudElectrons: minimum number of electrons needed to aggregate a residue or chain cloud.
+        :param :py:class:`float` minTotalElectrons: mininum total number of electrons required to calculate a density-electron ratio.
         """
         densityObj = self.densityObj
         biopdbObj = self.biopdbObj
@@ -639,7 +639,7 @@ class DensityAnalysis(object):
 
             for cloud in resClouds:
                 resElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
-                if resElectrons >= minResElectrons:
+                if resElectrons >= minCloudElectrons:
                     residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / resElectrons, len(cloud.crsList), resElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
@@ -679,7 +679,7 @@ class DensityAnalysis(object):
             numVoxels += len(cloud.crsList)
             totalDensity += cloud.totalDensity
 
-            if chainElectrons >= minResElectrons:
+            if chainElectrons >= minCloudElectrons:
                 chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
 
         if totalElectrons < minTotalElectrons:
