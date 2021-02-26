@@ -129,8 +129,9 @@ def main():
             print("Calculating start median differences: start-time=", str(datetime.datetime.now()))
             print("Calculating start median differences: start-time=", str(datetime.datetime.now()), file=logFile)
 
-            (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes, sizes) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
+            (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes, sizes, overlapCompleteness) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
             currentSlopes = {**currentSlopes, **(params["slopes"])}
+            bestPenalties = {atomType:(bestMedianDiffs[atomType] + overlapCompleteness[atomType] - 1.0) for atomType in bestMedianDiffs}
 
             maxSize = max([sizes[atomType] for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
             print("Radii:", currentRadii, file=logFile)
@@ -147,20 +148,23 @@ def main():
             print("Max Absolute Median Diff:", max([abs(bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                   ", Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                   ", Mean Abs Diff Mean-Median:", np.mean([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
+            print("Max Absolute Weighted Penalty:", max([abs(bestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in bestPenalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
+            print("Max Absolute Weighted Penalty:", max([abs(bestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in bestPenalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
 
-            testBestMedianDiffs = {atomType: diff for (atomType, diff) in bestMedianDiffs.items() if atomType in atomTypes2Optimize} if atomTypes2Optimize else bestMedianDiffs
+
+            testBestPenalties = {atomType: penalty for (atomType, penalty) in bestPenalties.items() if atomType in atomTypes2Optimize} if atomTypes2Optimize else bestPenalties
             if args["--unweighted"]:
-                currentAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y])) if not args["--start"]  else args["--start"]
+                currentAtomType = max(testBestPenalties, key=lambda y: abs(testBestPenalties[y])) if not args["--start"]  else args["--start"]
             else:
-                currentAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]) * sizes[y]) if not args["--start"] else args["--start"]
+                currentAtomType = max(testBestPenalties, key=lambda y: abs(testBestPenalties[y] * sizes[y])) if not args["--start"] else args["--start"]
             previousRadius = currentRadii[currentAtomType]
 
             if startingRadius > 0:
                 previousDirection = currentRadii[currentAtomType] < startingRadius
                 currentRadii[currentAtomType] = startingRadius
             else:
-                currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
-                previousDirection = bestMedianDiffs[currentAtomType] < 0
+                currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestPenalties[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
+                previousDirection = bestPenalties[currentAtomType] < 0
 
             numAccepted = 0
             numRejected = 0
@@ -173,8 +177,9 @@ def main():
                 print("Calculating next  median differences: start-time=", str(datetime.datetime.now()), ", current increment=",radiusIncrement)
                 print("Calculating next  median differences: start-time=", str(datetime.datetime.now()), ", current increment=",radiusIncrement, file=logFile)
 
-                (medianDiffs, meanDiffs, overallStdDevDiffs, slopes, sizes) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"],
+                (medianDiffs, meanDiffs, overallStdDevDiffs, slopes, sizes, overlapCompleteness) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"],
                                                                                                          args["<pdbid-file>"]+".execution_times")
+                penalties = {atomType: (bestMedianDiffs[atomType] + overlapCompleteness[atomType] - 1.0) for atomType in bestMedianDiffs}
 
                 maxSize = max([sizes[atomType] for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
                 print("Radii:", currentRadii, file=logFile)
@@ -191,21 +196,24 @@ def main():
                 print("Max Absolute Median Diff:", max([abs(medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                       ", Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                       ", Mean Abs Diff Mean-Median:", np.mean([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
+                print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
+                print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
                 print("Slopes:", slopes, file=logFile)
 
                 improved = False
-                directionChangeByIncrement = (previousDirection != (medianDiffs[currentAtomType] < 0)) and estimatedRadiusIncrement[currentAtomType] == 0
-                if abs(medianDiffs[currentAtomType]) <= abs(bestMedianDiffs[currentAtomType]):
+                directionChangeByIncrement = (previousDirection != (penalties[currentAtomType] < 0)) and estimatedRadiusIncrement[currentAtomType] == 0
+                if abs(penalties[currentAtomType]) <= abs(bestPenalties[currentAtomType]):
                     numAccepted += 1
-                    if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]):
-                        estimatedRadiusIncrement[currentAtomType] = 0.9 * (currentRadii[currentAtomType] - previousRadius) * medianDiffs[currentAtomType] / (bestMedianDiffs[currentAtomType] - medianDiffs[currentAtomType])
+                    if abs(penalties[currentAtomType]) < abs(bestPenalties[currentAtomType]):
+                        estimatedRadiusIncrement[currentAtomType] = 0.9 * (currentRadii[currentAtomType] - previousRadius) * penalties[currentAtomType] / (bestPenalties[currentAtomType] - penalties[currentAtomType])
                         if abs(estimatedRadiusIncrement[currentAtomType]) < minRadiusIncrement:
                             estimatedRadiusIncrement[currentAtomType] = 0
                     else:
                         estimatedRadiusIncrement[currentAtomType] = 0
                     bestMedianDiffs = medianDiffs
+                    bestPenalties = penalties
                     currentSlopes = {**slopes, **currentSlopes}
-                    improved = True if abs(medianDiffs[currentAtomType]) < abs(bestMedianDiffs[currentAtomType]) else 2
+                    improved = True if abs(penalties[currentAtomType]) < abs(bestPenalties[currentAtomType]) else 2
 
                     print("Accepted", currentAtomType, ": new radius=", currentRadii[currentAtomType],", current weighted median difference=",bestMedianDiffs[currentAtomType] * sizes[currentAtomType] / maxSize,
                           str("(")+str(bestMedianDiffs[currentAtomType])+str(")"), ", size=",sizes[currentAtomType])
@@ -224,17 +232,17 @@ def main():
                     print("Rejected", currentAtomType, ": new radius=", currentRadii[currentAtomType], file=logFile)
                     currentRadii[currentAtomType] = previousRadius
 
-                testBestMedianDiffs = { atomType:diff for (atomType,diff) in bestMedianDiffs.items() if atomType in atomTypes2Optimize } if atomTypes2Optimize else bestMedianDiffs
+                testBestPenalties = { atomType:diff for (atomType,diff) in bestPenalties.items() if atomType in atomTypes2Optimize } if atomTypes2Optimize else bestPenalties
                 if args["--unweighted"]:
-                    maxAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]))
+                    maxAtomType = max(testBestPenalties, key=lambda y: abs(testBestPenalties[y]))
                 else:
-                    maxAtomType = max(testBestMedianDiffs, key=lambda y: abs(testBestMedianDiffs[y]) * sizes[y])
+                    maxAtomType = max(testBestPenalties, key=lambda y: abs(testBestPenalties[y]) * sizes[y])
 
-                if stoppingFractionalDifference > 0 and max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]) < stoppingFractionalDifference:
+                if stoppingFractionalDifference > 0 and max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestPenalties.items()]) < stoppingFractionalDifference:
                     break
 
                 if maxAtomType == currentAtomType:
-                    if not improved or previousDirection != (bestMedianDiffs[currentAtomType] < 0):
+                    if not improved or previousDirection != (bestPenalties[currentAtomType] < 0):
                         if radiusIncrement == minRadiusIncrement:
                             break
 
@@ -256,16 +264,18 @@ def main():
                 if abs(estimatedRadiusIncrement[currentAtomType]) > 0:
                     currentRadii[currentAtomType] = currentRadii[currentAtomType] + estimatedRadiusIncrement[currentAtomType]
                 else:
-                    currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestMedianDiffs[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
-                previousDirection = bestMedianDiffs[currentAtomType] < 0
+                    currentRadii[currentAtomType] = currentRadii[currentAtomType] + radiusIncrement if bestPenalties[currentAtomType] < 0 else currentRadii[currentAtomType] - radiusIncrement
+                previousDirection = bestPenalties[currentAtomType] < 0
                 gc.collect() # force garbage collection to decrease memory use.
 
             print("Final Radii:", currentRadii)
             print("Final Radii:", currentRadii, file=logFile)
             print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected)
             print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected, file=logFile)
-            print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]))
-            print("Max Absolute Weighted Median Diff:", max([abs(value * sizes[atomType] / maxSize) for atomType,value in testBestMedianDiffs.items()]), file=logFile)
+            print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
+            print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
+            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]))
+            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]), file=logFile)
             print("Optimization end-time=", str(datetime.datetime.now()))
             print("Optimization end-time=", str(datetime.datetime.now()), file=logFile)
 
@@ -295,6 +305,9 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
 
     diffs = {atomType: [] for atomType in currentParams["radii"]}
     slopes = {atomType: [] for atomType in currentParams["slopes"]}
+    atomTypeOverlapCompleteness = {atomType: 0 for atomType in currentParams["radii"]}
+    atomTypeOverlapIncompleteness = {atomType: 0 for atomType in currentParams["radii"]}
+
     executionTimes = {}
     for resultFilename in results:
         if resultFilename:
@@ -306,9 +319,17 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
                     for atomType, slope in result['slopes'].items():
                         slopes[atomType].append(slope)
                     executionTimes[result["pdbid"]] = result["execution_time"]
+                    for atomType, count in result['atomtype_overlap_completeness'].items():
+                        atomTypeOverlapCompleteness[atomType] += count
+                    for atomType, count in result['atomtype_overlap_incompleteness'].items():
+                        atomTypeOverlapIncompleteness[atomType] += count
                 os.remove(resultFilename)
             except:
                 pass
+
+    for atomType in atomTypeOverlapCompleteness.keys():
+        if atomTypeOverlapCompleteness[atomType] > 0 or atomTypeOverlapIncompleteness[atomType] > 0:
+            atomTypeOverlapCompleteness[atomType] = atomTypeOverlapCompleteness[atomType] / (atomTypeOverlapCompleteness[atomType] + atomTypeOverlapIncompleteness[atomType])
 
     os.remove(currParamsFilename)
 
@@ -328,7 +349,7 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
     medianSlopes = {key: np.nanmedian(value) for (key, value) in slopes.items()}
     medianSlopes = {key:value for (key,value) in medianSlopes.items() if not np.isnan(value)} # remove nan values.
 
-    return (medianDiffs, meanDiffs, overallStdDevDiffs, medianSlopes, sizeDiffs)
+    return (medianDiffs, meanDiffs, overallStdDevDiffs, medianSlopes, sizeDiffs, atomTypeOverlapCompleteness)
 
 def processFunction(pdbid, paramsFilepath):
     """Process function to analyze a single pdb entry.
@@ -356,7 +377,8 @@ def processFunction(pdbid, paramsFilepath):
     newSlopes = {atomType:analyzer.medians['slopes'][atomType] for atomType in params["slopes"] if atomType in analyzer.medians['slopes'] and not np.isnan(analyzer.medians['slopes'][atomType])}
 
     elapsedTime = time.process_time() - startTime
-    resultFilename = fileUtils.createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime }, "tempResults_")
+    resultFilename = fileUtils.createTempJSONFile({ "pdbid" : pdbid, "diffs" : diffs, "slopes" : newSlopes, 'resolution' : analyzer.pdbObj.header.resolution, "execution_time" : elapsedTime
+                                                    "atomtype_overlap_completeness" : analyzer.atomTypeOverlapCompleteness, "atomtype_overlap_incompleteness" : analyzer.atomTypeOverlapIncompleteness }, "tempResults_")
 
     # force garbage collection to decrease memory use.
     analyzer=0
