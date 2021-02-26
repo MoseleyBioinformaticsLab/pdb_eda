@@ -330,6 +330,8 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
     for atomType in atomTypeOverlapCompleteness.keys():
         if atomTypeOverlapCompleteness[atomType] > 0 or atomTypeOverlapIncompleteness[atomType] > 0:
             atomTypeOverlapCompleteness[atomType] = atomTypeOverlapCompleteness[atomType] / (atomTypeOverlapCompleteness[atomType] + atomTypeOverlapIncompleteness[atomType])
+        else:
+            atomTypeOverlapCompleteness[atomType] = 1 # This makes the overlap penalty zero.
 
     os.remove(currParamsFilename)
 
