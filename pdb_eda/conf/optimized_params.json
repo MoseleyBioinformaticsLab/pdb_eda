@@ -1,4 +1,1720 @@
 {
+  "bonded_atoms": {
+    "ALA_C": [
+      "ALA_CA",
+      "ALA_O",
+      "ALA_OXT"
+    ],
+    "ALA_CA": [
+      "ALA_N",
+      "ALA_C",
+      "ALA_CB"
+    ],
+    "ALA_CB": [
+      "ALA_CA"
+    ],
+    "ALA_N": [
+      "ALA_CA"
+    ],
+    "ALA_O": [
+      "ALA_C"
+    ],
+    "ALA_OXT": [
+      "ALA_C"
+    ],
+    "ARG_C": [
+      "ARG_CA",
+      "ARG_O",
+      "ARG_OXT"
+    ],
+    "ARG_CA": [
+      "ARG_N",
+      "ARG_C",
+      "ARG_CB"
+    ],
+    "ARG_CB": [
+      "ARG_CA",
+      "ARG_CG"
+    ],
+    "ARG_CD": [
+      "ARG_CG",
+      "ARG_NE"
+    ],
+    "ARG_CG": [
+      "ARG_CB",
+      "ARG_CD"
+    ],
+    "ARG_CZ": [
+      "ARG_NE",
+      "ARG_NH1",
+      "ARG_NH2"
+    ],
+    "ARG_N": [
+      "ARG_CA"
+    ],
+    "ARG_NE": [
+      "ARG_CD",
+      "ARG_CZ"
+    ],
+    "ARG_NH1": [
+      "ARG_CZ"
+    ],
+    "ARG_NH2": [
+      "ARG_CZ"
+    ],
+    "ARG_O": [
+      "ARG_C"
+    ],
+    "ARG_OXT": [
+      "ARG_C"
+    ],
+    "ASN_C": [
+      "ASN_CA",
+      "ASN_O",
+      "ASN_OXT"
+    ],
+    "ASN_CA": [
+      "ASN_N",
+      "ASN_C",
+      "ASN_CB"
+    ],
+    "ASN_CB": [
+      "ASN_CA",
+      "ASN_CG"
+    ],
+    "ASN_CG": [
+      "ASN_CB",
+      "ASN_OD1",
+      "ASN_ND2"
+    ],
+    "ASN_N": [
+      "ASN_CA"
+    ],
+    "ASN_ND2": [
+      "ASN_CG"
+    ],
+    "ASN_O": [
+      "ASN_C"
+    ],
+    "ASN_OD1": [
+      "ASN_CG"
+    ],
+    "ASN_OXT": [
+      "ASN_C"
+    ],
+    "ASP_C": [
+      "ASP_CA",
+      "ASP_O",
+      "ASP_OXT"
+    ],
+    "ASP_CA": [
+      "ASP_N",
+      "ASP_C",
+      "ASP_CB"
+    ],
+    "ASP_CB": [
+      "ASP_CA",
+      "ASP_CG"
+    ],
+    "ASP_CG": [
+      "ASP_CB",
+      "ASP_OD1",
+      "ASP_OD2"
+    ],
+    "ASP_N": [
+      "ASP_CA"
+    ],
+    "ASP_O": [
+      "ASP_C"
+    ],
+    "ASP_OD1": [
+      "ASP_CG"
+    ],
+    "ASP_OD2": [
+      "ASP_CG"
+    ],
+    "ASP_OXT": [
+      "ASP_C"
+    ],
+    "A_C1'": [
+      "A_O4'",
+      "A_C2'",
+      "A_N9"
+    ],
+    "A_C2": [
+      "A_N1",
+      "A_N3"
+    ],
+    "A_C2'": [
+      "A_C3'",
+      "A_O2'",
+      "A_C1'"
+    ],
+    "A_C3'": [
+      "A_C4'",
+      "A_O3'",
+      "A_C2'"
+    ],
+    "A_C4": [
+      "A_N9",
+      "A_C5",
+      "A_N3"
+    ],
+    "A_C4'": [
+      "A_C5'",
+      "A_O4'",
+      "A_C3'"
+    ],
+    "A_C5": [
+      "A_N7",
+      "A_C6",
+      "A_C4"
+    ],
+    "A_C5'": [
+      "A_O5'",
+      "A_C4'"
+    ],
+    "A_C6": [
+      "A_C5",
+      "A_N6",
+      "A_N1"
+    ],
+    "A_C8": [
+      "A_N9",
+      "A_N7"
+    ],
+    "A_N1": [
+      "A_C6",
+      "A_C2"
+    ],
+    "A_N3": [
+      "A_C2",
+      "A_C4"
+    ],
+    "A_N6": [
+      "A_C6"
+    ],
+    "A_N7": [
+      "A_C8",
+      "A_C5"
+    ],
+    "A_N9": [
+      "A_C1'",
+      "A_C8",
+      "A_C4"
+    ],
+    "A_O2'": [
+      "A_C2'"
+    ],
+    "A_O3'": [
+      "A_C3'"
+    ],
+    "A_O4'": [
+      "A_C4'",
+      "A_C1'"
+    ],
+    "A_O5'": [
+      "A_P",
+      "A_C5'"
+    ],
+    "A_OP1": [
+      "A_P"
+    ],
+    "A_OP2": [
+      "A_P"
+    ],
+    "A_OP3": [
+      "A_P"
+    ],
+    "A_P": [
+      "A_OP3",
+      "A_OP1",
+      "A_OP2",
+      "A_O5'"
+    ],
+    "CYS_C": [
+      "CYS_CA",
+      "CYS_O",
+      "CYS_OXT"
+    ],
+    "CYS_CA": [
+      "CYS_N",
+      "CYS_C",
+      "CYS_CB"
+    ],
+    "CYS_CB": [
+      "CYS_CA",
+      "CYS_SG"
+    ],
+    "CYS_N": [
+      "CYS_CA"
+    ],
+    "CYS_O": [
+      "CYS_C"
+    ],
+    "CYS_OXT": [
+      "CYS_C"
+    ],
+    "CYS_SG": [
+      "CYS_CB"
+    ],
+    "C_C1'": [
+      "C_O4'",
+      "C_C2'",
+      "C_N1"
+    ],
+    "C_C2": [
+      "C_N1",
+      "C_O2",
+      "C_N3"
+    ],
+    "C_C2'": [
+      "C_C3'",
+      "C_O2'",
+      "C_C1'"
+    ],
+    "C_C3'": [
+      "C_C4'",
+      "C_O3'",
+      "C_C2'"
+    ],
+    "C_C4": [
+      "C_N3",
+      "C_N4",
+      "C_C5"
+    ],
+    "C_C4'": [
+      "C_C5'",
+      "C_O4'",
+      "C_C3'"
+    ],
+    "C_C5": [
+      "C_C4",
+      "C_C6"
+    ],
+    "C_C5'": [
+      "C_O5'",
+      "C_C4'"
+    ],
+    "C_C6": [
+      "C_N1",
+      "C_C5"
+    ],
+    "C_N1": [
+      "C_C1'",
+      "C_C2",
+      "C_C6"
+    ],
+    "C_N3": [
+      "C_C2",
+      "C_C4"
+    ],
+    "C_N4": [
+      "C_C4"
+    ],
+    "C_O2": [
+      "C_C2"
+    ],
+    "C_O2'": [
+      "C_C2'"
+    ],
+    "C_O3'": [
+      "C_C3'"
+    ],
+    "C_O4'": [
+      "C_C4'",
+      "C_C1'"
+    ],
+    "C_O5'": [
+      "C_P",
+      "C_C5'"
+    ],
+    "C_OP1": [
+      "C_P"
+    ],
+    "C_OP2": [
+      "C_P"
+    ],
+    "C_OP3": [
+      "C_P"
+    ],
+    "C_P": [
+      "C_OP3",
+      "C_OP1",
+      "C_OP2",
+      "C_O5'"
+    ],
+    "DA_C1'": [
+      "DA_O4'",
+      "DA_C2'",
+      "DA_N9"
+    ],
+    "DA_C2": [
+      "DA_N1",
+      "DA_N3"
+    ],
+    "DA_C2'": [
+      "DA_C3'",
+      "DA_C1'"
+    ],
+    "DA_C3'": [
+      "DA_C4'",
+      "DA_O3'",
+      "DA_C2'"
+    ],
+    "DA_C4": [
+      "DA_N9",
+      "DA_C5",
+      "DA_N3"
+    ],
+    "DA_C4'": [
+      "DA_C5'",
+      "DA_O4'",
+      "DA_C3'"
+    ],
+    "DA_C5": [
+      "DA_N7",
+      "DA_C6",
+      "DA_C4"
+    ],
+    "DA_C5'": [
+      "DA_O5'",
+      "DA_C4'"
+    ],
+    "DA_C6": [
+      "DA_C5",
+      "DA_N6",
+      "DA_N1"
+    ],
+    "DA_C8": [
+      "DA_N9",
+      "DA_N7"
+    ],
+    "DA_N1": [
+      "DA_C6",
+      "DA_C2"
+    ],
+    "DA_N3": [
+      "DA_C2",
+      "DA_C4"
+    ],
+    "DA_N6": [
+      "DA_C6"
+    ],
+    "DA_N7": [
+      "DA_C8",
+      "DA_C5"
+    ],
+    "DA_N9": [
+      "DA_C1'",
+      "DA_C8",
+      "DA_C4"
+    ],
+    "DA_O3'": [
+      "DA_C3'"
+    ],
+    "DA_O4'": [
+      "DA_C4'",
+      "DA_C1'"
+    ],
+    "DA_O5'": [
+      "DA_P",
+      "DA_C5'"
+    ],
+    "DA_OP1": [
+      "DA_P"
+    ],
+    "DA_OP2": [
+      "DA_P"
+    ],
+    "DA_OP3": [
+      "DA_P"
+    ],
+    "DA_P": [
+      "DA_OP3",
+      "DA_OP1",
+      "DA_OP2",
+      "DA_O5'"
+    ],
+    "DC_C1'": [
+      "DC_O4'",
+      "DC_C2'",
+      "DC_N1"
+    ],
+    "DC_C2": [
+      "DC_N1",
+      "DC_O2",
+      "DC_N3"
+    ],
+    "DC_C2'": [
+      "DC_C3'",
+      "DC_C1'"
+    ],
+    "DC_C3'": [
+      "DC_C4'",
+      "DC_O3'",
+      "DC_C2'"
+    ],
+    "DC_C4": [
+      "DC_N3",
+      "DC_N4",
+      "DC_C5"
+    ],
+    "DC_C4'": [
+      "DC_C5'",
+      "DC_O4'",
+      "DC_C3'"
+    ],
+    "DC_C5": [
+      "DC_C4",
+      "DC_C6"
+    ],
+    "DC_C5'": [
+      "DC_O5'",
+      "DC_C4'"
+    ],
+    "DC_C6": [
+      "DC_N1",
+      "DC_C5"
+    ],
+    "DC_N1": [
+      "DC_C1'",
+      "DC_C2",
+      "DC_C6"
+    ],
+    "DC_N3": [
+      "DC_C2",
+      "DC_C4"
+    ],
+    "DC_N4": [
+      "DC_C4"
+    ],
+    "DC_O2": [
+      "DC_C2"
+    ],
+    "DC_O3'": [
+      "DC_C3'"
+    ],
+    "DC_O4'": [
+      "DC_C4'",
+      "DC_C1'"
+    ],
+    "DC_O5'": [
+      "DC_P",
+      "DC_C5'"
+    ],
+    "DC_OP1": [
+      "DC_P"
+    ],
+    "DC_OP2": [
+      "DC_P"
+    ],
+    "DC_OP3": [
+      "DC_P"
+    ],
+    "DC_P": [
+      "DC_OP3",
+      "DC_OP1",
+      "DC_OP2",
+      "DC_O5'"
+    ],
+    "DG_C1'": [
+      "DG_O4'",
+      "DG_C2'",
+      "DG_N9"
+    ],
+    "DG_C2": [
+      "DG_N1",
+      "DG_N2",
+      "DG_N3"
+    ],
+    "DG_C2'": [
+      "DG_C3'",
+      "DG_C1'"
+    ],
+    "DG_C3'": [
+      "DG_C4'",
+      "DG_O3'",
+      "DG_C2'"
+    ],
+    "DG_C4": [
+      "DG_N9",
+      "DG_C5",
+      "DG_N3"
+    ],
+    "DG_C4'": [
+      "DG_C5'",
+      "DG_O4'",
+      "DG_C3'"
+    ],
+    "DG_C5": [
+      "DG_N7",
+      "DG_C6",
+      "DG_C4"
+    ],
+    "DG_C5'": [
+      "DG_O5'",
+      "DG_C4'"
+    ],
+    "DG_C6": [
+      "DG_C5",
+      "DG_O6",
+      "DG_N1"
+    ],
+    "DG_C8": [
+      "DG_N9",
+      "DG_N7"
+    ],
+    "DG_N1": [
+      "DG_C6",
+      "DG_C2"
+    ],
+    "DG_N2": [
+      "DG_C2"
+    ],
+    "DG_N3": [
+      "DG_C2",
+      "DG_C4"
+    ],
+    "DG_N7": [
+      "DG_C8",
+      "DG_C5"
+    ],
+    "DG_N9": [
+      "DG_C1'",
+      "DG_C8",
+      "DG_C4"
+    ],
+    "DG_O3'": [
+      "DG_C3'"
+    ],
+    "DG_O4'": [
+      "DG_C4'",
+      "DG_C1'"
+    ],
+    "DG_O5'": [
+      "DG_P",
+      "DG_C5'"
+    ],
+    "DG_O6": [
+      "DG_C6"
+    ],
+    "DG_OP1": [
+      "DG_P"
+    ],
+    "DG_OP2": [
+      "DG_P"
+    ],
+    "DG_OP3": [
+      "DG_P"
+    ],
+    "DG_P": [
+      "DG_OP3",
+      "DG_OP1",
+      "DG_OP2",
+      "DG_O5'"
+    ],
+    "DI_C1'": [
+      "DI_O4'",
+      "DI_C2'",
+      "DI_N9"
+    ],
+    "DI_C2": [
+      "DI_N1",
+      "DI_N3"
+    ],
+    "DI_C2'": [
+      "DI_C3'",
+      "DI_C1'"
+    ],
+    "DI_C3'": [
+      "DI_C4'",
+      "DI_O3'",
+      "DI_C2'"
+    ],
+    "DI_C4": [
+      "DI_N9",
+      "DI_C5",
+      "DI_N3"
+    ],
+    "DI_C4'": [
+      "DI_C5'",
+      "DI_O4'",
+      "DI_C3'"
+    ],
+    "DI_C5": [
+      "DI_N7",
+      "DI_C6",
+      "DI_C4"
+    ],
+    "DI_C5'": [
+      "DI_O5'",
+      "DI_C4'"
+    ],
+    "DI_C6": [
+      "DI_C5",
+      "DI_O6",
+      "DI_N1"
+    ],
+    "DI_C8": [
+      "DI_N9",
+      "DI_N7"
+    ],
+    "DI_N1": [
+      "DI_C6",
+      "DI_C2"
+    ],
+    "DI_N3": [
+      "DI_C2",
+      "DI_C4"
+    ],
+    "DI_N7": [
+      "DI_C8",
+      "DI_C5"
+    ],
+    "DI_N9": [
+      "DI_C1'",
+      "DI_C8",
+      "DI_C4"
+    ],
+    "DI_O3'": [
+      "DI_C3'"
+    ],
+    "DI_O4'": [
+      "DI_C4'",
+      "DI_C1'"
+    ],
+    "DI_O5'": [
+      "DI_P",
+      "DI_C5'"
+    ],
+    "DI_O6": [
+      "DI_C6"
+    ],
+    "DI_OP1": [
+      "DI_P"
+    ],
+    "DI_OP2": [
+      "DI_P"
+    ],
+    "DI_OP3": [
+      "DI_P"
+    ],
+    "DI_P": [
+      "DI_OP3",
+      "DI_OP1",
+      "DI_OP2",
+      "DI_O5'"
+    ],
+    "DT_C1'": [
+      "DT_O4'",
+      "DT_C2'",
+      "DT_N1"
+    ],
+    "DT_C2": [
+      "DT_N1",
+      "DT_O2",
+      "DT_N3"
+    ],
+    "DT_C2'": [
+      "DT_C3'",
+      "DT_C1'"
+    ],
+    "DT_C3'": [
+      "DT_C4'",
+      "DT_O3'",
+      "DT_C2'"
+    ],
+    "DT_C4": [
+      "DT_N3",
+      "DT_O4",
+      "DT_C5"
+    ],
+    "DT_C4'": [
+      "DT_C5'",
+      "DT_O4'",
+      "DT_C3'"
+    ],
+    "DT_C5": [
+      "DT_C4",
+      "DT_C7",
+      "DT_C6"
+    ],
+    "DT_C5'": [
+      "DT_O5'",
+      "DT_C4'"
+    ],
+    "DT_C6": [
+      "DT_N1",
+      "DT_C5"
+    ],
+    "DT_C7": [
+      "DT_C5"
+    ],
+    "DT_N1": [
+      "DT_C1'",
+      "DT_C2",
+      "DT_C6"
+    ],
+    "DT_N3": [
+      "DT_C2",
+      "DT_C4"
+    ],
+    "DT_O2": [
+      "DT_C2"
+    ],
+    "DT_O3'": [
+      "DT_C3'"
+    ],
+    "DT_O4": [
+      "DT_C4"
+    ],
+    "DT_O4'": [
+      "DT_C4'",
+      "DT_C1'"
+    ],
+    "DT_O5'": [
+      "DT_P",
+      "DT_C5'"
+    ],
+    "DT_OP1": [
+      "DT_P"
+    ],
+    "DT_OP2": [
+      "DT_P"
+    ],
+    "DT_OP3": [
+      "DT_P"
+    ],
+    "DT_P": [
+      "DT_OP3",
+      "DT_OP1",
+      "DT_OP2",
+      "DT_O5'"
+    ],
+    "DU_C1'": [
+      "DU_O4'",
+      "DU_C2'",
+      "DU_N1"
+    ],
+    "DU_C2": [
+      "DU_N1",
+      "DU_O2",
+      "DU_N3"
+    ],
+    "DU_C2'": [
+      "DU_C3'",
+      "DU_C1'"
+    ],
+    "DU_C3'": [
+      "DU_C4'",
+      "DU_O3'",
+      "DU_C2'"
+    ],
+    "DU_C4": [
+      "DU_N3",
+      "DU_O4",
+      "DU_C5"
+    ],
+    "DU_C4'": [
+      "DU_C5'",
+      "DU_O4'",
+      "DU_C3'"
+    ],
+    "DU_C5": [
+      "DU_C4",
+      "DU_C6"
+    ],
+    "DU_C5'": [
+      "DU_O5'",
+      "DU_C4'"
+    ],
+    "DU_C6": [
+      "DU_N1",
+      "DU_C5"
+    ],
+    "DU_N1": [
+      "DU_C1'",
+      "DU_C2",
+      "DU_C6"
+    ],
+    "DU_N3": [
+      "DU_C2",
+      "DU_C4"
+    ],
+    "DU_O2": [
+      "DU_C2"
+    ],
+    "DU_O3'": [
+      "DU_C3'"
+    ],
+    "DU_O4": [
+      "DU_C4"
+    ],
+    "DU_O4'": [
+      "DU_C4'",
+      "DU_C1'"
+    ],
+    "DU_O5'": [
+      "DU_P",
+      "DU_C5'"
+    ],
+    "DU_OP1": [
+      "DU_P"
+    ],
+    "DU_OP2": [
+      "DU_P"
+    ],
+    "DU_OP3": [
+      "DU_P"
+    ],
+    "DU_P": [
+      "DU_OP3",
+      "DU_OP1",
+      "DU_OP2",
+      "DU_O5'"
+    ],
+    "GLN_C": [
+      "GLN_CA",
+      "GLN_O",
+      "GLN_OXT"
+    ],
+    "GLN_CA": [
+      "GLN_N",
+      "GLN_C",
+      "GLN_CB"
+    ],
+    "GLN_CB": [
+      "GLN_CA",
+      "GLN_CG"
+    ],
+    "GLN_CD": [
+      "GLN_CG",
+      "GLN_OE1",
+      "GLN_NE2"
+    ],
+    "GLN_CG": [
+      "GLN_CB",
+      "GLN_CD"
+    ],
+    "GLN_N": [
+      "GLN_CA"
+    ],
+    "GLN_NE2": [
+      "GLN_CD"
+    ],
+    "GLN_O": [
+      "GLN_C"
+    ],
+    "GLN_OE1": [
+      "GLN_CD"
+    ],
+    "GLN_OXT": [
+      "GLN_C"
+    ],
+    "GLU_C": [
+      "GLU_CA",
+      "GLU_O",
+      "GLU_OXT"
+    ],
+    "GLU_CA": [
+      "GLU_N",
+      "GLU_C",
+      "GLU_CB"
+    ],
+    "GLU_CB": [
+      "GLU_CA",
+      "GLU_CG"
+    ],
+    "GLU_CD": [
+      "GLU_CG",
+      "GLU_OE1",
+      "GLU_OE2"
+    ],
+    "GLU_CG": [
+      "GLU_CB",
+      "GLU_CD"
+    ],
+    "GLU_N": [
+      "GLU_CA"
+    ],
+    "GLU_O": [
+      "GLU_C"
+    ],
+    "GLU_OE1": [
+      "GLU_CD"
+    ],
+    "GLU_OE2": [
+      "GLU_CD"
+    ],
+    "GLU_OXT": [
+      "GLU_C"
+    ],
+    "GLY_C": [
+      "GLY_CA",
+      "GLY_O",
+      "GLY_OXT"
+    ],
+    "GLY_CA": [
+      "GLY_N",
+      "GLY_C"
+    ],
+    "GLY_N": [
+      "GLY_CA"
+    ],
+    "GLY_O": [
+      "GLY_C"
+    ],
+    "GLY_OXT": [
+      "GLY_C"
+    ],
+    "G_C1'": [
+      "G_O4'",
+      "G_C2'",
+      "G_N9"
+    ],
+    "G_C2": [
+      "G_N1",
+      "G_N2",
+      "G_N3"
+    ],
+    "G_C2'": [
+      "G_C3'",
+      "G_O2'",
+      "G_C1'"
+    ],
+    "G_C3'": [
+      "G_C4'",
+      "G_O3'",
+      "G_C2'"
+    ],
+    "G_C4": [
+      "G_N9",
+      "G_C5",
+      "G_N3"
+    ],
+    "G_C4'": [
+      "G_C5'",
+      "G_O4'",
+      "G_C3'"
+    ],
+    "G_C5": [
+      "G_N7",
+      "G_C6",
+      "G_C4"
+    ],
+    "G_C5'": [
+      "G_O5'",
+      "G_C4'"
+    ],
+    "G_C6": [
+      "G_C5",
+      "G_O6",
+      "G_N1"
+    ],
+    "G_C8": [
+      "G_N9",
+      "G_N7"
+    ],
+    "G_N1": [
+      "G_C6",
+      "G_C2"
+    ],
+    "G_N2": [
+      "G_C2"
+    ],
+    "G_N3": [
+      "G_C2",
+      "G_C4"
+    ],
+    "G_N7": [
+      "G_C8",
+      "G_C5"
+    ],
+    "G_N9": [
+      "G_C1'",
+      "G_C8",
+      "G_C4"
+    ],
+    "G_O2'": [
+      "G_C2'"
+    ],
+    "G_O3'": [
+      "G_C3'"
+    ],
+    "G_O4'": [
+      "G_C4'",
+      "G_C1'"
+    ],
+    "G_O5'": [
+      "G_P",
+      "G_C5'"
+    ],
+    "G_O6": [
+      "G_C6"
+    ],
+    "G_OP1": [
+      "G_P"
+    ],
+    "G_OP2": [
+      "G_P"
+    ],
+    "G_OP3": [
+      "G_P"
+    ],
+    "G_P": [
+      "G_OP3",
+      "G_OP1",
+      "G_OP2",
+      "G_O5'"
+    ],
+    "HIS_C": [
+      "HIS_CA",
+      "HIS_O",
+      "HIS_OXT"
+    ],
+    "HIS_CA": [
+      "HIS_N",
+      "HIS_C",
+      "HIS_CB"
+    ],
+    "HIS_CB": [
+      "HIS_CA",
+      "HIS_CG"
+    ],
+    "HIS_CD2": [
+      "HIS_CG",
+      "HIS_NE2"
+    ],
+    "HIS_CE1": [
+      "HIS_ND1",
+      "HIS_NE2"
+    ],
+    "HIS_CG": [
+      "HIS_CB",
+      "HIS_ND1",
+      "HIS_CD2"
+    ],
+    "HIS_N": [
+      "HIS_CA"
+    ],
+    "HIS_ND1": [
+      "HIS_CG",
+      "HIS_CE1"
+    ],
+    "HIS_NE2": [
+      "HIS_CD2",
+      "HIS_CE1"
+    ],
+    "HIS_O": [
+      "HIS_C"
+    ],
+    "HIS_OXT": [
+      "HIS_C"
+    ],
+    "ILE_C": [
+      "ILE_CA",
+      "ILE_O",
+      "ILE_OXT"
+    ],
+    "ILE_CA": [
+      "ILE_N",
+      "ILE_C",
+      "ILE_CB"
+    ],
+    "ILE_CB": [
+      "ILE_CA",
+      "ILE_CG1",
+      "ILE_CG2"
+    ],
+    "ILE_CD1": [
+      "ILE_CG1"
+    ],
+    "ILE_CG1": [
+      "ILE_CB",
+      "ILE_CD1"
+    ],
+    "ILE_CG2": [
+      "ILE_CB"
+    ],
+    "ILE_N": [
+      "ILE_CA"
+    ],
+    "ILE_O": [
+      "ILE_C"
+    ],
+    "ILE_OXT": [
+      "ILE_C"
+    ],
+    "I_C1'": [
+      "I_O4'",
+      "I_C2'",
+      "I_N9"
+    ],
+    "I_C2": [
+      "I_N1",
+      "I_N3"
+    ],
+    "I_C2'": [
+      "I_C3'",
+      "I_O2'",
+      "I_C1'"
+    ],
+    "I_C3'": [
+      "I_C4'",
+      "I_O3'",
+      "I_C2'"
+    ],
+    "I_C4": [
+      "I_N9",
+      "I_C5",
+      "I_N3"
+    ],
+    "I_C4'": [
+      "I_C5'",
+      "I_O4'",
+      "I_C3'"
+    ],
+    "I_C5": [
+      "I_N7",
+      "I_C6",
+      "I_C4"
+    ],
+    "I_C5'": [
+      "I_O5'",
+      "I_C4'"
+    ],
+    "I_C6": [
+      "I_C5",
+      "I_O6",
+      "I_N1"
+    ],
+    "I_C8": [
+      "I_N9",
+      "I_N7"
+    ],
+    "I_N1": [
+      "I_C6",
+      "I_C2"
+    ],
+    "I_N3": [
+      "I_C2",
+      "I_C4"
+    ],
+    "I_N7": [
+      "I_C8",
+      "I_C5"
+    ],
+    "I_N9": [
+      "I_C1'",
+      "I_C8",
+      "I_C4"
+    ],
+    "I_O2'": [
+      "I_C2'"
+    ],
+    "I_O3'": [
+      "I_C3'"
+    ],
+    "I_O4'": [
+      "I_C4'",
+      "I_C1'"
+    ],
+    "I_O5'": [
+      "I_P",
+      "I_C5'"
+    ],
+    "I_O6": [
+      "I_C6"
+    ],
+    "I_OP1": [
+      "I_P"
+    ],
+    "I_OP2": [
+      "I_P"
+    ],
+    "I_OP3": [
+      "I_P"
+    ],
+    "I_P": [
+      "I_OP3",
+      "I_OP1",
+      "I_OP2",
+      "I_O5'"
+    ],
+    "LEU_C": [
+      "LEU_CA",
+      "LEU_O",
+      "LEU_OXT"
+    ],
+    "LEU_CA": [
+      "LEU_N",
+      "LEU_C",
+      "LEU_CB"
+    ],
+    "LEU_CB": [
+      "LEU_CA",
+      "LEU_CG"
+    ],
+    "LEU_CD1": [
+      "LEU_CG"
+    ],
+    "LEU_CD2": [
+      "LEU_CG"
+    ],
+    "LEU_CG": [
+      "LEU_CB",
+      "LEU_CD1",
+      "LEU_CD2"
+    ],
+    "LEU_N": [
+      "LEU_CA"
+    ],
+    "LEU_O": [
+      "LEU_C"
+    ],
+    "LEU_OXT": [
+      "LEU_C"
+    ],
+    "LYS_C": [
+      "LYS_CA",
+      "LYS_O",
+      "LYS_OXT"
+    ],
+    "LYS_CA": [
+      "LYS_N",
+      "LYS_C",
+      "LYS_CB"
+    ],
+    "LYS_CB": [
+      "LYS_CA",
+      "LYS_CG"
+    ],
+    "LYS_CD": [
+      "LYS_CG",
+      "LYS_CE"
+    ],
+    "LYS_CE": [
+      "LYS_CD",
+      "LYS_NZ"
+    ],
+    "LYS_CG": [
+      "LYS_CB",
+      "LYS_CD"
+    ],
+    "LYS_N": [
+      "LYS_CA"
+    ],
+    "LYS_NZ": [
+      "LYS_CE"
+    ],
+    "LYS_O": [
+      "LYS_C"
+    ],
+    "LYS_OXT": [
+      "LYS_C"
+    ],
+    "MET_C": [
+      "MET_CA",
+      "MET_O",
+      "MET_OXT"
+    ],
+    "MET_CA": [
+      "MET_N",
+      "MET_C",
+      "MET_CB"
+    ],
+    "MET_CB": [
+      "MET_CA",
+      "MET_CG"
+    ],
+    "MET_CE": [
+      "MET_SD"
+    ],
+    "MET_CG": [
+      "MET_CB",
+      "MET_SD"
+    ],
+    "MET_N": [
+      "MET_CA"
+    ],
+    "MET_O": [
+      "MET_C"
+    ],
+    "MET_OXT": [
+      "MET_C"
+    ],
+    "MET_SD": [
+      "MET_CG",
+      "MET_CE"
+    ],
+    "PHE_C": [
+      "PHE_CA",
+      "PHE_O",
+      "PHE_OXT"
+    ],
+    "PHE_CA": [
+      "PHE_N",
+      "PHE_C",
+      "PHE_CB"
+    ],
+    "PHE_CB": [
+      "PHE_CA",
+      "PHE_CG"
+    ],
+    "PHE_CD1": [
+      "PHE_CG",
+      "PHE_CE1"
+    ],
+    "PHE_CD2": [
+      "PHE_CG",
+      "PHE_CE2"
+    ],
+    "PHE_CE1": [
+      "PHE_CD1",
+      "PHE_CZ"
+    ],
+    "PHE_CE2": [
+      "PHE_CD2",
+      "PHE_CZ"
+    ],
+    "PHE_CG": [
+      "PHE_CB",
+      "PHE_CD1",
+      "PHE_CD2"
+    ],
+    "PHE_CZ": [
+      "PHE_CE1",
+      "PHE_CE2"
+    ],
+    "PHE_N": [
+      "PHE_CA"
+    ],
+    "PHE_O": [
+      "PHE_C"
+    ],
+    "PHE_OXT": [
+      "PHE_C"
+    ],
+    "PRO_C": [
+      "PRO_CA",
+      "PRO_O",
+      "PRO_OXT"
+    ],
+    "PRO_CA": [
+      "PRO_N",
+      "PRO_C",
+      "PRO_CB"
+    ],
+    "PRO_CB": [
+      "PRO_CA",
+      "PRO_CG"
+    ],
+    "PRO_CD": [
+      "PRO_N",
+      "PRO_CG"
+    ],
+    "PRO_CG": [
+      "PRO_CB",
+      "PRO_CD"
+    ],
+    "PRO_N": [
+      "PRO_CA",
+      "PRO_CD"
+    ],
+    "PRO_O": [
+      "PRO_C"
+    ],
+    "PRO_OXT": [
+      "PRO_C"
+    ],
+    "SER_C": [
+      "SER_CA",
+      "SER_O",
+      "SER_OXT"
+    ],
+    "SER_CA": [
+      "SER_N",
+      "SER_C",
+      "SER_CB"
+    ],
+    "SER_CB": [
+      "SER_CA",
+      "SER_OG"
+    ],
+    "SER_N": [
+      "SER_CA"
+    ],
+    "SER_O": [
+      "SER_C"
+    ],
+    "SER_OG": [
+      "SER_CB"
+    ],
+    "SER_OXT": [
+      "SER_C"
+    ],
+    "THR_C": [
+      "THR_CA",
+      "THR_O",
+      "THR_OXT"
+    ],
+    "THR_CA": [
+      "THR_N",
+      "THR_C",
+      "THR_CB"
+    ],
+    "THR_CB": [
+      "THR_CA",
+      "THR_OG1",
+      "THR_CG2"
+    ],
+    "THR_CG2": [
+      "THR_CB"
+    ],
+    "THR_N": [
+      "THR_CA"
+    ],
+    "THR_O": [
+      "THR_C"
+    ],
+    "THR_OG1": [
+      "THR_CB"
+    ],
+    "THR_OXT": [
+      "THR_C"
+    ],
+    "TRP_C": [
+      "TRP_CA",
+      "TRP_O",
+      "TRP_OXT"
+    ],
+    "TRP_CA": [
+      "TRP_N",
+      "TRP_C",
+      "TRP_CB"
+    ],
+    "TRP_CB": [
+      "TRP_CA",
+      "TRP_CG"
+    ],
+    "TRP_CD1": [
+      "TRP_CG",
+      "TRP_NE1"
+    ],
+    "TRP_CD2": [
+      "TRP_CG",
+      "TRP_CE2",
+      "TRP_CE3"
+    ],
+    "TRP_CE2": [
+      "TRP_CD2",
+      "TRP_NE1",
+      "TRP_CZ2"
+    ],
+    "TRP_CE3": [
+      "TRP_CD2",
+      "TRP_CZ3"
+    ],
+    "TRP_CG": [
+      "TRP_CB",
+      "TRP_CD1",
+      "TRP_CD2"
+    ],
+    "TRP_CH2": [
+      "TRP_CZ2",
+      "TRP_CZ3"
+    ],
+    "TRP_CZ2": [
+      "TRP_CE2",
+      "TRP_CH2"
+    ],
+    "TRP_CZ3": [
+      "TRP_CE3",
+      "TRP_CH2"
+    ],
+    "TRP_N": [
+      "TRP_CA"
+    ],
+    "TRP_NE1": [
+      "TRP_CD1",
+      "TRP_CE2"
+    ],
+    "TRP_O": [
+      "TRP_C"
+    ],
+    "TRP_OXT": [
+      "TRP_C"
+    ],
+    "TYR_C": [
+      "TYR_CA",
+      "TYR_O",
+      "TYR_OXT"
+    ],
+    "TYR_CA": [
+      "TYR_N",
+      "TYR_C",
+      "TYR_CB"
+    ],
+    "TYR_CB": [
+      "TYR_CA",
+      "TYR_CG"
+    ],
+    "TYR_CD1": [
+      "TYR_CG",
+      "TYR_CE1"
+    ],
+    "TYR_CD2": [
+      "TYR_CG",
+      "TYR_CE2"
+    ],
+    "TYR_CE1": [
+      "TYR_CD1",
+      "TYR_CZ"
+    ],
+    "TYR_CE2": [
+      "TYR_CD2",
+      "TYR_CZ"
+    ],
+    "TYR_CG": [
+      "TYR_CB",
+      "TYR_CD1",
+      "TYR_CD2"
+    ],
+    "TYR_CZ": [
+      "TYR_CE1",
+      "TYR_CE2",
+      "TYR_OH"
+    ],
+    "TYR_N": [
+      "TYR_CA"
+    ],
+    "TYR_O": [
+      "TYR_C"
+    ],
+    "TYR_OH": [
+      "TYR_CZ"
+    ],
+    "TYR_OXT": [
+      "TYR_C"
+    ],
+    "U_C1'": [
+      "U_O4'",
+      "U_C2'",
+      "U_N1"
+    ],
+    "U_C2": [
+      "U_N1",
+      "U_O2",
+      "U_N3"
+    ],
+    "U_C2'": [
+      "U_C3'",
+      "U_O2'",
+      "U_C1'"
+    ],
+    "U_C3'": [
+      "U_C4'",
+      "U_O3'",
+      "U_C2'"
+    ],
+    "U_C4": [
+      "U_N3",
+      "U_O4",
+      "U_C5"
+    ],
+    "U_C4'": [
+      "U_C5'",
+      "U_O4'",
+      "U_C3'"
+    ],
+    "U_C5": [
+      "U_C4",
+      "U_C6"
+    ],
+    "U_C5'": [
+      "U_O5'",
+      "U_C4'"
+    ],
+    "U_C6": [
+      "U_N1",
+      "U_C5"
+    ],
+    "U_N1": [
+      "U_C1'",
+      "U_C2",
+      "U_C6"
+    ],
+    "U_N3": [
+      "U_C2",
+      "U_C4"
+    ],
+    "U_O2": [
+      "U_C2"
+    ],
+    "U_O2'": [
+      "U_C2'"
+    ],
+    "U_O3'": [
+      "U_C3'"
+    ],
+    "U_O4": [
+      "U_C4"
+    ],
+    "U_O4'": [
+      "U_C4'",
+      "U_C1'"
+    ],
+    "U_O5'": [
+      "U_P",
+      "U_C5'"
+    ],
+    "U_OP1": [
+      "U_P"
+    ],
+    "U_OP2": [
+      "U_P"
+    ],
+    "U_OP3": [
+      "U_P"
+    ],
+    "U_P": [
+      "U_OP3",
+      "U_OP1",
+      "U_OP2",
+      "U_O5'"
+    ],
+    "VAL_C": [
+      "VAL_CA",
+      "VAL_O",
+      "VAL_OXT"
+    ],
+    "VAL_CA": [
+      "VAL_N",
+      "VAL_C",
+      "VAL_CB"
+    ],
+    "VAL_CB": [
+      "VAL_CA",
+      "VAL_CG1",
+      "VAL_CG2"
+    ],
+    "VAL_CG1": [
+      "VAL_CB"
+    ],
+    "VAL_CG2": [
+      "VAL_CB"
+    ],
+    "VAL_N": [
+      "VAL_CA"
+    ],
+    "VAL_O": [
+      "VAL_C"
+    ],
+    "VAL_OXT": [
+      "VAL_C"
+    ]
+  },
   "full_atom_name_map_atom_type": {
     "ALA_C": "C.N.6#C.N.7.SING_O.N.8.DOUB",
     "ALA_CA": "C.N.7#C.N.6.SING_C.N.9.SING_H.N.1.SING_N.N.8.SING",

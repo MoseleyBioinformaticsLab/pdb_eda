@@ -12,6 +12,7 @@ import os.path
 import gzip
 
 import itertools
+import collections
 import json
 import numpy as np
 import Bio.PDB as biopdb
@@ -37,6 +38,7 @@ with open(paramsPath, 'r') as fh:
 
 radiiGlobal = paramsGlobal['radii']
 slopesGlobal = paramsGlobal['slopes']
+bondedAtomsGlobal = paramsGlobal['bonded_atoms']
 elementElectronsGlobal = None
 masterFullAtomNameMapElectronsGlobal = None
 fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
@@ -51,6 +53,7 @@ def setGlobals(params):
     global paramsGlobal
     global radiiGlobal
     global slopesGlobal
+    global bondedAtomsGlobal
     global fullAtomNameMapElectronsGlobal
     global fullAtomNameMapAtomTypeGlobal
     global atomTypeLengthGlobal
@@ -58,6 +61,7 @@ def setGlobals(params):
     paramsGlobal = params
     radiiGlobal = paramsGlobal['radii']
     slopesGlobal = paramsGlobal['slopes']
+    bondedAtomsGlobal = paramsGlobal['bonded_atoms']
     fullAtomNameMapElectronsGlobal = paramsGlobal['full_atom_name_map_electrons']
     fullAtomNameMapAtomTypeGlobal = paramsGlobal['full_atom_name_map_atom_type']
     atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomTypeGlobal.values()) + 5
@@ -301,6 +305,9 @@ class DensityAnalysis(object):
         self._totalAggregatedElectrons = None
         self._totalAggregatedDensity = None
 
+        self._atomTypeOverlapCompleteness = None
+        self._atomTypeOverlapIncompleteness = None
+
     @property
     def symmetryAtoms(self):
         """Returns list of symmetry atoms.
@@ -520,6 +527,218 @@ class DensityAnalysis(object):
             self.aggregateCloud()
         return self._densityElectronRatio
 
+    @property
+    def atomTypeOverlapCompleteness(self):
+        """Returns atom-type overlap completeness counts.
+
+        :return: atomTypeOverlapCompleteness
+        :rtype: :py:class:`dict`
+        """
+        if self._atomTypeOverlapCompleteness is None:
+            self.aggregateCloud()
+        return self._atomTypeOverlapCompleteness
+
+    @property
+    def atomTypeOverlapIncompleteness(self):
+        """Returns atom-type overlap incompleteness counts.
+
+        :return: atomTypeOverlapIncompleteness
+        :rtype: :py:class:`dict`
+        """
+        if self._atomTypeOverlapIncompleteness is None:
+            self.aggregateCloud()
+        return self._atomTypeOverlapIncompleteness
+
+
+
+    residueCloudHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume']
+    chainCloudHeader = residueCloudHeader
+    def aggregateCloud(self, minResElectrons=25, minTotalElectrons=400):
+        """Aggregate the electron density map clouds by atom, residue, and chain.
+        Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data members.
+
+        :param :py:class:`int` minResAtoms: minimum number of atoms needed to aggregate a residue.
+        :param :py:class:`int` minTotalAtoms: miminum total number of atoms to calculate a density-electron ratio.
+        """
+        densityObj = self.densityObj
+        biopdbObj = self.biopdbObj
+
+        chainClouds = []
+        chainPool = []
+        chainList = []
+        residueList = []
+        atomList = []
+
+        currentRadii = radiiGlobal
+        currentSlopes = slopesGlobal
+        completelyOverlappedAtomTypes = collections.defaultdict(int)
+        incompletelyOverlappedAtomTypes = collections.defaultdict(int)
+
+        for residue in biopdbObj.get_residues():
+            if residue.id[0] != ' ': # skip HETATOM residues.
+                continue
+
+            residuePool = []
+            atomCloudIndeces = {}
+            for atom in residue.child_list:
+                resAtom = residueAtomName(atom)
+                if resAtom not in fullAtomNameMapAtomTypeGlobal.keys() or atom.get_occupancy() == 0:
+                    continue
+
+                ## Calculate atom clouds
+                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[fullAtomNameMapAtomTypeGlobal[resAtom]], densityObj.densityCutoff)
+                if len(atomClouds) == 0:
+                    continue
+                elif len(atomClouds) == 1:
+                    bestAtomCloud = atomClouds[0]
+                else:
+                    diffs = [np.linalg.norm(atom.coord - i.centroid) for i in atomClouds]
+                    index = diffs.index(min(diffs))
+                    bestAtomCloud = atomClouds[index]
+
+                for aCloud in atomClouds:
+                    aCloud.atoms = [atom]
+                atomCloudIndeces[resAtom] = [len(residuePool)+index for index in range(len(atomClouds))]
+                residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
+
+                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, fullAtomNameMapAtomTypeGlobal[resAtom], bestAtomCloud.totalDensity / fullAtomNameMapElectronsGlobal[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), fullAtomNameMapElectronsGlobal[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
+            ## End atom loop
+
+            overlap = np.zeros((len(residuePool), len(residuePool)))
+            for i in range(len(residuePool)):
+                for j in range(i+1, len(residuePool)):
+                    overlap[i][j] = overlap[j][i] = utils.testOverlap(residuePool[i],residuePool[j])
+
+
+            ## Calculate atom-type overlap completeness.  Needed for parameter optimization.
+            for atom in residue.child_list:
+                resAtom = residueAtomName(atom)
+                if resAtom in atomCloudIndeces:
+                    if all(any(overlap[index1][index2] for index1 in atomCloudIndeces[resAtom] for index2 in atomCloudIndeces[resAtom2]) for resAtom2 in bondedAtomsGlobal[resAtom] if resAtom2 in atomCloudIndeces):
+                        completelyOverlappedAtomTypes[fullAtomNameMapAtomTypeGlobal[resAtom]] += 1
+                    else:
+                        incompletelyOverlappedAtomTypes[fullAtomNameMapAtomTypeGlobal[resAtom]] += 1
+
+            ## Group connected residue density clouds together from individual atom clouds
+            resClouds = []
+            usedIdx = set()
+            for startingIndex in range(len(residuePool)):
+                if startingIndex not in usedIdx:
+                    newCluster = {index for index, o in enumerate(overlap[startingIndex]) if o}
+                    currCluster = set([startingIndex])
+                    currCluster.update(newCluster)
+                    while len(newCluster):
+                        newCluster = {index for oldIndex in newCluster for index, o in enumerate(overlap[oldIndex]) if index not in currCluster and o}
+                        currCluster.update(newCluster)
+
+                    usedIdx.update(currCluster)
+                    resCloud = residuePool[currCluster.pop()].clone()
+                    for idx in currCluster:
+                        resCloud.merge(residuePool[idx])
+                    resClouds.append(resCloud)
+
+            for cloud in resClouds:
+                resElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
+                if resElectrons >= minResElectrons:
+                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / resElectrons, len(cloud.crsList), resElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
+
+            chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
+        ## End residue
+
+        ## Group connected chain density clouds together from individual residue clouds
+        overlap = np.zeros((len(chainPool), len(chainPool)))
+        for i in range(len(chainPool)):
+            for j in range(i+1, len(chainPool)):
+                overlap[i][j] = overlap[j][i] = utils.testOverlap(chainPool[i],chainPool[j])
+
+        usedIdx = set()
+        for startingIndex in range(len(chainPool)):
+            if startingIndex not in usedIdx:
+                newCluster = {index for index, o in enumerate(overlap[startingIndex]) if o}
+                currCluster = set([startingIndex])
+                currCluster.update(newCluster)
+                while len(newCluster):
+                    newCluster = {index for oldIndex in newCluster for index, o in enumerate(overlap[oldIndex]) if index not in currCluster and o}
+                    currCluster.update(newCluster)
+
+                usedIdx.update(currCluster)
+                chainCloud = chainPool[currCluster.pop()].clone()
+                for idx in currCluster:
+                    chainCloud.merge(chainPool[idx])
+                chainClouds.append(chainCloud)
+        ##End chain
+
+        ## Calculate densityElectronRatio, which is technically a weighted mean value now.
+        numVoxels = 0
+        totalElectrons = 0
+        totalDensity = 0
+        for cloud in chainClouds:
+            atom = cloud.atoms[0]
+            chainElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
+            totalElectrons += chainElectrons
+            numVoxels += len(cloud.crsList)
+            totalDensity += cloud.totalDensity
+
+            if chainElectrons >= minResElectrons:
+                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
+
+        if totalElectrons < minTotalElectrons:
+            return
+        else:
+            densityElectronRatio = totalDensity / totalElectrons
+            chainList.sort(key=lambda x: x[3])
+        ## End calculate densityElectronRatio
+
+
+        def calcSlope(data, atom_type):
+            if len(data['chain']) <= 2 or len(np.unique(data['bfactor'])) == 1: ## Less than three data points or all b factors are the same. Should change this to something more robust like 15 unique values.
+                return currentSlopes[atom_type]
+
+            slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adj_density_electron_ratio']-densityElectronRatio)/densityElectronRatio)
+            return currentSlopes[atom_type] if p_value > 0.05 else slope
+
+        try:
+            dataType = np.dtype([('chain', np.dtype(('U', 20))), ('residue_number',int), ('residue_name',np.dtype(('U', 10)) ), ('atom_name',np.dtype(('U', 10)) ), ('atom_type',np.dtype(('U', atomTypeLengthGlobal)) ),
+                                 ('density_electron_ratio',float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('adj_density_electron_ratio', float), ('chain_fraction', float),
+                                 ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
+            atoms = np.asarray([tuple(atom+[0.0 for x in range(5)]) for atom in atomList],dataType) # must pass in list of tuples to create ndarray correctly.
+            if not np.isnan(atoms['centroid_distance']).all():
+                centroidCutoff = np.nanmedian(atoms['centroid_distance']) + np.nanstd(atoms['centroid_distance']) * 2
+                atoms = atoms[atoms['centroid_distance'] < centroidCutoff]
+            atom_types = np.unique(atoms['atom_type'])
+            medians = { column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in ['num_voxels'] }
+            medians_translator = np.vectorize(lambda column,atom_type : medians[column][atom_type])
+
+            ## Normalize by volume (numVoxels)
+            atoms['adj_density_electron_ratio'] = atoms['density_electron_ratio'] / atoms['num_voxels'] * medians_translator('num_voxels', atoms['atom_type'])
+            atoms['volume'] = atoms['num_voxels'] * densityObj.header.unitVolume
+            medians.update({column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
+                         ['density_electron_ratio', 'centroid_distance', 'adj_density_electron_ratio', 'volume']})
+            medians['bfactor'] = {atom_type : np.nanmedian(atoms['bfactor'][(atoms['atom_type'] == atom_type) & (atoms['bfactor'] > 0)]) for atom_type in atom_types}
+            atoms['bfactor'][atoms['bfactor'] <= 0] = medians_translator('bfactor', atoms['atom_type'])[atoms['bfactor'] <= 0]
+            medians['slopes'] = {atom_type : calcSlope(atoms[atoms['atom_type'] == atom_type], atom_type) for atom_type in atom_types}
+
+            ## Correct by b-factor
+            atoms['chain_fraction'] = (atoms['adj_density_electron_ratio'] - densityElectronRatio) / densityElectronRatio
+            atoms['corrected_fraction'] = atoms['chain_fraction'] - (np.log(atoms['bfactor']) - np.log(medians_translator('bfactor', atoms['atom_type']))) * medians_translator('slopes', atoms['atom_type'])
+            atoms['corrected_density_electron_ratio'] = atoms['corrected_fraction'] * densityElectronRatio + densityElectronRatio
+            medians.update({column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
+                         ['chain_fraction', 'corrected_fraction', 'corrected_density_electron_ratio']})
+        except:
+            return
+
+        self._densityElectronRatio = densityElectronRatio
+        self._numVoxelsAggregated = numVoxels
+        self._totalAggregatedElectrons = totalElectrons
+        self._totalAggregatedDensity = totalDensity
+        self._medians = medians
+        self._atomCloudDescriptions = atoms
+        self._residueCloudDescriptions = residueList
+        self._chainCloudDescriptions = chainList
+        self._atomTypeOverlapCompleteness = completelyOverlappedAtomTypes
+        self._atomTypeOverlapIncompleteness = incompletelyOverlappedAtomTypes
+
+
     def medianAbsFoFc(self):
         """Calculates median absolute values for the Fo and Fc maps less than 1 sigma.
         These values should be comparable, i.e. low relative difference, for RSCC and RSR metric calculations.
@@ -617,177 +836,6 @@ class DensityAnalysis(object):
         rscc = stats.stats.pearsonr(foDensity, fcDensity)[0]
         rsr = sum(abs(foDensity - fcDensity)) / sum(abs(foDensity + fcDensity))
         return (rscc,rsr)
-
-    residueCloudHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume']
-    chainCloudHeader = residueCloudHeader
-    def aggregateCloud(self, minResAtoms=4, minTotalAtoms=50):
-        """Aggregate the electron density map clouds by atom, residue, and chain.
-        Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data members.
-
-        :param :py:class:`int` minResAtoms: minimum number of atoms needed to aggregate a residue.
-        :param :py:class:`int` minTotalAtoms: miminum total number of atoms to calculate a density-electron ratio.
-        """
-        densityObj = self.densityObj
-        biopdbObj = self.biopdbObj
-
-        chainClouds = []
-        chainPool = []
-        chainList = []
-        residueList = []
-        atomList = []
-
-        currentRadii = radiiGlobal
-        currentSlopes = slopesGlobal
-
-        for residue in biopdbObj.get_residues():
-            if residue.id[0] != ' ': # skip HETATOM residues.
-                continue
-
-            residuePool = []
-            for atom in residue.child_list:
-                resAtom = residueAtomName(atom)
-                if resAtom not in fullAtomNameMapAtomTypeGlobal.keys() or atom.get_occupancy() == 0:
-                    continue
-
-                ## Calculate atom clouds
-                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[fullAtomNameMapAtomTypeGlobal[resAtom]], densityObj.densityCutoff)
-                if len(atomClouds) == 0:
-                    continue
-                elif len(atomClouds) == 1:
-                    bestAtomCloud = atomClouds[0]
-                else:
-                    diffs = [np.linalg.norm(atom.coord - i.centroid) for i in atomClouds]
-                    index = diffs.index(min(diffs))
-                    bestAtomCloud = atomClouds[index]
-
-                for aCloud in atomClouds:
-                    aCloud.atoms = [atom]
-                residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
-
-                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, fullAtomNameMapAtomTypeGlobal[resAtom], bestAtomCloud.totalDensity / fullAtomNameMapElectronsGlobal[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), fullAtomNameMapElectronsGlobal[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
-            ## End atom loop
-
-            ## Group connected residue density clouds together from individual atom clouds
-            overlap = np.zeros((len(residuePool), len(residuePool)))
-            for i in range(len(residuePool)):
-                for j in range(i+1, len(residuePool)):
-                    #overlap[i][j] = overlap[j][i] = residuePool[i].testOverlap(residuePool[j])
-                    overlap[i][j] = overlap[j][i] = utils.testOverlap(residuePool[i],residuePool[j])
-
-            resClouds = []
-            usedIdx = set()
-            for startingIndex in range(len(residuePool)):
-                if startingIndex not in usedIdx:
-                    newCluster = {index for index, o in enumerate(overlap[startingIndex]) if o}
-                    currCluster = set([startingIndex])
-                    currCluster.update(newCluster)
-                    while len(newCluster):
-                        newCluster = {index for oldIndex in newCluster for index, o in enumerate(overlap[oldIndex]) if index not in currCluster and o}
-                        currCluster.update(newCluster)
-
-                    usedIdx.update(currCluster)
-                    for idx in currCluster:
-                        residuePool[startingIndex].merge(residuePool[idx])
-                    resClouds.append(residuePool[startingIndex])
-
-            for cloud in resClouds:
-                if len(cloud.atoms) >= minResAtoms:
-                    totalElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
-                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / totalElectrons, len(cloud.crsList), totalElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
-
-            chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
-        ## End residue
-
-        ## Group connected chain density clouds together from individual residue clouds
-        overlap = np.zeros((len(chainPool), len(chainPool)))
-        for i in range(len(chainPool)):
-            for j in range(i+1, len(chainPool)):
-                #overlap[i][j] = overlap[j][i] = chainPool[i].testOverlap(chainPool[j])
-                overlap[i][j] = overlap[j][i] = utils.testOverlap(chainPool[i],chainPool[j])
-
-        usedIdx = set()
-        for startingIndex in range(len(chainPool)):
-            if startingIndex not in usedIdx:
-                newCluster = {index for index, o in enumerate(overlap[startingIndex]) if o}
-                currCluster = set([startingIndex])
-                currCluster.update(newCluster)
-                while len(newCluster):
-                    newCluster = {index for oldIndex in newCluster for index, o in enumerate(overlap[oldIndex]) if index not in currCluster and o}
-                    currCluster.update(newCluster)
-
-                usedIdx.update(currCluster)
-                for idx in currCluster:
-                    chainPool[startingIndex].merge(chainPool[idx])
-                chainClouds.append(chainPool[startingIndex])
-        ##End chain
-
-        ## Calculate densityElectronRatio, which is technically a weighted mean value now.
-        numVoxels = 0
-        totalElectrons = 0
-        totalDensity = 0
-        for cloud in chainClouds:
-            atom = cloud.atoms[0]
-            chainElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
-            totalElectrons += chainElectrons
-            numVoxels += len(cloud.crsList)
-            totalDensity += cloud.totalDensity
-
-            if len(cloud.atoms) >= minTotalAtoms:
-                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
-
-        if totalElectrons == 0 or len(atomList) < minTotalAtoms:
-            return
-        else:
-            densityElectronRatio = totalDensity / totalElectrons
-            chainList.sort(key=lambda x: x[3])
-        ## End calculate densityElectronRatio
-
-
-        def calcSlope(data, atom_type):
-            if len(data['chain']) <= 2 or len(np.unique(data['bfactor'])) == 1: ## Less than three data points or all b factors are the same. Should change this to something more robust like 15 unique values.
-                return currentSlopes[atom_type]
-
-            slope, intercept, r_vanue, p_value, std_err = stats.linregress(np.log(data['bfactor']), (data['adj_density_electron_ratio']-densityElectronRatio)/densityElectronRatio)
-            return currentSlopes[atom_type] if p_value > 0.05 else slope
-
-        try:
-            dataType = np.dtype([('chain', np.dtype(('U', 20))), ('residue_number',int), ('residue_name',np.dtype(('U', 10)) ), ('atom_name',np.dtype(('U', 10)) ), ('atom_type',np.dtype(('U', atomTypeLengthGlobal)) ),
-                                 ('density_electron_ratio',float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('adj_density_electron_ratio', float), ('chain_fraction', float),
-                                 ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
-            atoms = np.asarray([tuple(atom+[0.0 for x in range(5)]) for atom in atomList],dataType) # must pass in list of tuples to create ndarray correctly.
-            if not np.isnan(atoms['centroid_distance']).all():
-                centroidCutoff = np.nanmedian(atoms['centroid_distance']) + np.nanstd(atoms['centroid_distance']) * 2
-                atoms = atoms[atoms['centroid_distance'] < centroidCutoff]
-            atom_types = np.unique(atoms['atom_type'])
-            medians = { column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in ['num_voxels'] }
-            medians_translator = np.vectorize(lambda column,atom_type : medians[column][atom_type])
-
-            ## Normalize by volume (numVoxels)
-            atoms['adj_density_electron_ratio'] = atoms['density_electron_ratio'] / atoms['num_voxels'] * medians_translator('num_voxels', atoms['atom_type'])
-            atoms['volume'] = atoms['num_voxels'] * densityObj.header.unitVolume
-            medians.update({column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
-                         ['density_electron_ratio', 'centroid_distance', 'adj_density_electron_ratio', 'volume']})
-            medians['bfactor'] = {atom_type : np.nanmedian(atoms['bfactor'][(atoms['atom_type'] == atom_type) & (atoms['bfactor'] > 0)]) for atom_type in atom_types}
-            atoms['bfactor'][atoms['bfactor'] <= 0] = medians_translator('bfactor', atoms['atom_type'])[atoms['bfactor'] <= 0]
-            medians['slopes'] = {atom_type : calcSlope(atoms[atoms['atom_type'] == atom_type], atom_type) for atom_type in atom_types}
-
-            ## Correct by b-factor
-            atoms['chain_fraction'] = (atoms['adj_density_electron_ratio'] - densityElectronRatio) / densityElectronRatio
-            atoms['corrected_fraction'] = atoms['chain_fraction'] - (np.log(atoms['bfactor']) - np.log(medians_translator('bfactor', atoms['atom_type']))) * medians_translator('slopes', atoms['atom_type'])
-            atoms['corrected_density_electron_ratio'] = atoms['corrected_fraction'] * densityElectronRatio + densityElectronRatio
-            medians.update({column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
-                         ['chain_fraction', 'corrected_fraction', 'corrected_density_electron_ratio']})
-        except:
-            return
-
-        self._densityElectronRatio = densityElectronRatio
-        self._numVoxelsAggregated = numVoxels
-        self._totalAggregatedElectrons = totalElectrons
-        self._totalAggregatedDensity = totalDensity
-        self._medians = medians
-        self._atomCloudDescriptions = atoms
-        self._residueCloudDescriptions = residueList
-        self._chainCloudDescriptions = chainList
 
 
     def _calculateSymmetryAtoms(self):

@@ -104,7 +104,7 @@ def main():
         if args["--F000"]:
             initialParams = {"full_atom_name_map_electrons": {}, "element_map_electrons": elementElectrons }
         else:
-            initialParams = { "full_atom_name_map_atom_type" : {}, "full_atom_name_map_electrons" : {}, "leaving_atoms" : [], "radii" : {}, "slopes" : {} }
+            initialParams = { "full_atom_name_map_atom_type" : {}, "full_atom_name_map_electrons" : {}, "leaving_atoms" : [], "radii" : {}, "slopes" : {}, "bonded_atoms" : {} }
 
         fullAtomName2AtomType = {}
 
@@ -164,6 +164,7 @@ def main():
                                 initialParams["full_atom_name_map_atom_type"][fullAtomName] = atom["full_element_color"]
                                 initialParams["radii"][atom["full_element_color"]] = elementAtomicRadii[atom["element"]]
                                 initialParams["slopes"][atom["full_element_color"]] = args["--default-slope"]
+                                initialParams["bonded_atoms"][fullAtomName] = [residue["name"].strip() + "_" + atomName for atomName, bondType, aromatic, stereo in atom["bonds"] if residue["atoms"][atomName]["element"] != "H"]
                                 if atom["leaving"] == "Y":
                                     initialParams["leaving_atoms"].append(fullAtomName)
 

@@ -22,7 +22,7 @@ from . import singleStructure
 from . import multipleStructures
 from . import crystalContacts
 from . import generateParams
-from . import paramsOptimize
+from . import optimizeParams
 from . import __version__
 
 def main():
@@ -31,7 +31,7 @@ def main():
     elif len(sys.argv) > 1 and sys.argv[1] == "multiple":
         multipleStructures.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "optimize":
-        paramsOptimize.main()
+        optimizeParams.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "contacts":
         crystalContacts.main()
     elif len(sys.argv) > 1 and sys.argv[1] == "generate":
@@ -49,7 +49,7 @@ def main():
         print("-"*80)
         print(generateParams.__doc__)
         print("-"*80)
-        print(radiiOptimize.__doc__)
+        print(optimizeParams.__doc__)
     else:
         print(__doc__)
 

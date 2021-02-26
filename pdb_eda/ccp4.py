@@ -440,7 +440,7 @@ class DensityMatrix:
 class DensityBlob:
     """:class:`pdb_eda.ccp4.DensityBlob` that stores data and methods of a electron density blob."""
 
-    def __init__(self, centroid, coordCenter, totalDensity, volume, crsList, densityMatrix):
+    def __init__(self, centroid, coordCenter, totalDensity, volume, crsList, densityMatrix, atoms=None):
         """Initialize a :class:`pdb_eda.ccp4.DensityBlob` object.
 
         :param :py:class:`list` centroid: the centroid of the blob.
@@ -457,7 +457,7 @@ class DensityBlob:
         self.volume = volume
         self.crsList = {tuple(crs) for crs in crsList}
         self.densityMatrix = densityMatrix
-        self.atoms = []
+        self.atoms = [] if not atoms else atoms
 
     @property
     def validCrs(self):
@@ -507,13 +507,7 @@ class DensityBlob:
         :return: bool
         :rtype: :py:class`bool`
         """
-        #if any(x in self.crsList for x in otherBlob.crsList):
-        #    return True
-        #if np.any(scipy.spatial.distance.cdist(np.matrix(self.crsList), np.matrix(otherBlob.crsList)) <= np.sqrt(3)):
-        if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in self.crsList for y in otherBlob.crsList):
-            return True
-        else:
-            return False
+        return utils.testOverlap(self, otherBlob)
 
     def merge(self, otherBlob):
         """Merge the given blob into the original blob.
@@ -527,12 +521,11 @@ class DensityBlob:
         self.__dict__.update(newBlob.__dict__)
         self.atoms = atoms
 
-        # self.centroid = newBlob.centroid
-        # self.totalDensity = newBlob.totalDensity
-        # self.volume = newBlob.volume
-        # self.crsList = newBlob.crsList
-        # self.header = newBlob.header
-        # self.densityMatrix = newBlob.densityMatrix
-        # self.atoms = self.atoms + [atom for atom in otherBlob.atoms if atom not in self.atoms]
+    def clone(self):
+        """Returns a copy of the density blob.
 
+        :return: densityBlob
+        :rtype: :class:`pdb_eda.ccp4.DensityBlob`
+        """
+        return DensityBlob(self.centroid,self.coordCenter,self.totalDensity,self.volume,self.crsList,self.densityMatrix,self.atoms.copy())
 
