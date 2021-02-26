@@ -289,7 +289,7 @@ def analyzePDBID(pdbid):
     stats = {'density_electron_ratio' : analyzer.densityElectronRatio, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.F000, 'num_voxels_aggregated' : analyzer.numVoxelsAggregated,
         'total_aggregated_electrons' : analyzer.totalAggregatedElectrons, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
         'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomCloudDescriptions),
-        'num_residues_analyzed' : len(analyzer.residueCloudDescriptions), 'num_chains_analyzed' : len(analyzer.chainCloudDescriptions), 'atom_overlap_completeness' : atomOverlapCompleteness}
+        'num_residue_clouds_analyzed' : len(analyzer.residueCloudDescriptions), 'num_chain_clouds_analyzed' : len(analyzer.chainCloudDescriptions), 'atom_overlap_completeness' : atomOverlapCompleteness}
 
     properties = { property : value for (property,value) in analyzer.biopdbObj.header.items() }
     properties['residue_counts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))

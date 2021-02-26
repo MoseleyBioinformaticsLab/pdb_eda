@@ -574,6 +574,23 @@ class DensityAnalysis(object):
         completelyOverlappedAtomTypes = collections.defaultdict(int)
         incompletelyOverlappedAtomTypes = collections.defaultdict(int)
 
+        allAtomClouds = {}
+        centroidDistances = []
+        for residue in biopdbObj.get_residues():
+            if residue.id[0] != ' ': # skip HETATOM residues.
+                continue
+
+            for atom in residue.child_list:
+                resAtom = residueAtomName(atom)
+                if resAtom not in fullAtomNameMapAtomTypeGlobal.keys() or atom.get_occupancy() == 0:
+                    continue
+
+                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[fullAtomNameMapAtomTypeGlobal[resAtom]], densityObj.densityCutoff)
+                allAtomClouds[tuple(atom.coord)] = atomClouds
+                if len(atomClouds) > 0:
+                    centroidDistances.append(min(np.linalg.norm(atom.coord - i.centroid) for i in atomClouds))
+        centroidDistanceCutoff = np.nanmedian(centroidDistances) + 2.5 * np.nanstd(centroidDistances) # ~99% cutoff, but this is calculated across all atom-types.
+
         for residue in biopdbObj.get_residues():
             if residue.id[0] != ' ': # skip HETATOM residues.
                 continue
@@ -586,14 +603,17 @@ class DensityAnalysis(object):
                     continue
 
                 ## Calculate atom clouds
-                atomClouds = densityObj.findAberrantBlobs(atom.coord, currentRadii[fullAtomNameMapAtomTypeGlobal[resAtom]], densityObj.densityCutoff)
+                atomClouds = allAtomClouds[tuple(atom.coord)]
                 if len(atomClouds) == 0:
                     continue
                 elif len(atomClouds) == 1:
                     bestAtomCloud = atomClouds[0]
                 else:
-                    diffs = [np.linalg.norm(atom.coord - i.centroid) for i in atomClouds]
-                    index = diffs.index(min(diffs))
+                    distances = [np.linalg.norm(atom.coord - i.centroid) for i in atomClouds]
+                    minDistance = min(distances)
+                    if minDistance > centroidDistanceCutoff:
+                        continue
+                    index = distances.index(minDistance)
                     bestAtomCloud = atomClouds[index]
 
                 for aCloud in atomClouds:
