@@ -18,7 +18,7 @@ Options:
     --min=<min-radius-change>           Minimum to change the radius at each incremental optimization. [default: 0.001]
     --radius=<start-radius>             Starting radius for the starting atom-type. [default: 0]
     --start=<start-atom-type>           Starting atom type. [default: ]
-    --stop=<fractional-difference>      Max fractional difference between atom-specific and chain-specific density conversion allowed for stopping the optimization. [default: 0]
+    --stop=<fractional-difference>      Max fractional difference between atom-specific and overall density conversion allowed for stopping the optimization. [default: 0]
     --unweighted                        Pick atom type to optimize next without weighting based on occurrence across PDB entries.
     --compare                           Compare two parameter files.
     --testing                           Run only a single process for testing purposes.

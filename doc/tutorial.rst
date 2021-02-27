@@ -83,7 +83,7 @@ Analysing the electron density data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are several methods you can use to perform on the electron density data.
-To aggregate the electron density map (2Fo - Fc) by atom, residue, and chain::
+To aggregate the electron density map (2Fo - Fc) by atom, residue, and domain::
 
     analyzer.aggregateCloud()
     medians = analyzer.medians

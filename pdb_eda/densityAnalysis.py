@@ -298,7 +298,7 @@ class DensityAnalysis(object):
         self._medians = None
         self._atomCloudDescriptions = None
         self._residueCloudDescriptions = None
-        self._chainCloudDescriptions = None
+        self._domainCloudDescriptions = None
         self._F000 = None
         self._densityElectronRatio = None
         self._numVoxelsAggregated = None
@@ -473,15 +473,15 @@ class DensityAnalysis(object):
         return self._residueCloudDescriptions
 
     @property
-    def chainCloudDescriptions(self):
-        """Returns aggregated chain cloud descriptions.
+    def domainCloudDescriptions(self):
+        """Returns aggregated domain cloud descriptions.
 
-        :return: chainCloudDescriptions
+        :return: domainCloudDescriptions
         :rtype: :py:class:`list`
         """
-        if self._chainCloudDescriptions is None:
+        if self._domainCloudDescriptions is None:
             self.aggregateCloud()
-        return self._chainCloudDescriptions
+        return self._domainCloudDescriptions
 
     @property
     def numVoxelsAggregated(self):
@@ -552,20 +552,20 @@ class DensityAnalysis(object):
 
 
     residueCloudHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume', 'centroid_xyz']
-    chainCloudHeader = residueCloudHeader
+    domainCloudHeader = residueCloudHeader
     def aggregateCloud(self, minCloudElectrons=25.0, minTotalElectrons=400.0):
-        """Aggregate the electron density map clouds by atom, residue, and chain.
+        """Aggregate the electron density map clouds by atom, residue, and domain.
         Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data members.
 
-        :param :py:class:`float` minCloudElectrons: minimum number of electrons needed to aggregate a residue or chain cloud.
-        :param :py:class:`float` minTotalElectrons: mininum total number of electrons required to calculate a density-electron ratio.
+        :param :py:class:`float` minCloudElectrons: minimum number of electrons needed to aggregate a residue or domain cloud.
+        :param :py:class:`float` minTotalElectrons: mininum number of electrons required to calculate a density-electron ratio.
         """
         densityObj = self.densityObj
         biopdbObj = self.biopdbObj
 
-        chainClouds = []
-        chainPool = []
-        chainList = []
+        domainClouds = []
+        domainPool = []
+        domainList = []
         residueList = []
         atomList = []
 
@@ -665,17 +665,17 @@ class DensityAnalysis(object):
                     residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / resElectrons, len(cloud.crsList), resElectrons, len(cloud.crsList) * densityObj.header.unitVolume,
                                         cloud.centroid])
 
-            chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
+            domainPool = domainPool + resClouds ## For aggregating residue clouds into domain clouds
         ## End residue
 
-        ## Group connected chain density clouds together from individual residue clouds
-        overlap = np.zeros((len(chainPool), len(chainPool)))
-        for i in range(len(chainPool)):
-            for j in range(i+1, len(chainPool)):
-                overlap[i][j] = overlap[j][i] = utils.testOverlap(chainPool[i],chainPool[j])
+        ## Group connected domain density clouds together from individual residue clouds
+        overlap = np.zeros((len(domainPool), len(domainPool)))
+        for i in range(len(domainPool)):
+            for j in range(i+1, len(domainPool)):
+                overlap[i][j] = overlap[j][i] = utils.testOverlap(domainPool[i],domainPool[j])
 
         usedIdx = set()
-        for startingIndex in range(len(chainPool)):
+        for startingIndex in range(len(domainPool)):
             if startingIndex not in usedIdx:
                 newCluster = {index for index, o in enumerate(overlap[startingIndex]) if o}
                 currCluster = set([startingIndex])
@@ -685,32 +685,32 @@ class DensityAnalysis(object):
                     currCluster.update(newCluster)
 
                 usedIdx.update(currCluster)
-                chainCloud = chainPool[currCluster.pop()].clone()
+                domainCloud = domainPool[currCluster.pop()].clone()
                 for idx in currCluster:
-                    chainCloud.merge(chainPool[idx])
-                chainClouds.append(chainCloud)
-        ##End chain
+                    domainCloud.merge(domainPool[idx])
+                domainClouds.append(domainCloud)
+        ##End domain
 
         ## Calculate densityElectronRatio, which is technically a weighted mean value now.
         numVoxels = 0
         totalElectrons = 0
         totalDensity = 0
-        for cloud in chainClouds:
+        for cloud in domainClouds:
             atom = cloud.atoms[0]
-            chainElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
-            totalElectrons += chainElectrons
+            domainElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
+            totalElectrons += domainElectrons
             numVoxels += len(cloud.crsList)
             totalDensity += cloud.totalDensity
 
-            if chainElectrons >= minCloudElectrons:
-                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume,
+            if domainElectrons >= minCloudElectrons:
+                domainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / domainElectrons, len(cloud.crsList), domainElectrons, len(cloud.crsList) * densityObj.header.unitVolume,
                                   cloud.centroid])
 
         if totalElectrons < minTotalElectrons:
             return
         else:
             densityElectronRatio = totalDensity / totalElectrons
-            chainList.sort(key=lambda x: x[3])
+            domainList.sort(key=lambda x: x[3])
         ## End calculate densityElectronRatio
 
 
@@ -723,8 +723,8 @@ class DensityAnalysis(object):
 
         try:
             dataType = np.dtype([('chain', np.dtype(('U', 20))), ('residue_number', int), ('residue_name', np.dtype(('U', 10)) ), ('atom_name', np.dtype(('U', 10)) ), ('atom_type', np.dtype(('U', atomTypeLengthGlobal)) ),
-                                 ('density_electron_ratio', float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('centroid_xyz', float, (3,)), ('adj_density_electron_ratio', float), ('chain_fraction', float),
-                                 ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
+                                 ('density_electron_ratio', float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('centroid_xyz', float, (3,)), ('adj_density_electron_ratio', float),
+                                 ('domain_fraction', float), ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
             atoms = np.asarray([tuple(atom+[0.0 for x in range(5)]) for atom in atomList],dataType) # must pass in list of tuples to create ndarray correctly.
             if not np.isnan(atoms['centroid_distance']).all():
                 centroidCutoff = np.nanmedian(atoms['centroid_distance']) + np.nanstd(atoms['centroid_distance']) * 2
@@ -743,11 +743,11 @@ class DensityAnalysis(object):
             medians['slopes'] = {atom_type : calcSlope(atoms[atoms['atom_type'] == atom_type], atom_type) for atom_type in atom_types}
 
             ## Correct by b-factor
-            atoms['chain_fraction'] = (atoms['adj_density_electron_ratio'] - densityElectronRatio) / densityElectronRatio
-            atoms['corrected_fraction'] = atoms['chain_fraction'] - (np.log(atoms['bfactor']) - np.log(medians_translator('bfactor', atoms['atom_type']))) * medians_translator('slopes', atoms['atom_type'])
+            atoms['domain_fraction'] = (atoms['adj_density_electron_ratio'] - densityElectronRatio) / densityElectronRatio
+            atoms['corrected_fraction'] = atoms['domain_fraction'] - (np.log(atoms['bfactor']) - np.log(medians_translator('bfactor', atoms['atom_type']))) * medians_translator('slopes', atoms['atom_type'])
             atoms['corrected_density_electron_ratio'] = atoms['corrected_fraction'] * densityElectronRatio + densityElectronRatio
             medians.update({column : {atom_type : np.nanmedian(atoms[column][atoms['atom_type'] == atom_type]) for atom_type in atom_types} for column in
-                         ['chain_fraction', 'corrected_fraction', 'corrected_density_electron_ratio']})
+                         ['domain_fraction', 'corrected_fraction', 'corrected_density_electron_ratio']})
         except:
             return
 
@@ -758,7 +758,7 @@ class DensityAnalysis(object):
         self._medians = medians
         self._atomCloudDescriptions = atoms
         self._residueCloudDescriptions = residueList
-        self._chainCloudDescriptions = chainList
+        self._domainCloudDescriptions = domainList
         self._atomTypeOverlapCompleteness = completelyOverlappedAtomTypes
         self._atomTypeOverlapIncompleteness = incompletelyOverlappedAtomTypes
 

@@ -11,7 +11,10 @@ def testOverlap(selfBlob, otherBlob):
     :return: bool
     :rtype: :py:class:`bool`
     """
-    return True if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in selfBlob.crsList for y in otherBlob.crsList) else False
+    if len(selfBlob.crsList) > len(otherBlob.crsList):
+        return True if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in selfBlob.crsList for y in otherBlob.crsList) else False
+    else:
+        return True if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in otherBlob.crsList for y in selfBlob.crsList) else False
 
 
 def sumOfAbs(array, float cutoff):

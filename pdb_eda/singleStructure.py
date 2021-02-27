@@ -6,7 +6,7 @@ pdb_eda single structure analysis mode command-line interface
 Usage:
     pdb_eda single -h | --help
     pdb_eda single <pdbid> <out-file> map (--density | --diff-density)
-    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --chain) [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
+    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --domain) [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> difference (--atom | --residue | --symmetry-atom) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
@@ -23,7 +23,7 @@ Options:
     --atom                          Calculate results for each atom.
     --residue                       Calculate results for each residue.
     --symmetry-atom                 Calculate results for each symmetry atom.
-    --chain                         Calculate results for each chain.
+    --domain                        Calculate results for each domain.
     --green                         Calculate green (positive) difference map blobs.
     --red                           Calculate red (negative) difference map blobs.
     --blue                          Calculate blue (positive) density map blobs. Default option if red/green not selected.  However, this option uses a LOT OF MEMORY at 1.5sd.
@@ -82,9 +82,9 @@ def main():
         elif args["--residue"]:
             headerList = densityAnalysis.DensityAnalysis.residueCloudHeader + ['density_electron_ratio']
             result = [list(item) + [analyzer.densityElectronRatio] for item in analyzer.residueCloudDescriptions]
-        elif args["--chain"]:
-            headerList = densityAnalysis.DensityAnalysis.chainCloudHeader + ['density_electron_ratio']
-            result = [list(item) + [analyzer.densityElectronRatio] for item in analyzer.chainCloudDescriptions]
+        elif args["--domain"]:
+            headerList = densityAnalysis.DensityAnalysis.domainCloudHeader + ['density_electron_ratio']
+            result = [list(item) + [analyzer.densityElectronRatio] for item in analyzer.domainCloudDescriptions]
     elif args["difference"]:
         if args["--atom"]:
             headerList = densityAnalysis.DensityAnalysis.atomRegionDiscrepancyHeader

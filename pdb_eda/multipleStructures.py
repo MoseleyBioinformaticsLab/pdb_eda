@@ -174,7 +174,7 @@ def main():
 
             if globalArgs["--out-format"] == 'csv' or globalArgs["--out-format"] == 'txt':
                 statsHeaders = ['density_electron_ratio', 'voxel_volume', 'f000', 'num_voxels_aggregated', 'total_aggregated_electrons', 'density_mean', 'diff_density_mean', 'resolution', 'space_group',
-                                'num_atoms_analyzed', 'num_residues_analyzed', 'num_chains_analyzed', "atom_overlap_completeness"]
+                                'num_atoms_analyzed', 'num_residue_clouds_analyzed', 'num_domain_clouds_analyzed', "atom_overlap_completeness"]
                 with open(globalArgs['<out-result-file>'], "w", newline='') if globalArgs["<out-result-file>"] != "-" else sys.stdout as csvFile:
                     writer = csv.writer(csvFile)
                     writer.writerow(['pdbid'] + statsHeaders + sorted(densityAnalysis.paramsGlobal["radii"]))
@@ -289,7 +289,7 @@ def analyzePDBID(pdbid):
     stats = {'density_electron_ratio' : analyzer.densityElectronRatio, 'voxel_volume' : analyzer.densityObj.header.unitVolume, 'f000' : analyzer.F000, 'num_voxels_aggregated' : analyzer.numVoxelsAggregated,
         'total_aggregated_electrons' : analyzer.totalAggregatedElectrons, 'density_mean' : analyzer.densityObj.header.densityMean, 'diff_density_mean' : analyzer.diffDensityObj.header.densityMean,
         'resolution' : analyzer.pdbObj.header.resolution, 'space_group' : analyzer.pdbObj.header.spaceGroup, 'num_atoms_analyzed' : len(analyzer.atomCloudDescriptions),
-        'num_residue_clouds_analyzed' : len(analyzer.residueCloudDescriptions), 'num_chain_clouds_analyzed' : len(analyzer.chainCloudDescriptions), 'atom_overlap_completeness' : atomOverlapCompleteness}
+        'num_residue_clouds_analyzed' : len(analyzer.residueCloudDescriptions), 'num_domain_clouds_analyzed' : len(analyzer.domainCloudDescriptions), 'atom_overlap_completeness' : atomOverlapCompleteness}
 
     properties = { property : value for (property,value) in analyzer.biopdbObj.header.items() }
     properties['residue_counts'] = dict(collections.Counter(residue.resname for residue in analyzer.biopdbObj.get_residues()))

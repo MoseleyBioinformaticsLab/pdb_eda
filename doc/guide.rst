@@ -9,7 +9,7 @@ available from the world wide Protein Data Bank (PDB_).
 The :mod:`pdb_eda` package currently provides facilities that can:
     * Parse .ccp4 format file into their object representation.
     * Parse .pdb format file to get information that is complimentary to the Bio.PDB module in BioPython_ package.
-    * Analyze the electron density maps at the atom/residue/chain levels and
+    * Analyze the electron density maps at the atom/residue/domain levels and
       interpret the electron densities in terms of number of electrons by estimating a density-electron ratio.
 
 Citation
@@ -93,7 +93,7 @@ The :mod:`pdb_eda` package can be used in several ways:
 
         * single - single-structure mode:
             * Convert electron density map CCP4 files into its equivalent JSON file format.
-            * Aggregate electron density map by atom, residue, and chain, and return the results in
+            * Aggregate electron density map by atom, residue, and domain, and return the results in
               either JSON or csv format.
             * Aggregate difference electron density map into green (positive) or red (negative) blobs,
               and return the object or statistics results in either JSON or csv format.
