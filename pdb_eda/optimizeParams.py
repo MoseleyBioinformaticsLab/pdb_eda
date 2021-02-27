@@ -136,6 +136,8 @@ def main():
             maxSize = max([sizes[atomType] for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
             print("Radii:", currentRadii, file=logFile)
             print("Median Diffs:", bestMedianDiffs, file=logFile)
+            print("Overlap Completeness:", overlapCompleteness, file=logFile)
+            print("Penalties:", bestPenalties, file=logFile)
             print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                   ", Weighted Diff StdDev:", overallStdDevDiffs,
                   ", Max Size:", maxSize)
@@ -184,6 +186,9 @@ def main():
                 maxSize = max([sizes[atomType] for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
                 print("Radii:", currentRadii, file=logFile)
                 print("Median Diffs:", medianDiffs, file=logFile)
+                print("Overlap Completeness:", overlapCompleteness, file=logFile)
+                print("Penalties:", penalties, file=logFile)
+                print("Slopes:", slopes, file=logFile)
                 print("Max Absolute Weighted Median Diff:", max([abs(medianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                       ", Weighted Diff StdDev:", overallStdDevDiffs,
                       ", Max Size:", maxSize)
@@ -198,7 +203,6 @@ def main():
                       ", Mean Abs Diff Mean-Median:", np.mean([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
                 print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
                 print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
-                print("Slopes:", slopes, file=logFile)
 
                 improved = False
                 directionChangeByIncrement = (previousDirection != (penalties[currentAtomType] < 0)) and estimatedRadiusIncrement[currentAtomType] == 0

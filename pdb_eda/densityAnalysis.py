@@ -551,7 +551,7 @@ class DensityAnalysis(object):
 
 
 
-    residueCloudHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume']
+    residueCloudHeader = ['chain', 'residue_number', 'residue_name', 'local_density_electron_ratio', 'num_voxels', 'electrons', 'volume', 'centroid_xyz']
     chainCloudHeader = residueCloudHeader
     def aggregateCloud(self, minCloudElectrons=25.0, minTotalElectrons=400.0):
         """Aggregate the electron density map clouds by atom, residue, and chain.
@@ -621,7 +621,9 @@ class DensityAnalysis(object):
                 atomCloudIndeces[resAtom] = [len(residuePool)+index for index in range(len(atomClouds))]
                 residuePool = residuePool + atomClouds ## For aggregating atom clouds into residue clouds
 
-                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, fullAtomNameMapAtomTypeGlobal[resAtom], bestAtomCloud.totalDensity / fullAtomNameMapElectronsGlobal[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList), fullAtomNameMapElectronsGlobal[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid)])
+                atomList.append([residue.parent.id, residue.id[1], atom.parent.resname, atom.name, fullAtomNameMapAtomTypeGlobal[resAtom],
+                                 bestAtomCloud.totalDensity / fullAtomNameMapElectronsGlobal[resAtom] / atom.get_occupancy(), len(bestAtomCloud.crsList),
+                                 fullAtomNameMapElectronsGlobal[resAtom], atom.get_bfactor(), np.linalg.norm(atom.coord - bestAtomCloud.centroid), bestAtomCloud.centroid])
             ## End atom loop
 
             overlap = np.zeros((len(residuePool), len(residuePool)))
@@ -660,7 +662,8 @@ class DensityAnalysis(object):
             for cloud in resClouds:
                 resElectrons = sum([fullAtomNameMapElectronsGlobal[residueAtomName(atom)] * atom.get_occupancy() for atom in cloud.atoms])
                 if resElectrons >= minCloudElectrons:
-                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / resElectrons, len(cloud.crsList), resElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
+                    residueList.append([residue.parent.id, residue.id[1], residue.resname, cloud.totalDensity / resElectrons, len(cloud.crsList), resElectrons, len(cloud.crsList) * densityObj.header.unitVolume,
+                                        cloud.centroid])
 
             chainPool = chainPool + resClouds ## For aggregating residue clouds into chain clouds
         ## End residue
@@ -700,7 +703,8 @@ class DensityAnalysis(object):
             totalDensity += cloud.totalDensity
 
             if chainElectrons >= minCloudElectrons:
-                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume])
+                chainList.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, cloud.totalDensity / chainElectrons, len(cloud.crsList), chainElectrons, len(cloud.crsList) * densityObj.header.unitVolume,
+                                  cloud.centroid])
 
         if totalElectrons < minTotalElectrons:
             return
@@ -718,8 +722,8 @@ class DensityAnalysis(object):
             return currentSlopes[atom_type] if p_value > 0.05 else slope
 
         try:
-            dataType = np.dtype([('chain', np.dtype(('U', 20))), ('residue_number',int), ('residue_name',np.dtype(('U', 10)) ), ('atom_name',np.dtype(('U', 10)) ), ('atom_type',np.dtype(('U', atomTypeLengthGlobal)) ),
-                                 ('density_electron_ratio',float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('adj_density_electron_ratio', float), ('chain_fraction', float),
+            dataType = np.dtype([('chain', np.dtype(('U', 20))), ('residue_number', int), ('residue_name', np.dtype(('U', 10)) ), ('atom_name', np.dtype(('U', 10)) ), ('atom_type', np.dtype(('U', atomTypeLengthGlobal)) ),
+                                 ('density_electron_ratio', float), ('num_voxels', int), ('electrons', int), ('bfactor', float), ('centroid_distance', float), ('centroid_xyz', float, (3,)), ('adj_density_electron_ratio', float), ('chain_fraction', float),
                                  ('corrected_fraction', float), ('corrected_density_electron_ratio', float), ('volume', float)])
             atoms = np.asarray([tuple(atom+[0.0 for x in range(5)]) for atom in atomList],dataType) # must pass in list of tuples to create ndarray correctly.
             if not np.isnan(atoms['centroid_distance']).all():
