@@ -131,7 +131,8 @@ def main():
 
             (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes, sizes, overlapCompleteness) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
             currentSlopes = {**currentSlopes, **(params["slopes"])}
-            bestPenalties = {atomType:(bestMedianDiffs[atomType] + overlapCompleteness[atomType] - 1.0) for atomType in bestMedianDiffs}
+            maxOverlapCompleteness = max(max(overlapCompleteness.values()),0.95)
+            bestPenalties = {atomType:(bestMedianDiffs[atomType] + overlapCompleteness[atomType] - maxOverlapCompleteness) for atomType in bestMedianDiffs}
 
             maxSize = max([sizes[atomType] for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
             print("Radii:", currentRadii, file=logFile)
@@ -181,7 +182,8 @@ def main():
 
                 (medianDiffs, meanDiffs, overallStdDevDiffs, slopes, sizes, overlapCompleteness) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"],
                                                                                                          args["<pdbid-file>"]+".execution_times")
-                penalties = {atomType:(medianDiffs[atomType] + overlapCompleteness[atomType] - 1.0) for atomType in medianDiffs}
+                maxOverlapCompleteness = max(max(overlapCompleteness.values()), 0.95)
+                penalties = {atomType:(medianDiffs[atomType] + overlapCompleteness[atomType] - maxOverlapCompleteness) for atomType in medianDiffs}
 
                 maxSize = max([sizes[atomType] for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
                 print("Radii:", currentRadii, file=logFile)
