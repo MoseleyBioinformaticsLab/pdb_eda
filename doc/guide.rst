@@ -125,6 +125,7 @@ CHANGELOG
 ---------
 Since version 1.0.1, over 2200 lines of additional code has been written and most of the code base has been revised and refactored.
 Computationally intensive parts of the code have been cythonized to improve execution performance.
+Many variables and functions have been renamed to greatly improve readability and understanding of the code base, API, and CLI.
 
 The application programming interface (API) has been greatly expanded and much of the functionality streamlined.
 
