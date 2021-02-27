@@ -99,9 +99,11 @@ The :mod:`pdb_eda` package can be used in several ways:
         * Calculate atom regional discrepancies and statistics.
         * Calculate residue regional discrepancies and statistics.
 
-    * As a command-line tool:
+    * As a command-line tool using the pdb_eda command (or "python3 -m pdb_eda").
 
-        * For single-structure mode:
+        * The command-line interface has multiple modes.
+
+        * single - single-structure mode:
             * Convert electron density map CCP4 files into its equivalent JSON file format.
             * Aggregate electron density map by atom, residue, and chain, and return the results in
               either JSON or csv format.
@@ -111,33 +113,36 @@ The :mod:`pdb_eda` package can be used in several ways:
               results in either JSON or csv format.
             * Return traditional quality metrics and statistics for atoms and residues.
 
-        * For multiple-structure mode:
+        * multiple - multiple-structure mode:
             * Analyze and return cumulative statistics for a given list of PDB IDs.
             * Filter list of PDB IDs by cumulative statistic criteria.
             * Check and redownload problematic PDB entries.
             * Run single structure mode with multicore processing.
             * Run crystal contacts mode with multicore processing.
 
-        * For crystal contacts mode:
+        * contacts - crystal contacts mode:
             * Analyze and return atoms with crystal contacts.
             * This mode requires pymol to be installed.
 
-        * For parameter generation mode: (rarely used mode)
+        * generate - parameter generation mode: (rarely used mode)
             * Downloads PDB chemical component list and extracts information to create atom type parameters.
             * Analyzes list of PDB IDs for specific atom types.
             * Generates atom type parameter file and list of PDB IDs for their optimization.
 
-        * For parameter optimization mode: (rarely used mode)
+        * optimize - parameter optimization mode: (rarely used mode)
             * Optimizes atom type radii and b-factor density correction slopes using a given list of PDB IDs.
 
 CHANGELOG
 ---------
-Since version 1.0.1, over 2000 lines of additional code has been written and most of the code base has been revised and refactored.
+Since version 1.0.1, over 2200 lines of additional code has been written and most of the code base has been revised and refactored.
 Computationally intensive parts of the code have been cythonized to improve execution performance.
 
 The application programming interface (API) has been greatly expanded and much of the functionality streamlined.
 
 The command line interface has been greatly expanded and now includes single, multiple, contacts, generate, and optimize modes.
+
+Optimize mode has a new penalty function being optimized that both minimizes differences in density-electron ratio estimates and
+maximizes electron cloud aggregation.  The optimization is also roughly 50-fold faster than the previous generation of algorithm.
 
 The atom types have been systematically generated from the wwPDB master chemical components file.
 Both amino acid and nucleic acid type parameters have been optimized.

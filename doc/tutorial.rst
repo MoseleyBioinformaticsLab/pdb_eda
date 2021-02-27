@@ -86,8 +86,8 @@ There are several methods you can use to perform on the electron density data.
 To aggregate the electron density map (2Fo - Fc) by atom, residue, and chain::
 
     analyzer.aggregateCloud()
-    medians = analyser.medians
-    densityElectronRatio = analyser.densityElectronRatio
+    medians = analyzer.medians
+    densityElectronRatio = analyzer.densityElectronRatio
 
 
 To aggregate the difference electron density map (Fo - Fc) into positive (green) and negative (red) blobs::
@@ -112,7 +112,6 @@ To acquire a list all nearby symmetry, symmetry-only, or asymmetry coordinate li
     symmetryOnlyAtomCoords = analyzer.symmetryOnlyAtomCoords
     asymmetryAtomCoords = analyzer.asymmetryAtomCoords
 
-
 The result is a list of :class:`pdb_eda.densityAnalysis.symAtom` instances.
 
 To calculate the summary statistics of the above positive and negative density blobs with respect to their closest symmetry atom::
@@ -124,9 +123,11 @@ For more detailed information, check the **API Reference**.
 Using pdb_eda in the command-line interface
 -------------------------------------------
 
-Some of the above functions can be accessed as command line interface::
+Some of the above functions can be accessed from the command line interface::
 
-    > python3 -m pdb_eda -h
+    Either the "pdb_eda" command or "python3 -m pdb_eda" can be used to run the command line interface.
+
+    > pdb_eda -h
 
     pdb_eda command-line interface
 
@@ -148,27 +149,27 @@ Some of the above functions can be accessed as command line interface::
 
 Using single mode to sum significant (> 3 std.dev) deviations in a 3.5 angstrom spherical region around atoms::
 
-   python3 -m pdb_eda single 3UBK 3ubk.txt difference --atom --radius=3.5 --num-sd=3 --out-format=csv --include-pdbid
+   pdb_eda single 3UBK 3ubk.txt difference --atom --radius=3.5 --num-sd=3 --out-format=csv --include-pdbid
 
 Using single mode to sum significant (> 3 std.dev) deviations in a 5 angstrom spherical region around residues::
 
-   python3 -m pdb_eda single 3UBK 3ubk.txt difference --residue --radius=5 --num-sd=3 --out-format=csv --include-pdbid
+   pdb_eda single 3UBK 3ubk.txt difference --residue --radius=5 --num-sd=3 --out-format=csv --include-pdbid
 
 Using single mode to return all green difference blobs and their closest symmetry atom::
 
-   python3 -m pdb_eda single 3UBK 3ubk.green_blobs.txt blob --green --out-format=csv --include-pdbid
+   pdb_eda single 3UBK 3ubk.green_blobs.txt blob --green --out-format=csv --include-pdbid
 
 Using multiple mode to return summative analysis results for a list of PDB IDs::
 
-   python3 -m pdb_eda multiple pdbids.txt results/result.txt
+   pdb_eda multiple pdbids.txt results/result.txt
 
 Using multiple mode to run single mode with multiprocessing::
 
-   python3 -m pdb_eda multiple pdbids.txt results/ --single-mode="--atom --radius=3.5 --num-sd=3 --out-format=csv --include-pdbid"
+   pdb_eda multiple pdbids.txt results/ --single-mode="--atom --radius=3.5 --num-sd=3 --out-format=csv --include-pdbid"
 
 Using multiple mode to check and redownload entry and ccp4 files for a given set of PDB IDs::
 
-   python3 -m pdb_eda multiple pdbids.txt --reload
+   pdb_eda multiple pdbids.txt --reload
 
 
 

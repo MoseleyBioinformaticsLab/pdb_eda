@@ -30,9 +30,27 @@ PDB Parser
    :private-members:
    :exclude-members: __weakref__
 
+Crystal Contacts Analysis
+-------------------------
+.. automodule:: pdb_eda.crystalContacts
+   :member-order: bysource
+   :members:
+   :special-members:
+   :private-members:
+   :exclude-members: __weakref__
+
 Utilities
 ----------
 .. automodule:: pdb_eda.utils
+   :member-order: bysource
+   :members:
+   :special-members:
+   :private-members:
+   :exclude-members: __weakref__
+
+File Utilities
+--------------
+.. automodule:: pdb_eda.fileUtils
    :member-order: bysource
    :members:
    :special-members:
