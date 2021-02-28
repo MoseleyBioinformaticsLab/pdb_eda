@@ -155,8 +155,10 @@ def main():
             print("Max Absolute Median Diff:", max([abs(bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                   ", Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                   ", Mean Abs Diff Mean-Median:", np.mean([abs(meanDiffs[atomType] - bestMedianDiffs[atomType]) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
-            print("Max Absolute Weighted Penalty:", max([abs(bestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in bestPenalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
-            print("Max Absolute Weighted Penalty:", max([abs(bestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in bestPenalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
+            print("Max Absolute Weighted Penalty:", max([abs(bestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in bestPenalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                  ", max overlap completeness=",maxOverlapCompleteness)
+            print("Max Absolute Weighted Penalty:", max([abs(bestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in bestPenalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                  ", max overlap completeness=",maxOverlapCompleteness, file=logFile)
 
 
             testBestPenalties = {atomType: penalty for (atomType, penalty) in bestPenalties.items() if atomType in atomTypes2Optimize} if atomTypes2Optimize else bestPenalties
@@ -207,8 +209,10 @@ def main():
                 print("Max Absolute Median Diff:", max([abs(medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                       ", Max Abs Diff Mean-Median:", max([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                       ", Mean Abs Diff Mean-Median:", np.mean([abs(meanDiffs[atomType] - medianDiffs[atomType]) for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
-                print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
-                print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
+                print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                      ", max overlap completeness=",maxOverlapCompleteness)
+                print("Max Absolute Weighted Penalty:", max([abs(penalties[atomType] * sizes[atomType] / maxSize) for atomType in penalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
+                      ", max overlap completeness=",maxOverlapCompleteness, file=logFile)
 
                 improved = False
                 directionChangeByIncrement = (previousDirection != (penalties[currentAtomType] < 0)) and estimatedRadiusIncrement[currentAtomType] == 0
@@ -286,8 +290,8 @@ def main():
             print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected, file=logFile)
             print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
             print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
-            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]))
-            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]), file=logFile)
+            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]), ", max overlap completeness=",maxOverlapCompleteness)
+            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]), ", max overlap completeness=",maxOverlapCompleteness, file=logFile)
             print("Optimization end-time=", str(datetime.datetime.now()))
             print("Optimization end-time=", str(datetime.datetime.now()), file=logFile)
 
