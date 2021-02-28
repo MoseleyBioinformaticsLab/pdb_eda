@@ -13,6 +13,7 @@ Usage:
 Options:
     -h, --help                          Show this screen.
     --ignore                            Ignore the "optimize" atom type limit in the parameter file.
+    --reverse                           Reverse the "optimize" atom type limit.
     --sample=<sample-size>              Use a random sample of PDB ids for optimization. [default: 0]
     --max=<max-radius-change>           Maximum to change the radius at each incremental optimization. [default: 0.2]
     --min=<min-radius-change>           Minimum to change the radius at each incremental optimization. [default: 0.001]
@@ -107,6 +108,9 @@ def main():
                 densityAnalysis.setGlobals(params)
         except:
             sys.exit(str("Error: params file \"") + args["<start-params-file>"] + "\" does not exist or is not parsable.")
+
+        if args["--reverse"] and atomTypes2Optimize:
+            atomTypes2Optimize = { atomType for atomType in currentRadii.keys() if atomType not in atomTypes2Optimize }
 
         if args["--start"] != "" and args["--start"] not in currentRadii:
             sys.exit(str("Error: starting atom \"") + args["--start"] + "\" is not valid.")
