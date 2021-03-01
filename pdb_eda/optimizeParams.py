@@ -27,6 +27,7 @@ Options:
 
 This mode is often run multiple times using the output parameter file generated in one cycle as the starting parameter file in the next cycle.
 Typically, it is good to start with the following series of cycles.  You can start with larger sample sizes if you have more than 20 CPU cores available.
+The total optimization time is typically between 5000 to 10000 CPU hours.
 1) --sample=100 --max=0.1 --min=0.001
 2) --sample=100 --max=0.1 --min=0.001 --unweighted
 5) (use ~1000 pdbids) --max=0.1 --min=0.001

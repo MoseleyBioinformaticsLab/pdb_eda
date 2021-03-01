@@ -132,7 +132,7 @@ The application programming interface (API) has been greatly expanded and much o
 The command line interface has been greatly expanded and now includes single, multiple, contacts, generate, and optimize modes.
 
 Optimize mode has a new penalty function being optimized that both minimizes differences in density-electron ratio estimates and
-maximizes electron cloud aggregation.  The optimization is also roughly 50-fold faster than the previous generation of algorithm.
+maximizes electron cloud aggregation.  The optimization is also roughly 10-fold faster than the previous generation of algorithm.
 
 The atom types have been systematically generated from the wwPDB master chemical components file.
 Both amino acid and nucleic acid type parameters have been optimized.
