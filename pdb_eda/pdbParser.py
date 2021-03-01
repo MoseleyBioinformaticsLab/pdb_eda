@@ -24,7 +24,7 @@ def readPDBfile(file):
 def parse(handle, mode='lite'):
     """Creates :class:`pdb_eda.pdbParser.PDBentry` object from file handle object.
 
-    :param :class:`io.IOBase` handle: The file handle of a PDB formated file.
+    :param :class:`io.IOBase` handle: The file handle of a PDB formatted file.
     :param :py:class:`str` mode: Whether of not to parse all the atoms, default as 'lite' (not parse).
     :return: pdbEntry
     :rtype: :class:`pdb_eda.pdbParser.PDBentry`

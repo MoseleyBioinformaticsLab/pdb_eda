@@ -1,6 +1,8 @@
 """
 Cythonized Utilities (pdb_eda.cutils)
 ------------------------------------
+
+Contains low-level functions used in pdb_eda.ccp4 and pdb_eda.densityAnalysis.
 """
 
 def testOverlap(selfBlob, otherBlob):
