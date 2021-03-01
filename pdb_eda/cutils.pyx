@@ -100,7 +100,7 @@ class SymAtom:
         return getattr(self.atom, attr)
 
 def getPointDensityFromCrs(densityMatrix, crsCoord):
-    """Get the density of a point.
+    """Returns the density of a point.
 
     :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param crsCoord: crs coordinates.
@@ -120,7 +120,7 @@ def getPointDensityFromCrs(densityMatrix, crsCoord):
     return densityMatrix.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
 def testValidCrs(densityMatrix, crsCoord):
-    """Get the density of a point.
+    """Tests whether the crs coordinate is valid.
 
     :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param :py:class:`list` crsCoord: crs coordinates.
@@ -139,7 +139,7 @@ def testValidCrs(densityMatrix, crsCoord):
     return True
 
 def testValidCrsList(densityMatrix, crsList):
-    """Get the density of a point.
+    """Tests whether all of the crs coordinates in the list are valid.
 
     :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param crsList: list of crs coordinates.
@@ -167,7 +167,7 @@ def createFullCrsList(densityMatrix, float cutoff):
         return None
 
 cdef inline _testXyzWithinDistance(xyzCoord1, xyzCoord2, float distance):
-    """Test whether two xyzCoords are within a certain distance.
+    """Tests whether two xyzCoords are within a certain distance.
 
     :param :py:class:`list` xyzCoord1:
     :param :py:class:`list` xyzCoord2:
@@ -178,7 +178,7 @@ cdef inline _testXyzWithinDistance(xyzCoord1, xyzCoord2, float distance):
     return np.sqrt((xyzCoord2[0] - xyzCoord1[0])**2 + (xyzCoord2[1] - xyzCoord1[1])**2 + (xyzCoord2[2] - xyzCoord1[2])**2) <= distance
 
 def getSphereCrsFromXyz(densityMatrix, xyzCoord, float radius, float densityCutoff=0):
-    """Calculate a list of crs coordinates that within a given distance of a xyz point.
+    """Calculates a list of crs coordinates that within a given distance of a xyz point.
 
     :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param :py:class:`list` xyzCoord: xyz coordinates.
@@ -204,7 +204,7 @@ def getSphereCrsFromXyz(densityMatrix, xyzCoord, float radius, float densityCuto
     return crsCoordList
 
 def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, float radius, float densityCutoff=0):
-    """Calculate a list of crs coordinates that within a given distance from a list of xyz points.
+    """Calculates a list of crs coordinates that within a given distance from a list of xyz points.
 
     :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param :py:class:`list` xyzCoord: xyz coordinates.
@@ -220,7 +220,7 @@ def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, float radius, float den
     return {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff)}
 
 def testValidXyz(densityMatrix, xyzCoord, float radius):
-    """Test whether all crs coordinates within a given distance of a xyzCoord is within the densityMatrix.
+    """Tests whether all crs coordinates within a given distance of a xyzCoord is within the densityMatrix.
 
     :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param :py:class:`list` xyzCoord: xyz coordinates.
@@ -237,7 +237,7 @@ def testValidXyz(densityMatrix, xyzCoord, float radius):
                    if _testXyzWithinDistance(xyzCoord, densityMatrix.header.crs2xyzCoord(crs), radius))
 
 def testValidXyzList(densityMatrix, xyzCoordList, float radius):
-    """Test whether all crs coordinates within a given distance of a set of xyzCoords is within the densityMatrix.
+    """Tests whether all crs coordinates within a given distance of a set of xyzCoords is within the densityMatrix.
 
     :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
     :param :py:class:`list` xyzCoordList: list of xyz coordinates.
