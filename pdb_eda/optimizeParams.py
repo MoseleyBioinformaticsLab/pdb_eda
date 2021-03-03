@@ -19,11 +19,20 @@ Options:
     --min=<min-radius-change>           Minimum to change the radius at each incremental optimization. [default: 0.001]
     --radius=<start-radius>             Starting radius for the starting atom-type. [default: 0]
     --start=<start-atom-type>           Starting atom type. [default: ]
-    --stop=<fractional-difference>      Max fractional difference between atom-specific and overall density conversion allowed for stopping the optimization. [default: 0]
+    --stop=<fractional-difference>      Max penalty fraction allowed for stopping the optimization. [default: 0]
     --unweighted                        Pick atom type to optimize next without weighting based on occurrence across PDB entries.
+    --penalty-weight                    Inverse penalty weight for the atom-type specific overlap completeness. [default: 2.0]
     --compare                           Compare two parameter files.
     --testing                           Run only a single process for testing purposes.
 
+
+The optimization uses the absolute value of a penalty function to determine which atom-type radius to optimize next.
+The penalty function is: medianDensityElectronRatioDifferences[atomType] + (overlapCompleteness[atomType] - maxOverlapCompleteness)/inversePenaltyWeight
+    overlapCompleteness - fraction of atoms of a specific atom-type where the density cloud around the atom overlaps with the density clouds of bonded atoms.
+    maxOverlapCompleteness - maximum of all atom-type-specific overlap completeness values.
+    The median density-electron ratio differences tends to optimize smaller radii, while overlap completeness tends to optimize larger radii.
+    The two terms of the penalty function balance two opposing criteria that need to be maximized to create the best estimate of the density-electron ratio.
+    Also negative penalty function values indicate that a positive change in radius is needed, while a positive penalty function values indicate that a negative change in radius is needed.
 
 This mode is often run multiple times using the output parameter file generated in one cycle as the starting parameter file in the next cycle.
 Typically, it is good to start with the following series of cycles.  You can start with larger sample sizes if you have more than 20 CPU cores available.
@@ -96,6 +105,7 @@ def main():
         stoppingFractionalDifference = float(args["--stop"])
         startingRadius = float(args["--radius"])
         sampleSize = int(args["--sample"])
+        inversePenaltyWeight = float(args["--penalty-weight"])
         atomTypes2Optimize = None
 
         try:
@@ -136,10 +146,11 @@ def main():
 
             (bestMedianDiffs, meanDiffs, overallStdDevDiffs, currentSlopes, sizes, overlapCompleteness) = calculateMedianDiffsSlopes(pdbids, params, args["--testing"], args["<pdbid-file>"]+".execution_times")
             currentSlopes = {**currentSlopes, **(params["slopes"])}
-            maxOverlapCompleteness = max(max(overlapCompleteness.values()),0.95)
-            bestPenalties = {atomType:(bestMedianDiffs[atomType] + overlapCompleteness[atomType] - maxOverlapCompleteness) for atomType in bestMedianDiffs}
+            maxOverlapCompleteness = max(overlapCompleteness.values())
+            bestPenalties = {atomType:(bestMedianDiffs[atomType] + (overlapCompleteness[atomType] - maxOverlapCompleteness)/inversePenaltyWeight) for atomType in bestMedianDiffs}
 
             maxSize = max([sizes[atomType] for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
+            print("Starting Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]",file=logFile)
             print("Radii:", currentRadii, file=logFile)
             print("Median Diffs:", bestMedianDiffs, file=logFile)
             print("Overlap Completeness:", overlapCompleteness, file=logFile)
@@ -189,8 +200,8 @@ def main():
 
                 (medianDiffs, meanDiffs, overallStdDevDiffs, slopes, sizes, overlapCompleteness) = calculateMedianDiffsSlopes(pdbids, {**params, "radii" : currentRadii, "slopes" : currentSlopes }, args["--testing"],
                                                                                                          args["<pdbid-file>"]+".execution_times")
-                maxOverlapCompleteness = max(max(overlapCompleteness.values()), 0.95)
-                penalties = {atomType:(medianDiffs[atomType] + overlapCompleteness[atomType] - maxOverlapCompleteness) for atomType in medianDiffs}
+                maxOverlapCompleteness = max(overlapCompleteness.values())
+                penalties = {atomType:(medianDiffs[atomType] + (overlapCompleteness[atomType] - maxOverlapCompleteness)/inversePenaltyWeight) for atomType in medianDiffs}
 
                 maxSize = max([sizes[atomType] for atomType in medianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
                 print("Radii:", currentRadii, file=logFile)
@@ -285,6 +296,8 @@ def main():
                 previousDirection = bestPenalties[currentAtomType] < 0
                 gc.collect() # force garbage collection to decrease memory use.
 
+            print("Final Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]")
+            print("Final Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]",file=logFile)
             print("Final Radii:", currentRadii)
             print("Final Radii:", currentRadii, file=logFile)
             print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected)
