@@ -21,7 +21,7 @@ Options:
     --start=<start-atom-type>           Starting atom type. [default: ]
     --stop=<fractional-difference>      Max penalty fraction allowed for stopping the optimization. [default: 0]
     --unweighted                        Pick atom type to optimize next without weighting based on occurrence across PDB entries.
-    --penalty-weight                    Inverse penalty weight for the atom-type specific overlap completeness. [default: 2.0]
+    --penalty-weight=<inverse-weight>   Inverse penalty weight for the atom-type specific overlap completeness. [default: 2.0]
     --compare                           Compare two parameter files.
     --testing                           Run only a single process for testing purposes.
 
