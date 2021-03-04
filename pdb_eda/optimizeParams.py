@@ -296,20 +296,22 @@ def main():
                 previousDirection = bestPenalties[currentAtomType] < 0
                 gc.collect() # force garbage collection to decrease memory use.
 
-            print("Final Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]")
-            print("Final Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]",file=logFile)
             print("Final Radii:", currentRadii)
             print("Final Radii:", currentRadii, file=logFile)
+            print("Final Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]")
+            print("Final Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]",file=logFile)
             print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected)
             print("Num Accepted Changes=", numAccepted, ", Num Rejected Changes=", numRejected, file=logFile)
             print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]))
             print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]), file=logFile)
-            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]), ", max overlap completeness=",maxOverlapCompleteness)
-            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]), ", max overlap completeness=",maxOverlapCompleteness, file=logFile)
+            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]))
+            print("Max Absolute Weighted Penalty:", max([abs(testBestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in testBestPenalties.keys()]), file=logFile)
+            print("Overlap Completeness Min-Max: [", min(overlapCompleteness.values()),",",max(overlapCompleteness.values()),"]")
+            print("Overlap Completeness Min-Max: [", min(overlapCompleteness.values()),",",max(overlapCompleteness.values()),"]", file=logFile)
             print("Optimization end-time=", str(datetime.datetime.now()))
             print("Optimization end-time=", str(datetime.datetime.now()), file=logFile)
 
-            outParams = {**params, "radii" : currentRadii, "slopes" : currentSlopes }
+            outParams = { **params, "radii" : currentRadii, "slopes" : currentSlopes }
 
         try:
             with open(args["<out-params-file>"], 'w') as jsonFile:
