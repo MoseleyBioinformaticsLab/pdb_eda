@@ -21,7 +21,7 @@ Options:
     --start=<start-atom-type>           Starting atom type. [default: ]
     --stop=<fractional-difference>      Max penalty fraction allowed for stopping the optimization. [default: 0]
     --unweighted                        Pick atom type to optimize next without weighting based on occurrence across PDB entries.
-    --penalty-weight=<inverse-weight>   Inverse penalty weight for the atom-type specific overlap completeness. [default: 2.0]
+    --penalty-weight=<inverse-weight>   Inverse penalty weight for the atom-type specific overlap completeness. [default: 3.0]
     --compare                           Compare two parameter files.
     --testing                           Run only a single process for testing purposes.
 
@@ -151,10 +151,6 @@ def main():
 
             maxSize = max([sizes[atomType] for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize])
             print("Starting Radii Min-Max: [",min(currentRadii.values()),",",max(currentRadii.values()),"]",file=logFile)
-            print("Radii:", currentRadii, file=logFile)
-            print("Median Diffs:", bestMedianDiffs, file=logFile)
-            print("Overlap Completeness:", overlapCompleteness, file=logFile)
-            print("Penalties:", bestPenalties, file=logFile)
             print("Max Absolute Weighted Median Diff:", max([abs(bestMedianDiffs[atomType] * sizes[atomType] / maxSize) for atomType in bestMedianDiffs.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                   ", Weighted Diff StdDev:", overallStdDevDiffs,
                   ", Max Size:", maxSize)
@@ -171,6 +167,12 @@ def main():
                   ", max overlap completeness=",maxOverlapCompleteness)
             print("Max Absolute Weighted Penalty:", max([abs(bestPenalties[atomType] * sizes[atomType] / maxSize) for atomType in bestPenalties.keys() if not atomTypes2Optimize or atomType in atomTypes2Optimize]),
                   ", max overlap completeness=",maxOverlapCompleteness, file=logFile)
+            print("Overlap Completeness Min-Max: [", min(overlapCompleteness.values()),",",max(overlapCompleteness.values()),"]")
+            print("Overlap Completeness Min-Max: [", min(overlapCompleteness.values()),",",max(overlapCompleteness.values()),"]", file=logFile)
+            print("Radii:", currentRadii, file=logFile)
+            print("Median Diffs:", bestMedianDiffs, file=logFile)
+            print("Overlap Completeness:", overlapCompleteness, file=logFile)
+            print("Penalties:", bestPenalties, file=logFile)
 
 
             testBestPenalties = {atomType: penalty for (atomType, penalty) in bestPenalties.items() if atomType in atomTypes2Optimize} if atomTypes2Optimize else bestPenalties

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """
 pdb_eda command-line interface
+    The PDB Electron Density Analysis package has facilities for analyzing PDB entries and their associated 2Fo-Fc and Fo-Fc electron density maps.
 
 Usage:
     pdb_eda -h | --help     for this screen.
