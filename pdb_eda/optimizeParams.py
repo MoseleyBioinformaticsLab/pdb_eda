@@ -9,6 +9,7 @@ Usage:
     pdb_eda optimize -h | --help
     pdb_eda optimize <start-params-file> <pdbid-file> <log-file> <out-params-file> [options]
     pdb_eda optimize <params-file1> <params-file2> --compare
+    pdb_eda optimize <start-params-file> <out-params-file> --finalize
 
 Options:
     -h, --help                          Show this screen.
@@ -23,6 +24,7 @@ Options:
     --unweighted                        Pick atom type to optimize next without weighting based on occurrence across PDB entries.
     --penalty-weight=<inverse-weight>   Inverse penalty weight for the atom-type specific overlap completeness. [default: 3.0]
     --compare                           Compare two parameter files.
+    --finalize                          Finalize the parameter file for general use.
     --testing                           Run only a single process for testing purposes.
 
 
@@ -98,6 +100,21 @@ def main():
         NanAtomTypes = [atomType for (atomType, slope) in params2["slopes"].items() if np.isnan(slope)]
         if NanAtomTypes:
             print("AtomTypes in", args["<params-file2>"], "with NaN slope:", ", ".join(NanAtomTypes))
+    elif args["--finalize"]:
+        try:
+            with open(args["<start-params-file>"], 'r') as jsonFile:
+                params = json.load(jsonFile)
+        except:
+            sys.exit(str("Error: params file \"") + args["<start-params-file>"] + "\" does not exist or is not parsable.")
+
+        if "optimize" in params:
+            del params["optimize"]
+
+        try:
+            with open(args["<out-params-file>"], 'w') as jsonFile:
+                print(json.dumps(params, indent=2, sort_keys=True), file=jsonFile)
+        except:
+            sys.exit(str("Error: unable to create params file \"") + args["<out-params-file>"] + "\".")
     else:
         maxRadiusIncrement = float(args["--max"])
         radiusIncrement = maxRadiusIncrement
