@@ -79,7 +79,7 @@ for example, to get the point density from a set of given xyz coordinates::
 
 A full list of methods can be found at the **API Reference**.
 
-Analysing the electron density data
+Analyzing the electron density data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are several methods you can use to perform on the electron density data.
