@@ -34,7 +34,7 @@ The penalty function is: medianDensityElectronRatioDifferences[atomType] + (over
     maxOverlapCompleteness - maximum of all atom-type-specific overlap completeness values.
     The median density-electron ratio differences tends to optimize smaller radii, while overlap completeness tends to optimize larger radii.
     The two terms of the penalty function balance two opposing criteria that need to be maximized to create the best estimate of the density-electron ratio.
-    Also negative penalty function values indicate that a positive change in radius is needed, while a positive penalty function values indicate that a negative change in radius is needed.
+    Also negative penalty function values indicate that a positive change in radius is needed, while a positive penalty function values indicate that a negative change in radius is needed. 
 
 This mode is often run multiple times using the output parameter file generated in one cycle as the starting parameter file in the next cycle.
 Typically, it is good to start with the following series of cycles.  You can start with larger sample sizes if you have more than 20 CPU cores available.
