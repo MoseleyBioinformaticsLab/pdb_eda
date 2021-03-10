@@ -83,14 +83,14 @@ To install dependencies manually:
 
 Basic usage
 -----------
-The :mod:`pdb_eda` package can be used in several ways:
+The `pdb_eda` package can be used in several ways:
 
     * As a library for accessing and manipulating data in PDB and CCP4 format files.
 
-        * Use the :class:`~pdb_eda.densityAnalysis.fromPDBid` generator function that will generate
-          (yield) a single :class:`~pdb_eda.densityAnalysis` instance at a time.
+        * Use the `~pdb_eda.densityAnalysis.fromPDBid` generator function that will generate
+          (yield) a single `~pdb_eda.densityAnalysis` instance at a time.
 
-        * Process each :class:`~pdb_eda.densityAnalysis` instance:
+        * Process each `~pdb_eda.densityAnalysis` instance:
 
         * Generate symmetry atoms.
         * Generate red (negative density) or green (positive density) blob lists.
