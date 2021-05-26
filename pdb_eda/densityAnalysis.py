@@ -173,11 +173,11 @@ def fromFile(pdbFile, ccp4DensityFile=None, ccp4DiffDensityFile=None):
     """Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the appropriate PDB and CCP4 files.
 
     :param pdbFile: PDB entry file.
-    :type pdbFile: :py:class:`str` or or :class:`io.IOBase`
+    :type pdbFile: :py:class:`str` or :class:`io.IOBase`
     :param ccp4DensityFile: ccp4 density file.
-    :type ccp4DensityFile: :py:class:`str` or or :class:`io.IOBase` or :py:obj:`None`
+    :type ccp4DensityFile: :py:class:`str` or :class:`io.IOBase` or :py:obj:`None`
     :param ccp4DiffDensityFile: ccp4 difference density file.
-    :type ccp4DiffDensityFile: :py:class:`str` or or :class:`io.IOBase` or :py:obj:`None`
+    :type ccp4DiffDensityFile: :py:class:`str` or :class:`io.IOBase` or :py:obj:`None`
 
     :return: densityAnalysis object
     :rtype: :class:`pdb_eda.densityAnalysis.DensityAnalysis`
