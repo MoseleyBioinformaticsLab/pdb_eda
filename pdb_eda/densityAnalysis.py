@@ -902,6 +902,8 @@ class DensityAnalysis(object):
         symmetryAtoms = self.symmetryAtoms
         symmetryAtomCoords = self.symmetryAtomCoords
 
+        if not self.densityElectronRatio:
+            raise RuntimeError("Failed to calculate densityElectronRatio, probably due to total aggregated electrons less than the minimum.")
         densityElectronRatio = self.densityElectronRatio
 
         blobStats = []
@@ -995,6 +997,8 @@ class DensityAnalysis(object):
         :return diffMapRegionStats: Difference density map region statistics and optional validCrs result.
         :rtype: :py:class:`list` or :py:class:`tuple`
         """
+        if not self.densityElectronRatio:
+            raise RuntimeError("Failed to calculate densityElectronRatio, probably due to total aggregated electrons less than the minimum.")
         densityElectronRatio = self.densityElectronRatio
 
         diffDensityObj = self.diffDensityObj
