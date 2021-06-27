@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 """
-optimizeParams.py
-  The radii and slope parameter optimization mode command-line interface
+The radii and slope parameter optimization mode command-line interface
   Optimizes radii and b-factor slopes using a given set of PDB IDs.
   A simple steepest decent optimization approach is utilized.
   This approach is justified by testing and the use of median differences that smooths the error surface.

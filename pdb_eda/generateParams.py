@@ -1,9 +1,9 @@
 """
-generateParams.py
-    Generates initial parameters needed for pdb_eda calculations.
+The generate parameters mode command line interface
+  Generates initial parameters needed for pdb_eda calculations.
 
 Usage:
-    pdb_eda optimize -h | --help
+    pdb_eda generate -h | --help
     pdb_eda generate atom-type <out-jsonfile> [--residues=<comma-separated-residues>] [--allow-errors] [--default-slope=<default-slope>] [--F000]
     pdb_eda generate prevalence <pdbid-file> <out-jsonfile> [--testing]
     pdb_eda generate parameters <in-atom-types> <in-prevalence-file> <out-params-file> <out-pdbid-file> [--params=<params-file>] [--min-atom-types=<min-atom-types>] [--min-atoms=<min-atoms>] [--max-atoms=<max-atoms>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>]
