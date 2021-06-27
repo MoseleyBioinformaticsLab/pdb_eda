@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """
-pdb_eda radii and slope parameter optimization mode command-line interface
+optimizeParams.py
+  The radii and slope parameter optimization mode command-line interface
   Optimizes radii and b-factor slopes using a given set of PDB IDs.
   A simple steepest decent optimization approach is utilized.
   This approach is justified by testing and the use of median differences that smooths the error surface.
@@ -341,8 +342,11 @@ def main():
 def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTimesFilename=None):
     """Calculates the median diffs and slopes across a list of pdb entries.
 
-    :param :py:class:`list` pdbids: list of pdbids to process.
-    :param :py:class:`dict` currentParams:  parameters.
+    :param pdbids: list of pdbids to process.
+    :type pdbids: :py:class:`list`
+    :param currentParams:  parameters.
+    :type currentParams: :py:class:`dict`
+
     :return: diffs_slopes_tuple
     :rtype: :py:class:`tuple`
     """
@@ -407,10 +411,13 @@ def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTi
 def processFunction(pdbid, paramsFilepath):
     """Process function to analyze a single pdb entry.
 
-    :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
-    :param :py:class:`str` paramsFilepath: filepath to the radii and slopes parameters.
+    :param pdbid: pdbid for entry to download and analyze.
+    :type pdbid: :py:class:`str`
+    :param paramsFilepath: filepath to the radii and slopes parameters.
+    :type paramsFilepath: :py:class:`str`
+
     :return: resultFilename or 0
-    :rtype: :py:class:`str` or :py:class:`int`
+    :rtype: :py:class:`str`, :py:class:`int`
     """
     try:
         with open(paramsFilepath, 'r') as jsonFile:

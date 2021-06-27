@@ -9,12 +9,12 @@ Usage:
 	pdb_eda contacts <pdbid> <out-file> [--distance=<cutoff>] [--symmetry-atoms] [--include-pdbid] [--out-format=<format>]
 
 Arguments:
-    <pdbid>                The PDB ID to download and analyze.
-    <out-file>             Output filename. "-" will write to standard output.
-    --distance=<cutoff>    Distance cutoff in angstroms for detecting crystal contacts. [default: 5.0]
-    --symmetry-atoms       Calculate crystal contacts to symmetry atoms too.
-    --include-pdbid        Include PDB ID at the beginning of each result.
-    --out-format=<format>  Output file format, available formats: csv, json [default: json].
+	<pdbid>                The PDB ID to download and analyze.
+	<out-file>             Output filename. "-" will write to standard output.
+	--distance=<cutoff>    Distance cutoff in angstroms for detecting crystal contacts. [default: 5.0]
+	--symmetry-atoms       Calculate crystal contacts to symmetry atoms too.
+	--include-pdbid        Include PDB ID at the beginning of each result.
+	--out-format=<format>  Output file format, available formats: csv, json [default: json].
 """
 
 import scipy.spatial.distance
@@ -86,11 +86,15 @@ def main():
 def findCoordContacts(coordList1, coordList2, distanceCutoff=5.0):
 	"""Find contacts in coordList1 to coordList2 at the given distance cutoff.
 
-	:param :py:class:`list` coordList1: list of coordinates.
-	:param :py:class:`list` coordList2: list of coordinates.
-	:param :py:class:`float` distanceCutoff: distance cutoff.
+	:param coordList1: list of coordinates.
+	:type coordList1: :py:class:`list`
+	:param coordList2: list of coordinates.
+	:type coordList2: py:class:`list`
+	:param distanceCutoff: distance cutoff., defaults to 5.0
+	:type distanceCutoff: :py:class:`float`
+
 	:return: contactList of index,minDistance tuples.
-    :rtype: :py:class:`list`
+	:rtype: :py:class:`list`
 	"""
 	distances = scipy.spatial.distance.cdist(coordList1, coordList2)
 	return [(index,minDistance) for index,minDistance in enumerate(np.min(distances[x]) for x in range(len(coordList1))) if minDistance <= distanceCutoff]
@@ -102,10 +106,13 @@ def simulateCrystalNeighborCoordinates(filename, distanceCutoff=5.0):
 	structure because the bulk of this is handled by Pymol.
 	NOTE: This will only work with PDB structures resolved with X-RAY DIFFRACTION.
 
-	:param :py:class:`str` filename:
-	:param :py:class:`float` distanceCutoff: distance cutoff.
+	:param filename:
+	:type filename: :py:class:`str`
+	:param distanceCutoff: distance cutoff., defaults to 5.0
+	:type distanceCutoff: :py:class:`float`
+
 	:return: coordList
-    :rtype: :py:class:`list`
+	:rtype: :py:class:`list`
 	"""
 	# Launch pymol.
 	pymol.pymol_argv = ['pymol', '-qc']

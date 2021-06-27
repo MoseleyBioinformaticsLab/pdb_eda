@@ -9,8 +9,11 @@ The cythonized version provide a 3- to 4-fold improvement in execution performan
 def testOverlap(selfBlob, otherBlob):
     """Check if two blobs overlaps or right next to each other.
 
-    :param :class:`pdb_eda.ccp4.DensityBlob` selfBlob:
-    :param :class:`pdb_eda.ccp4.DensityBlob` otherBlob:
+    :param selfBlob:
+    :type selfBlob: :class:`pdb_eda.ccp4.DensityBlob`
+    :param otherBlob:
+    :type otherBlob: :class:`pdb_eda.ccp4.DensityBlob`
+
     :return: bool
     :rtype: :py:class:`bool`
     """
@@ -23,8 +26,11 @@ def testOverlap(selfBlob, otherBlob):
 def sumOfAbs(array, cutoff):
     """Return sum of absolute values above a cutoff.
 
-    :param :class:`collections.abc.Iterable` array:
-    :param :py:class:`float` cutoff:
+    :param array:
+    :type array: :class:`collections.abc.Iterable`
+    :param cutoff:
+    :type cutoff: :py:class:`float`
+
     :return: value
     :rtype: :py:class:`float`
     """
@@ -37,7 +43,9 @@ def createCrsLists(crsList):
     """Calculates a list of crsLists from a given crsList.
     This is a preparation step for creating blobs.
 
-    :param :py:class:`list` crsList: a crs list.
+    :param crsList: a crs list.
+    :type crsList: :py:class:`list`
+
     :return: crsLists is a list of disjoint crsLists.
     :rtype: :py:class:`list`
     """
@@ -63,12 +71,19 @@ import itertools
 def createSymmetryAtoms(atomList, rotationMats, orthoMat, xs, ys, zs):
     """Creates and returns a list of all symmetry atoms.
 
-    :param :py:class:`list` atomList:
-    :param :py:class:`list` rotationMats:
-    :param :py:class:`list` orthoMat:
-    :param :py:class:`list` xs:
-    :param :py:class:`list` ys:
-    :param :py:class:`list` zs:
+    :param atomList:
+    :type atomList: :py:class:`list`
+    :param rotationMats:
+    :type rotationMats: :py:class:`list`
+    :param orthoMat:
+    :type orthoMat: :py:class:`list`
+    :param xs:
+    :type xs: :py:class:`list`
+    :param ys:
+    :type ys: :py:class:`list`
+    :param zs:
+    :type zs: py:class:`list`
+
     :return: allAtoms
     :rtype: :py:class:`list`
     """
@@ -91,9 +106,12 @@ class SymAtom:
     def __init__(self, atom, coord, symmetry):
         """`pdb_eda.densityAnalysis.symAtom` initializer.
 
-        :param :class:`Bio.PDB.atom` atom: atom object.
-        :param :py:class:`list` coord: x,y,z coordinates.
-        :param :py:class:`list` symmetry: i,j,k,r symmetry
+        :param atom: atom object.
+        :type atom: :class:`Bio.PDB.atom`
+        :param coord: x,y,z coordinates.
+        :type coord: :py:class:`list`
+        :param symmetry: i,j,k,r symmetry
+        :type symmetry: :py:class:`list`
         """
         self.atom = atom
         self.coord = coord
@@ -105,9 +123,11 @@ class SymAtom:
 def getPointDensityFromCrs(densityMatrix, crsCoord):
     """Returns the density of a point.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
     :param crsCoord: crs coordinates.
-    :type: :py:class:`list` or :py:class:`set`
+    :type: :py:class:`list`, :py:class:`set`
+
     :return: density
     :rtype: :py:class:`float`
     """
@@ -122,11 +142,14 @@ def getPointDensityFromCrs(densityMatrix, crsCoord):
 
     return densityMatrix.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
-def testValidCrs(densityMatrix,crsCoord):
+def testValidCrs(densityMatrix, crsCoord):
     """Tests whether the crs coordinate is valid.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
-    :param :py:class:`list` crsCoord: crs coordinates.
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
+    :param crsCoord: crs coordinates.
+    :type crsCoord: :py:class:`list`
+
     :return: bool
     :rtype: :py:class:`bool`
     """
@@ -144,9 +167,11 @@ def testValidCrs(densityMatrix,crsCoord):
 def testValidCrsList(densityMatrix, crsList):
     """Tests whether all of the crs coordinates in the list are valid.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
     :param crsList: list of crs coordinates.
-    :type: :py:class:`list` or :py:class:`set`
+    :type: :py:class:`list`, :py:class:`set`
+
     :return: bool
     :rtype: :py:class:`bool`
     """
@@ -155,8 +180,11 @@ def testValidCrsList(densityMatrix, crsList):
 def createFullCrsList(densityMatrix, cutoff):
     """Returns full crs list for the density matrix.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
-    :param :py:class:`float` cutoff:
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
+    :param cutoff:
+    :type cutoff: :py:class:`float`
+
     :return: crsList
     :rtype: :py:class:`list`
     """
@@ -172,9 +200,13 @@ def createFullCrsList(densityMatrix, cutoff):
 def _testXyzWithinDistance(xyzCoord1, xyzCoord2, distance):
     """Tests whether two xyzCoords are within a certain distance.
 
-    :param :py:class:`list` xyzCoord1:
-    :param :py:class:`list` xyzCoord2:
-    :param :py:class:`float` radius:
+    :param xyzCoord1:
+    :type xyzCoord1: :py:class:`list`
+    :param xyzCoord2:
+    :type xyzCoord2: :py:class:`list`
+    :param distance:
+    :type distance: :py:class:`float`
+
     :return: bool
     :rtype: :py:class:`bool`
     """
@@ -183,13 +215,17 @@ def _testXyzWithinDistance(xyzCoord1, xyzCoord2, distance):
 def getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff=0):
     """Calculate a list of crs coordinates that within a given distance of a xyz point.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
-    :param :py:class:`list` xyzCoord: xyz coordinates.
-    :param :py:class:`float` radius: the radius.
-    :param :py:class:`float` densityCutoff: a density cutoff for all the points wants to be included.
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
+    :param xyzCoord: xyz coordinates.
+    :type xyzCoord: :py:class:`list`
+    :param radius:
+    :type radius: :py:class:`float`
+    :param densityCutoff: a density cutoff for all the points wants to be included, defaults to 0
             Default 0 means include every point within the radius.
             If cutoff < 0, include only points with density < cutoff.
             If cutoff > 0, include only points with density > cutoff.
+    :type densityCutoff: :py:class:`float`
 
     :return: crsCoordList of crs coordinates
     :rtype: :py:class:`list`
@@ -209,13 +245,17 @@ def getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff=0):
 def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, radius, densityCutoff=0):
     """Calculates a list of crs coordinates that within a given distance from a list of xyz points.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
-    :param :py:class:`list` xyzCoord: xyz coordinates.
-    :param :py:class:`float` radius: the radius.
-    :param :py:class:`float` densityCutoff: a density cutoff for all the points wants to be included.
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
+    :param xyzCoordList: xyz coordinates.
+    :type xyzCoordList: :py:class:`list`
+    :param radius:
+    :type radius: :py:class:`float`
+    :param densityCutoff: a density cutoff for all the points wants to be included., defaults to 0
             Default 0 means include every point within the radius.
             If cutoff < 0, include only points with density < cutoff.
             If cutoff > 0, include only points with density > cutoff.
+    :type densityCutoff: :py:class:`float`
 
     :return: crsCoordList of crs coordinates
     :rtype: :py:class:`set`
@@ -225,9 +265,13 @@ def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, radius, densityCutoff=0
 def testValidXyz(densityMatrix, xyzCoord, radius):
     """Tests whether all crs coordinates within a given distance of a xyzCoord is within the densityMatrix.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
-    :param :py:class:`list` xyzCoord: xyz coordinates.
-    :param :py:class:`float` radius: the radius.
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
+    :param xyzCoord: xyz coordinates.
+    :type xyzCoord: :py:class:`list`
+    :param radius:
+    :type radius: :py:class:`float`
+
     :return: bool
     :rtype: :py:class:`bool`
     """
@@ -242,9 +286,13 @@ def testValidXyz(densityMatrix, xyzCoord, radius):
 def testValidXyzList(densityMatrix, xyzCoordList, radius):
     """Tests whether all crs coordinates within a given distance of a set of xyzCoords is within the densityMatrix.
 
-    :param :class:`pdb_eda.ccp4.DensityMatrix` densityMatrix:
-    :param :py:class:`list` xyzCoordList: list of xyz coordinates.
-    :param :py:class:`float` radius: the radius.
+    :param densityMatrix:
+    :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
+    :param xyzCoordList: list of xyz coordinates.
+    :type xyzCoordList: :py:class:`list`
+    :param radius:
+    :type radius: :py:class:`float`
+
     :return: bool
     :rtype: :py:class:`bool`
     """

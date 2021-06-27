@@ -1,4 +1,8 @@
 __pycache__/
 build/
+_build/
+dist/
+.idea/
+pdb_eda.egg-info/
 *.so
 *.c

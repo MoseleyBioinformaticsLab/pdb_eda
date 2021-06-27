@@ -13,7 +13,7 @@ def readPDBfile(file):
     """Creates :class:`pdb_eda.pdbParser.PDBentry` object from file name.
 
     :param file: The name of a PDB formated file or a file handle.
-    :type file: :py:class:`str` or :class:`io.IOBase`
+    :type file: :py:class:`str`, :class:`io.IOBase`
     """
     if isinstance(file,str):
         with open(file, "r") as fileHandle:
@@ -24,8 +24,11 @@ def readPDBfile(file):
 def parse(handle, mode='lite'):
     """Creates :class:`pdb_eda.pdbParser.PDBentry` object from file handle object.
 
-    :param :class:`io.IOBase` handle: The file handle of a PDB formatted file.
-    :param :py:class:`str` mode: Whether of not to parse all the atoms, default as 'lite' (not parse).
+    :param handle: The file handle of a PDB formatted file.
+    :type handle: :class:`io.IOBase`
+    :param mode: Whether of not to parse all the atoms. 'lite' means do not to parse., defaults to 'lite'
+    :type mode: :py:class:`str`
+
     :return: pdbEntry
     :rtype: :class:`pdb_eda.pdbParser.PDBentry`
     """
@@ -101,8 +104,10 @@ class PDBentry:
     def __init__(self, header, atoms):
         """:class:`pdb_eda.pdbParser.PDBentry` initializer.
 
-        :param :class:`pdb_eda.pdbParser.PDBheader` header:
-        :param :py:class:`list` atoms: list of  :class:`pdb_eda.pdbParser.Atom` objects
+        :param header:
+        :type header: :class:`pdb_eda.pdbParser.PDBheader`
+        :param atoms: list of  :class:`pdb_eda.pdbParser.Atom` objects
+        :type atoms: :py:class:`list`
         """
         self.header = header
         self.atoms = atoms
@@ -114,15 +119,24 @@ class PDBheader:
     def __init__(self, PDBid, date, method, resolution, rValue, rFree, program, spaceGroup, rotationMats):
         """:class:`pdb_eda.pdbParser.PDBheader` initializer.
 
-        :param :py:class:`str` pdbid: PDB id.:param str pdbid: PDB id.
-        :param :py:class:`str` date: PDB structure publish date.
-        :param :py:class:`str` method: Experiment method, i.e. X-ray, NMR, etc.
-        :param :py:class:`float` resolution: Structure resolution if applicable.
-        :param :py:class:`float` rValue: Structure's R value.
-        :param :py:class:`float` rFree: Structure's R free value.
-        :param :py:class:`str` program: Software for acquiring the structure.
-        :param :py:class:`str` spaceGroup: Structure's space group if applicable.
-        :param :py:class:`list` rotationMats: Structure's rotation matrix and translation matrix if applicable.
+        :param PDBid: PDB entry ID.
+        :type PDBid: :py:class:`str`
+        :param date: PDB structure publish date.
+        :type date: :py:class:`str`
+        :param method: Experiment method, i.e. X-ray, NMR, etc.
+        :type method: :py:class:`str`
+        :param resolution: Structure resolution if applicable.
+        :type resolution: :py:class:`float`
+        :param rValue: Structure's R value.
+        :type rValue: :py:class:`float`
+        :param rFree: Structure's R free value.
+        :type rFree: :py:class:`float`
+        :param program: Software for acquiring the structure.
+        :type program: :py:class:`str`
+        :param spaceGroup: Structure's space group if applicable.
+        :type spaceGroup: :py:class:`str`
+        :param rotationMats: Structure's rotation matrix and translation matrix if applicable.
+        :type rotationMats: :py:class:`list`
         """
         self.pdbid = PDBid
         self.date = date
@@ -141,7 +155,8 @@ class Atom:
     def __init__(self, keyValues):
         """:class:`pdb_eda.pdbParser.Atom` initializer.
 
-        :param :py:class:`dict` keyValues: key-value pairs for atom information.
+        :param keyValues: key-value pairs for atom information.
+        :type keyValues: :py:class:`dict`
         """
         self.record = keyValues['record']
         self.recordType = keyValues['recordType']

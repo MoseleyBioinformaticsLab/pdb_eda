@@ -13,8 +13,10 @@ def createTempJSONFile(data, filenamePrefix):
     """Creates a temporary JSON file and returns its filename.
 
     :param data:  data to save into the JSON file.
-    :type data: :py:class:`dict` or :py:class:`list`
-    :param :py:class:`str` filenamePrefix: temporary filename prefix.
+    :type data: :py:class:`dict`, :py:class:`list`
+    :param filenamePrefix: temporary filename prefix.
+    :type filenamePrefix: :py:class:`str`
+
     :return: filename
     :rtype: :py:class:`str`
     """

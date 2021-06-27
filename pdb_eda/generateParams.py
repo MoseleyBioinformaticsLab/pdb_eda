@@ -1,5 +1,6 @@
 """
 generateParams.py
+    Generates initial parameters needed for pdb_eda calculations.
 
 Usage:
     pdb_eda optimize -h | --help
@@ -327,11 +328,14 @@ def processComponents():
     return { "residues" : residues, "errors" : list(errors) }
 
 
-def bondTyping(bondType,aromatic):
+def bondTyping(bondType, aromatic):
     """Returns type of bond based on given bondType and whether it was marked aromatic.
 
-    :param :py:class:`str` bondType:
-    :param :py:class:`str` aromatic:
+    :param bondType:
+    :type bondType: :py:class:`str`
+    :param aromatic:
+    :type aromatic: :py:class:`str`
+
     :return: bondType
     :rtype: :py:class:`str`
     """
@@ -340,7 +344,9 @@ def bondTyping(bondType,aromatic):
 def processFunction(pdbid):
     """Process function for multiprocessing to analyze a single pdb entry.
 
-    :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
+    :param pdbid: pdbid for entry to download and analyze.
+    :type pdbid: :py:class:`str`
+
     :return: resultFilename
     :rtype: :py:class:`str`
     """

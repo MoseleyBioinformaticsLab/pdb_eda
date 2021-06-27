@@ -48,7 +48,8 @@ atomTypeLengthGlobal = max(len(atomType) for atomType in fullAtomNameMapAtomType
 def setGlobals(params):
     """Sets global parameters.  Typically used for optimizing parameters.
 
-    :param :py:class:`dict` params:
+    :param  params: dictionary of parameters needed for pdb_eda calculations.
+    :type params: :py:class:`dict`
     """
     global paramsGlobal
     global radiiGlobal
@@ -87,13 +88,21 @@ def fromPDBid(pdbid, ccp4density=True, ccp4diff=True, pdbbio=True, pdbi=True, do
     """Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the PDB id if the id is valid
     and the structure has electron density file available.
 
-    :param :py:class:`str` pdbid: PDB id.
-    :param :py:class:`bool` ccp4density: Whether to generate ccp4 density object. Default is true.
-    :param :py:class:`bool` ccp4diff: Whether to generate in default of ccp4 difference density object. Default is true.
-    :param :py:class:`bool` pdbbio: Whether to generate in default of bio.PDB object. Default is true.
-    :param :py:class:`bool` pdbi: Whether to generate in default of PDB object. Default is true.
-    :param :py:class:`bool` downloadFile: Whether to save the downloaded ccp4 density, ccp4 difference density, and PDB file. Default is true.
-    :param :py:class:`bool` mmcif: Whether to download the mmCif file. Default is false.
+    :param pdbid: PDB entry ID.
+    :type pdbid: :py:class:`str`
+    :param ccp4density: Whether to generate ccp4 density object, defaults to :py:obj:`True`.
+    :type ccp4density: :py:class:`bool`
+    :param ccp4diff: Whether to generate in default of ccp4 difference density object, defaults to :py:obj:`True`.
+    :type ccp4diff: :py:class:`bool`
+    :param pdbbio: Whether to generate in default of bio.PDB object, defaults to :py:obj:`True`.
+    :type pdbbio: :py:class:`bool`
+    :param pdbi: Whether to generate in default of PDB object, defaults to :py:obj:`True`.
+    :type pdbi: :py:class:`bool`
+    :param downloadFile: Whether to save the downloaded ccp4 density, ccp4 difference density, and PDB file, defaults to :py:obj:`True`.
+    :type downloadFile: :py:class:`bool`
+    :param mmcif: Whether to download the mmCif file, defaults to :py:obj:`False`.
+    :type mmcif: :py:class:`bool`
+
     :return: densityAnalysis object
     :rtype: :class:`pdb_eda.densityAnalysis.DensityAnalysis`
     """
@@ -173,11 +182,11 @@ def fromFile(pdbFile, ccp4DensityFile=None, ccp4DiffDensityFile=None):
     """Creates :class:`pdb_eda.densityAnalysis.DensityAnalysis` object given the appropriate PDB and CCP4 files.
 
     :param pdbFile: PDB entry file.
-    :type pdbFile: :py:class:`str` or :class:`io.IOBase`
+    :type pdbFile: :py:class:`str`, :class:`io.IOBase`
     :param ccp4DensityFile: ccp4 density file.
-    :type ccp4DensityFile: :py:class:`str` or :class:`io.IOBase` or :py:obj:`None`
+    :type ccp4DensityFile: :py:class:`str`, :class:`io.IOBase`, optional
     :param ccp4DiffDensityFile: ccp4 difference density file.
-    :type ccp4DiffDensityFile: :py:class:`str` or :class:`io.IOBase` or :py:obj:`None`
+    :type ccp4DiffDensityFile: :py:class:`str`, :class:`io.IOBase`, optional
 
     :return: densityAnalysis object
     :rtype: :class:`pdb_eda.densityAnalysis.DensityAnalysis`
@@ -222,7 +231,9 @@ def fromFile(pdbFile, ccp4DensityFile=None, ccp4DiffDensityFile=None):
 def cleanPDBid(pdbid):
     """Removes PDB entry, ccp4, and mmcif files associated with a PDB id.
 
-    :param :py:class:`str` pdbid:
+    :param pdbid: PDB entry ID.
+    :type pdbid: :py:class:`str`
+
     :return: bool whether the operation was successful.
     :rtype: :py:class:`bool`
     """
@@ -249,7 +260,9 @@ def cleanPDBid(pdbid):
 
 def testCCP4URL(pdbid):
     """Test whether the pdbid has electron density maps by querying if the PDBe API has electron density statistics.
-    :param :py:class:`str` pdbid: PDB id
+    :param pdbid: PDB entry ID.
+    :type pdbid: :py:class:`str`
+
     :return: bool on test success.
     :rtype: :py:class:`bool`
     """
@@ -268,15 +281,16 @@ class DensityAnalysis(object):
         """`densityAnalysis` initializer. Leave `densityObj`, `diffDensityObj`, `biopdbObj` and `pdbObj` as :py:obj:`None`
         to be created. They are not required for initialization but could be required for some methods.
 
-        :param :py:class:`str` pdbid: PDB entry ID.
-        :param densityObj: optional DensityMatrix object.
-        :type densityObj: :class:`pdb_eda.ccp4.DensityMatrix` or :py:obj:`None`
+        :param pdbid: PDB entry ID.
+        :type pdbid: :py:class:`str`
+        :param densityObj: DensityMatrix object.
+        :type densityObj: :class:`pdb_eda.ccp4.DensityMatrix`, optional
         :param diffDensityObj: optional DensityMatrix object.
-        :type diffDensityObj: :class:`pdb_eda.ccp4.DensityMatrix` or :py:obj:`None`
+        :type diffDensityObj: :class:`pdb_eda.ccp4.DensityMatrix`, optional
         :param biopdbObj: optional Bio.PDB Structure object.
-        :type biopdbObj: :class:`Bio.PDB.Structure.Structure` or :py:obj:`None`
+        :type biopdbObj: :class:`Bio.PDB.Structure.Structure`, optional
         :param pdbObj: optional PDBentry object.
-        :type pdbObj: :class:`pdb_eda.pdbParser.PDBentry` or :py:obj:`None`
+        :type pdbObj: :class:`pdb_eda.pdbParser.PDBentry`, optional
         """
         self.pdbid = pdbid
         self.densityObj = densityObj
@@ -557,8 +571,10 @@ class DensityAnalysis(object):
         """Aggregate the electron density map clouds by atom, residue, and domain.
         Calculate and populate `densityAnalysis.densityElectronRatio` and `densityAnalysis.medians` data members.
 
-        :param :py:class:`float` minCloudElectrons: minimum number of electrons needed to aggregate a residue or domain cloud.
-        :param :py:class:`float` minTotalElectrons: mininum number of electrons required to calculate a density-electron ratio.
+        :param minCloudElectrons: minimum number of electrons needed to aggregate a residue or domain cloud., defaults to 25.0
+        :type minCloudElectrons: :py:class:`float`
+        :param minTotalElectrons: mininum number of electrons required to calculate a density-electron ratio., defaults to 400.0
+        :type minTotalElectrons: :py:class:`float`
         """
         densityObj = self.densityObj
         biopdbObj = self.biopdbObj
@@ -787,7 +803,8 @@ class DensityAnalysis(object):
         """RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
 
         :param residueList:
-        :type residueList: :py:class:`list` or :py:obj:`None`
+        :type residueList: :py:class:`list`, optional
+
         :return: results
         :rtype: :py:class:`list`
         """
@@ -820,7 +837,8 @@ class DensityAnalysis(object):
         """RETURNS rscc and rsr statistics for each residue using the Fo and Fc density maps.
 
         :param atomList:
-        :type atomList: :py:class:`list` or :py:obj:`None`
+        :type atomList: :py:class:`list`, optional
+
         :return: results
         :rtype: :py:class:`list`
         """
@@ -848,7 +866,8 @@ class DensityAnalysis(object):
         Comparison of median absolute values below one sigma should be quite similar between Fo and Fc maps.
 
         :param crsList:
-        :type crsList: :py:class:`list` or :py:class:`set`
+        :type crsList: :py:class:`list`, :py:class:`set`
+
         :return: rscc_rsr_arrays_tuple
         :rtype: :py:obj:`tuple`
         """
@@ -895,7 +914,9 @@ class DensityAnalysis(object):
     def calculateAtomSpecificBlobStatistics(self, blobList):
         """Calculate atom-specific blob statistics.
 
-        :param :py:class:`list` blobList: list of blobs to calculate statistics for.
+        :param blobList: list of blobs to calculate statistics for.
+        :type blobList: :py:class:`list`
+
         :return blobStats: Difference density map statistics.
         :rtype: :py:class:`list`
         """
@@ -926,9 +947,13 @@ class DensityAnalysis(object):
     def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type=""):
         """Calculates significant region discrepancies in a given radius of each atom.
 
-        :param :py:class:`float`:py:class:`float` radius: the search radius.
-        :param :py:class:`float` numSD: number of standard deviations of significance.
-        :param :py:class:`str` type: atom type to filter on.
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance, defaults to 3.0
+        :type numSD: py:class:`float`
+        :param type: atom type to filter on., defaults to ""
+        :type type: :py:class:`str`
+
         :return diffMapRegionStats: Difference density map region statistics per atom.
         :rtype: :py:class:`list`
         """
@@ -947,9 +972,13 @@ class DensityAnalysis(object):
     def calculateSymmetryAtomRegionDiscrepancies(self, radius, numSD=3.0, type=""):
         """Calculates significant region discrepancies in a given radius of each symmetry atom.
 
-        :param :py:class:`float` radius: the search radius.
-        :param :py:class:`float` numSD: number of standard deviations of significance.
-        :param :py:class:`str` type: atom type to filter on.
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance., defaults to 3.0
+        :type numSD: :py:class:`float`
+        :param type: atom type to filter on., defaults to ""
+        :type type: :py:class:`str`
+
         :return diffMapRegionStats: Difference density map region statistics per atom.
         :rtype: :py:class:`list`
         """
@@ -967,9 +996,13 @@ class DensityAnalysis(object):
     def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type=""):
         """Calculates significant region discrepancies in a given radius of each residue.
 
-        :param :py:class:`float` radius: the search radius.
-        :param :py:class:`float` numSD: number of standard deviations of significance.
-        :param :py:class:`str` type: residue type to filter on.
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance., defaults to 3.0
+        :type numSD: :py:class:`float`
+        :param type: atom type to filter on., defaults to ""
+        :type type: :py:class:`str`
+
         :return diffMapRegionStats: Difference density map region statistics per residue.
         :rtype: :py:class:`list`
         """
@@ -991,11 +1024,17 @@ class DensityAnalysis(object):
     def calculateRegionDiscrepancy(self, xyzCoordList, radius, numSD=3.0, testValidCrs=False):
         """Calculate region-specific discrepancy from the difference density matrix.
 
-        :param :py:class:`list` xyzCoordLists: single xyz coordinate or a list of xyz coordinates.
-        :param :py:class:`float` radius: the search radius.
-        :param :py:class:`float` numSD: number of standard deviations of significance.
+        :param xyzCoordLists: single xyz coordinate or a list of xyz coordinates.
+        :type xyzCoordList: :py:class:`list`
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance., defaults to 3.0
+        :type numSD: :py:class:`float`
+        :param testValidCrs: whether to test crs are valid and return the results., defaults to :py:obj:`False`
+        :type testValidCrs: :py:class:`bool`
+
         :return diffMapRegionStats: Difference density map region statistics and optional validCrs result.
-        :rtype: :py:class:`list` or :py:class:`tuple`
+        :rtype: :py:class:`list`, :py:class:`tuple`
         """
         if not self.densityElectronRatio:
             raise RuntimeError("Failed to calculate densityElectronRatio, probably due to total aggregated electrons less than the minimum.")
@@ -1059,7 +1098,9 @@ class DensityAnalysis(object):
 def residueAtomName(atom):
     """Returns a combined residue and atom name used to select an atom type.
 
-    :param :class:`Bio.PDB.atom` atom:
+    :param atom:
+    :type atom: :class:`Bio.PDB.atom`
+
     :return: fullAtomName
     :rtype: :py:class:`str`
     """

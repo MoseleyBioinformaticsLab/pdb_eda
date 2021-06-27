@@ -1,7 +1,7 @@
 pdb-eda
 ==========
 
-.. image:: https://raw.githubusercontent.com/MoseleyBioinformaticsLab/pdb_eda/master/doc/_static/images/pdb_eda_logo.png
+.. image:: https://raw.githubusercontent.com/MoseleyBioinformaticsLab/pdb_eda/master/docs/_static/images/pdb_eda_logo.png
    :width: 50%
    :align: center
    :target: https://pdb-eda.readthedocs.io/

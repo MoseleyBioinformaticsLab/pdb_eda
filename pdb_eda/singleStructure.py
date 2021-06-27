@@ -148,7 +148,10 @@ def numpyConverter(obj):
     """Converts numpy objects to standard Python types, otherwise just return the object.
 
     :param obj:
+    :type obj: :py:class:`object`
+
     :return: object
+    :rtype: :py:class:`int`, :py:class:`float`, :py:class:`list`, :py:class:`object`
     """
     if isinstance(obj, numpy.integer):
         return int(obj)

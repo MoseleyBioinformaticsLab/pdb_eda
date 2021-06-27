@@ -191,7 +191,9 @@ def main():
 def singleModeFunction(pdbid):
     """Execute pdb_eda single mode on a given pdbid.
 
-    :param :py:class:`str` pdbid:
+    :param pdbid:
+    :type pdbid: :py:class:`str`
+
     :return: 0
     """
     singleModeCommandLine = "pdb_eda single " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--single-mode"]
@@ -219,7 +221,9 @@ def singleModeFunction(pdbid):
 def contactsModeFunction(pdbid):
     """Execute pdb_eda contacts mode on a given pdbid.
 
-    :param :py:class:`str` pdbid:
+    :param pdbid:
+    :type pdbid: :py:class:`str`
+
     :return: 0
     """
     contactsModeCommandLine = "pdb_eda contacts " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--contacts-mode"]
@@ -247,9 +251,11 @@ def contactsModeFunction(pdbid):
 def multipleModeFunction(pdbid):
     """Analyze a single pdbid.
 
-    :param :py:class:`str` pdbid:
+    :param pdbid:
+    :type pdbid: py:class:`str`
+
     :return: resultFilename or 0
-    :rtype: :py:class:`str` or :py:class:`int`
+    :rtype: :py:class:`str`, :py:class:`int`
     """
     if globalArgs["--time-out"]:
         try:
@@ -265,7 +271,9 @@ def multipleModeFunction(pdbid):
 def testPDBIDLoad(pdbid):
     """Returns whether the pdbid downloads and loads correctly.
 
-    :param :py:class:`str` pdbid:
+    :param pdbid:
+    :type pdbid: :py:class:`str`
+
     :return: bool
     :rtype: :py:class:`bool`
     """
@@ -275,7 +283,9 @@ def testPDBIDLoad(pdbid):
 def analyzePDBID(pdbid):
     """Process function to analyze a single pdb entry.
 
-    :param :py:class:`str` pdbid: pdbid for entry to download and analyze.
+    :param pdbid: pdbid for entry to download and analyze.
+    :type pdbid: :py:class:`str`
+
     :return: resultFilename
     :rtype: :py:class:`str`
     """
@@ -312,6 +322,13 @@ def analyzePDBID(pdbid):
 class timeout:
     """Implements a timeout context manager to work with a with statement."""
     def __init__(self, seconds=1, error_message='Timeout'):
+        """
+
+        :param seconds:
+        :type seconds: :py:class:`int`
+        :param error_message:
+        :type error_message: :py:class:`str`
+        """
         self.seconds = seconds
         self.error_message = error_message
     def handle_timeout(self, signum, frame):
