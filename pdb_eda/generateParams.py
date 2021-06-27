@@ -187,7 +187,7 @@ def main():
                 for pdbid in textFile:
                     pdbids.append(pdbid[0:4])
         except:
-            sys.exit(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
 
         if args["--testing"]:
@@ -233,7 +233,7 @@ def main():
                 with open(args["--params"], 'r') as paramsFile:
                     overrideParams = json.load(paramsFile)
             except:
-                sys.exit(str("Error: params file \"") + args["--params"] + "\" does not exist or is not parsable.")
+                RuntimeError(str("Error: params file \"") + args["--params"] + "\" does not exist or is not parsable.")
         else:
             overrideParams = None
 
@@ -241,13 +241,13 @@ def main():
             with open(args["<in-atom-types>"], 'r') as paramsFile:
                 initialParams = json.load(paramsFile)
         except:
-            sys.exit(str("Error: params file \"") + args["<in-atom-types>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: params file \"") + args["<in-atom-types>"] + "\" does not exist or is not parsable.")
 
         try:
             with open(args["<in-prevalence-file>"], 'r') as jsonFile:
                 prevalenceInfo = json.load(jsonFile)
         except:
-            sys.exit(str("Error: prevalence file \"") + args["<in-prevalence-file>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: prevalence file \"") + args["<in-prevalence-file>"] + "\" does not exist or is not parsable.")
 
         currentPDBinfo = { pdbid:info for pdbid,info in prevalenceInfo["pdbid_info"].items()
                            if info["properties"]["resolution"] >= args["--min-resolution"] and info["properties"]["resolution"] <= args["--max-resolution"] }

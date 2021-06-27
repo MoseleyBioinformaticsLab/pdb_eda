@@ -61,11 +61,11 @@ def main():
                 params = json.load(paramsFile)
             densityAnalysis.setGlobals(params)
         except:
-            sys.exit(str("Error: params file \"") + args["--params"] + "\" does not exist or is not parsable.")
+            raise RuntimeError(str("Error: params file \"") + args["--params"] + "\" does not exist or is not parsable.")
 
     analyzer = densityAnalysis.fromPDBid(args["<pdbid>"])
     if not analyzer:
-        sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
+        raise RuntimeError("Error: Unable to parse or download PDB entry or associated ccp4 file.")
 
     jsonType = "json"
     if args["--density"]:

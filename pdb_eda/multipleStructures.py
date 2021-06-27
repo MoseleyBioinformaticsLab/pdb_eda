@@ -4,11 +4,11 @@ pdb_eda multiple structure analysis mode command-line interface
 
 Usage:
     pdb_eda multiple -h | --help
-    pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>]
+    pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>] [--silent]
     pdb_eda multiple <in-result-file> <out-pdbid-file> --filter [--out-format=<format>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>] [--min-atoms=<min-atoms>] [--min-residues=<min-residues>] [--min-elements=<min-elements>]
     pdb_eda multiple <pdbid-file> --reload
-    pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing]
-    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing]
+    pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing] [--silent]
+    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing] [--silent]
 
 Options:
     -h, --help                                      Show this screen.
@@ -20,6 +20,7 @@ Options:
     --out-format=<format>                           Output file format, available formats: csv, json [default: json].
     --time-out=<seconds>                            Set a maximum time to try to analyze any single pdb entry. [default: 0]
     --testing                                       Run only a single process for testing purposes.
+    --silent                                        Do not print error message to stderr.
     --single-mode=<quoted-single-mode-options>      Run single structure analysis mode on a set of PDB entries.
     --contacts-mode=<quoted-contacts-mode-options>  Run (crystal) contacts analysis mode on a set of PDB entries.
     --filter                                        Filter pdbids based on criteria.
@@ -68,7 +69,7 @@ def main():
                 params = json.load(paramsFile)
             densityAnalysis.setGlobals(params)
         except:
-            sys.exit(str("Error: params file \"") + globalArgs["--params"] + "\" does not exist or is not parsable.")
+            raise RuntimeError(str("Error: params file \"") + globalArgs["--params"] + "\" does not exist or is not parsable.")
 
     if globalArgs["--filter"]:
         globalArgs["--max-resolution"] = float(globalArgs["--max-resolution"])
@@ -95,7 +96,7 @@ def main():
             with open(globalArgs["<in-result-file>"], "r") if globalArgs["<in-result-file>"] != "-" else sys.stdin as jsonFile:
                 pdbResults = json.load(jsonFile)
         except:
-            sys.exit(str("Error: PDB results file \"") + globalArgs["<in-result-file>"] + "\" does not exist or is not parsable.")
+            raise RuntimeError(str("Error: PDB results file \"") + globalArgs["<in-result-file>"] + "\" does not exist or is not parsable.")
 
         pdbids = [pdbid for pdbid in pdbResults if
                   pdbResults[pdbid]["stats"]["num_atoms_analyzed"] >= globalArgs["--min-atoms"] and
@@ -118,7 +119,7 @@ def main():
                 for pdbid in textFile:
                     pdbids.append(pdbid[0:4])
         except:
-            sys.exit(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
+            raise RuntimeError(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
         badPDBids = [pdbid for pdbid in pdbids if not testPDBIDLoad(pdbid)]
         for pdbid in badPDBids:
@@ -135,7 +136,7 @@ def main():
                 for pdbid in textFile:
                     pdbids.append(pdbid[0:4])
         except:
-            sys.exit(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
+            raise RuntimeError(str("Error: PDB IDs file \"") + globalArgs["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
         if globalArgs["--single-mode"]:
             processFunction = singleModeFunction
@@ -143,14 +144,14 @@ def main():
                 if not os.path.isfile(globalArgs["<out-dir>"]):
                     os.mkdir(globalArgs["<out-dir>"])
                 else:
-                    sys.exit(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
+                    raise RuntimeError(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
         elif globalArgs["--contacts-mode"]:
             processFunction = contactsModeFunction
             if not os.path.isdir(globalArgs["<out-dir>"]):
                 if not os.path.isfile(globalArgs["<out-dir>"]):
                     os.mkdir(globalArgs["<out-dir>"])
                 else:
-                    sys.exit(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
+                    raise RuntimeError(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
         else:
             processFunction = multipleModeFunction
 
@@ -199,15 +200,17 @@ def singleModeFunction(pdbid):
         try:
             with timeout(seconds=globalArgs["--time-out"]):
                 singleStructure.main()
-        except:
-            pass
+        except Exception as exception:
+            if not globalArgs["--silent"]:
+                print(pdbid, exception, file=sys.stderr)
     elif globalArgs["--testing"]:
         singleStructure.main()
     else:
         try:
             singleStructure.main()
-        except:
-            pass
+        except Exception as exception:
+            if not globalArgs["--silent"]:
+                print(pdbid, exception, file=sys.stderr)
 
     gc.collect()
     return 0
@@ -225,15 +228,17 @@ def contactsModeFunction(pdbid):
         try:
             with timeout(seconds=globalArgs["--time-out"]):
                 crystalContacts.main()
-        except:
-            pass
+        except Exception as exception:
+            if not globalArgs["--silent"]:
+                print(pdbid, exception, file=sys.stderr)
     elif globalArgs["--testing"]:
         crystalContacts.main()
     else:
         try:
             crystalContacts.main()
-        except:
-            pass
+        except Exception as exception:
+            if not globalArgs["--silent"]:
+                print(pdbid, exception, file=sys.stderr)
 
     gc.collect()
     return 0
@@ -250,7 +255,9 @@ def multipleModeFunction(pdbid):
         try:
             with timeout(seconds=globalArgs["--time-out"]):
                 return analyzePDBID(pdbid)
-        except:
+        except Exception as exception:
+            if not globalArgs["--silent"]:
+                print(pdbid, exception, file=sys.stderr)
             return 0
     else:
         return analyzePDBID(pdbid)

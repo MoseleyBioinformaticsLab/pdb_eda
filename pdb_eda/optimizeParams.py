@@ -69,13 +69,13 @@ def main():
             with open(args["<params-file1>"], 'r') as jsonFile:
                 params1 = json.load(jsonFile)
         except:
-            sys.exit(str("Error: params file \"") + args["<params-file1>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: params file \"") + args["<params-file1>"] + "\" does not exist or is not parsable.")
 
         try:
             with open(args["<params-file2>"], 'r') as jsonFile:
                 params2 = json.load(jsonFile)
         except:
-            sys.exit(str("Error: params file \"") + args["<params-file2>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: params file \"") + args["<params-file2>"] + "\" does not exist or is not parsable.")
 
 
         atomTypes = set(params1["radii"].keys()).union(params2["radii"].keys())
@@ -105,7 +105,7 @@ def main():
             with open(args["<start-params-file>"], 'r') as jsonFile:
                 params = json.load(jsonFile)
         except:
-            sys.exit(str("Error: params file \"") + args["<start-params-file>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: params file \"") + args["<start-params-file>"] + "\" does not exist or is not parsable.")
 
         if "optimize" in params:
             del params["optimize"]
@@ -114,7 +114,7 @@ def main():
             with open(args["<out-params-file>"], 'w') as jsonFile:
                 print(json.dumps(params, indent=2, sort_keys=True), file=jsonFile)
         except:
-            sys.exit(str("Error: unable to create params file \"") + args["<out-params-file>"] + "\".")
+            RuntimeError(str("Error: unable to create params file \"") + args["<out-params-file>"] + "\".")
     else:
         maxRadiusIncrement = float(args["--max"])
         radiusIncrement = maxRadiusIncrement
@@ -135,13 +135,13 @@ def main():
 
                 densityAnalysis.setGlobals(params)
         except:
-            sys.exit(str("Error: params file \"") + args["<start-params-file>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: params file \"") + args["<start-params-file>"] + "\" does not exist or is not parsable.")
 
         if args["--reverse"] and atomTypes2Optimize:
             atomTypes2Optimize = { atomType for atomType in currentRadii.keys() if atomType not in atomTypes2Optimize }
 
         if args["--start"] != "" and args["--start"] not in currentRadii:
-            sys.exit(str("Error: starting atom \"") + args["--start"] + "\" is not valid.")
+            RuntimeError(str("Error: starting atom \"") + args["--start"] + "\" is not valid.")
 
         try:
             pdbids = []
@@ -149,7 +149,7 @@ def main():
                 for pdbid in textFile:
                     pdbids.append(pdbid[0:4])
         except:
-            sys.exit(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
+            RuntimeError(str("Error: PDB IDs file \"") + args["<pdbid-file>"] + "\" does not exist or is not parsable.")
 
         if sampleSize > 0:
             pdbids = random.sample(pdbids,sampleSize)
@@ -271,7 +271,7 @@ def main():
                         with open(args["<out-params-file>"] + ".temp", 'w') as jsonFile:
                             print(json.dumps({**params, "radii": currentRadii, "slopes": currentSlopes}, indent=2, sort_keys=True), file=jsonFile)
                     except:
-                        sys.exit(str("Error: unable to create temporary params file \"") + args["<out-params-file>"] + ".temp" + "\".")
+                        RuntimeError(str("Error: unable to create temporary params file \"") + args["<out-params-file>"] + ".temp" + "\".")
                 else:
                     numRejected += 1
                     estimatedRadiusIncrement[currentAtomType] = 0
@@ -336,7 +336,7 @@ def main():
             with open(args["<out-params-file>"], 'w') as jsonFile:
                 print(json.dumps(outParams, indent=2, sort_keys=True), file=jsonFile)
         except:
-            sys.exit(str("Error: unable to create params file \"") + args["<out-params-file>"] + "\".")
+            RuntimeError(str("Error: unable to create params file \"") + args["<out-params-file>"] + "\".")
 
 def calculateMedianDiffsSlopes(pdbids, currentParams, testing=False, executionTimesFilename=None):
     """Calculates the median diffs and slopes across a list of pdb entries.

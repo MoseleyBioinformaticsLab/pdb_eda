@@ -9,15 +9,17 @@ Usage:
 	pdb_eda contacts <pdbid> <out-file> [--distance=<cutoff>] [--symmetry-atoms] [--include-pdbid] [--out-format=<format>]
 
 Arguments:
-    <pdbid>				  The PDB ID to download and analyze.
-    <out-file>			  Output filename. "-" will write to standard output.
-    --distance=<cutoff>	  Distance cutoff in angstroms for detecting crystal contacts. [default: 5.0]
-    --symmetry-atoms	  Calculate crystal contacts to symmetry atoms too.
-    --include-pdbid		  Include PDB ID at the beginning of each result.
+    <pdbid>                The PDB ID to download and analyze.
+    <out-file>             Output filename. "-" will write to standard output.
+    --distance=<cutoff>    Distance cutoff in angstroms for detecting crystal contacts. [default: 5.0]
+    --symmetry-atoms       Calculate crystal contacts to symmetry atoms too.
+    --include-pdbid        Include PDB ID at the beginning of each result.
+    --out-format=<format>  Output file format, available formats: csv, json [default: json].
 """
 
 import scipy.spatial.distance
 import numpy as np
+import sys
 import os
 import docopt
 import json
@@ -48,11 +50,11 @@ def main():
 
 	analyzer = densityAnalysis.fromPDBid(args["<pdbid>"], mmcif=True)
 	if not analyzer:
-		sys.exit("Error: Unable to parse or download PDB entry or associated ccp4 file.")
+		raise RuntimeError("Error: Unable to parse or download PDB entry or associated ccp4 file.")
 
 	mmcif_file = densityAnalysis.pdbfolder + args["<pdbid>"] + '.cif.gz'
 
-	crystalNeighborCoords = simulateCrystalNeighborCoordinates(mmcif_file)
+	crystalNeighborCoords = simulateCrystalNeighborCoordinates(mmcif_file, args["--distance"])
 
 	if args["--symmetry-atoms"]:
 		atoms = analyzer.symmetryAtoms
@@ -94,13 +96,14 @@ def findCoordContacts(coordList1, coordList2, distanceCutoff=5.0):
 	return [(index,minDistance) for index,minDistance in enumerate(np.min(distances[x]) for x in range(len(coordList1))) if minDistance <= distanceCutoff]
 
 
-def simulateCrystalNeighborCoordinates(filename):
+def simulateCrystalNeighborCoordinates(filename, distanceCutoff=5.0):
 	"""RETURN a list of atom coordinates of the simulated crystal environment surrounding the X-Ray
 	Diffraction asymmetric unit (excluding heteroatoms). Requires a file path instead of a
 	structure because the bulk of this is handled by Pymol.
 	NOTE: This will only work with PDB structures resolved with X-RAY DIFFRACTION.
 
 	:param :py:class:`str` filename:
+	:param :py:class:`float` distanceCutoff: distance cutoff.
 	:return: coordList
     :rtype: :py:class:`list`
 	"""
@@ -120,7 +123,7 @@ def simulateCrystalNeighborCoordinates(filename):
 	pymol.cmd.create(asym_unit, "polymer")
 
 	# Generate local crystal environment using symexp; delete original structures.
-	pymol.cmd.symexp("neighbor", asym_unit, asym_unit, 5)
+	pymol.cmd.symexp("neighbor", asym_unit, asym_unit, distanceCutoff)
 	pymol.cmd.delete(sname)
 	pymol.cmd.delete(asym_unit)
 
