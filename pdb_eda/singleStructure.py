@@ -18,8 +18,8 @@ Options:
     <out-file>                      Output filename. "-" will write to standard output.
     --params=<params-file>          Overriding parameters file that includes radii, slopes, etc. [default: ]
     --include-pdbid                 Include PDB ID at the beginning of each result.
-    --density                       Output the density Fo-Fc map in jsonpickle format.
-    --diff-density                  Output the difference density 2Fo-Fc map in jsonpickle format.
+    --density                       Output the density 2Fo-Fc map in jsonpickle format.
+    --diff-density                  Output the difference density Fo-Fc map in jsonpickle format.
     --atom                          Calculate results for each atom.
     --residue                       Calculate results for each residue.
     --symmetry-atom                 Calculate results for each symmetry atom.
@@ -32,6 +32,13 @@ Options:
     --type=<type>                   Residue type or atom type to filter by.
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
     --print-validation              Print comparison of median absolute values below 1 sigma for Fo and Fc maps, which should be very similar.
+
+Submodes:
+    map                             Output the electron density map in jsonpickle format.
+    density                         Output the regional 2Fo-Fc density.
+    difference                      Output the regional Fo-Fc density discrepancy.
+    blob                            Output either 2Fo-Fc (blue) density blobs or Fo-Fc (green or red) difference density blobs.
+    statistics                      Output statistics at the atom, residue, or whole electron density map level.
 """
 
 import docopt
