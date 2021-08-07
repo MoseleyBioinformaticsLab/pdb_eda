@@ -5,7 +5,7 @@ Cythonized Utilities (pdb_eda.cutils)
 Contains low-level functions used in pdb_eda.ccp4 and pdb_eda.densityAnalysis.
 """
 
-def testOverlap(selfBlob, otherBlob):
+cdef bint _testOverlap(selfBlob, otherBlob):
     """Check if two blobs overlaps or right next to each other.
 
     :param selfBlob:
@@ -20,6 +20,9 @@ def testOverlap(selfBlob, otherBlob):
         return True if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in selfBlob.crsList for y in otherBlob.crsList) else False
     else:
         return True if any(-1 <= x[0] - y[0] <= 1 and -1 <= x[1] - y[1] <= 1 and -1 <= x[2] - y[2] <= 1 for x in otherBlob.crsList for y in selfBlob.crsList) else False
+
+def testOverlap(selfBlob, otherBlob):
+    return _testOverlap(selfBlob, otherBlob)
 
 
 def sumOfAbs(array, float cutoff):
@@ -67,7 +70,7 @@ def createCrsLists(crsList):
     return crsLists
 
 import itertools
-def createSymmetryAtoms(list atomList, rotationMats, orthoMat, list xs, list ys, list zs):
+cpdef list createSymmetryAtoms(list atomList, rotationMats, orthoMat, list xs, list ys, list zs):
     """Creates and returns a list of all symmetry atoms.
 
     :param atomList:
@@ -141,7 +144,7 @@ def getPointDensityFromCrs(densityMatrix, crsCoord):
 
     return densityMatrix.density[crsCoord[2], crsCoord[1], crsCoord[0]]
 
-def testValidCrs(densityMatrix, crsCoord):
+cpdef bint testValidCrs(densityMatrix, crsCoord):
     """Tests whether the crs coordinate is valid.
 
     :param densityMatrix:
@@ -163,7 +166,7 @@ def testValidCrs(densityMatrix, crsCoord):
 
     return True
 
-def testValidCrsList(densityMatrix, crsList):
+cdef bint _testValidCrsList(densityMatrix, crsList):
     """Tests whether all of the crs coordinates in the list are valid.
 
     :param densityMatrix:
@@ -175,6 +178,9 @@ def testValidCrsList(densityMatrix, crsList):
     :rtype: :py:class:`bool`
     """
     return not any(not testValidCrs(densityMatrix,crs) for crs in crsList)
+
+def testValidCrsList(densityMatrix, crsList):
+    return _testValidCrsList(densityMatrix, crsList)
 
 def createFullCrsList(densityMatrix, float cutoff):
     """Returns full crs list for the density matrix.
@@ -196,7 +202,7 @@ def createFullCrsList(densityMatrix, float cutoff):
     else:
         return None
 
-cdef inline _testXyzWithinDistance(xyzCoord1, xyzCoord2, float distance):
+cdef inline bint _testXyzWithinDistance(xyzCoord1, xyzCoord2, float distance):
     """Tests whether two xyzCoords are within a certain distance.
 
     :param xyzCoord1:
@@ -211,7 +217,7 @@ cdef inline _testXyzWithinDistance(xyzCoord1, xyzCoord2, float distance):
     """
     return np.sqrt((xyzCoord2[0] - xyzCoord1[0])**2 + (xyzCoord2[1] - xyzCoord1[1])**2 + (xyzCoord2[2] - xyzCoord1[2])**2) <= distance
 
-def getSphereCrsFromXyz(densityMatrix, xyzCoord, float radius, float densityCutoff=0):
+cpdef list getSphereCrsFromXyz(densityMatrix, xyzCoord, float radius, float densityCutoff=0):
     """Calculates a list of crs coordinates that within a given distance of a xyz point.
 
     :param densityMatrix:
@@ -261,7 +267,7 @@ def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, float radius, float den
     """
     return {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff)}
 
-def testValidXyz(densityMatrix, xyzCoord, float radius):
+cdef bint _testValidXyz(densityMatrix, xyzCoord, float radius):
     """Tests whether all crs coordinates within a given distance of a xyzCoord is within the densityMatrix.
 
     :param densityMatrix:
@@ -282,7 +288,10 @@ def testValidXyz(densityMatrix, xyzCoord, float radius):
                                                 range(crsCoord[2] - crsRadius[2]-1, crsCoord[2] + crsRadius[2]+1))
                    if _testXyzWithinDistance(xyzCoord, densityMatrix.header.crs2xyzCoord(crs), radius))
 
-def testValidXyzList(densityMatrix, xyzCoordList, float radius):
+def testValidXyz(densityMatrix, xyzCoord, float radius):
+    return _testValidXyz(densityMatrix, xyzCoord, radius)
+
+cdef bint _testValidXyzList(densityMatrix, xyzCoordList, float radius):
     """Tests whether all crs coordinates within a given distance of a set of xyzCoords is within the densityMatrix.
 
     :param densityMatrix:
@@ -295,4 +304,7 @@ def testValidXyzList(densityMatrix, xyzCoordList, float radius):
     :return: bool
     :rtype: :py:class:`bool`
     """
-    return not any(not testValidXyz(densityMatrix,xyzCoord,radius) for xyzCoord in xyzCoordList)
+    return not any(not _testValidXyz(densityMatrix,xyzCoord,radius) for xyzCoord in xyzCoordList)
+
+def testValidXyzList(densityMatrix, xyzCoordList, float radius):
+    return _testValidXyzList(densityMatrix, xyzCoordList, radius)
