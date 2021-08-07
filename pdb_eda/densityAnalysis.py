@@ -938,8 +938,131 @@ class DensityAnalysis(object):
         return blobStats
 
     # Headers that match the order of the results
+    regionDensityHeader = [ "actual_significant_regional_density", "num_electrons_actual_significant_regional_density" ]
+    atomRegionDensityHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDensityHeader
+    symmetryAtomRegionDensityHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "atom_xyz", "fully_within_density_map"] + regionDensityHeader
+    residueRegionDensityHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDensityHeader
+
+
+    def calculateAtomRegionDensity(self, radius, numSD=1.5, type=""):
+        """Calculates significant region density in a given radius of each atom.
+
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance, defaults to 1.5
+        :type numSD: py:class:`float`
+        :param type: atom type to filter on., defaults to ""
+        :type type: :py:class:`str`
+
+        :return diffMapRegionStats: density map region statistics per atom.
+        :rtype: :py:class:`list`
+        """
+        biopdbObj = self.biopdbObj
+        atoms = list(biopdbObj.get_atoms())
+        if type:
+            atoms = [atom for atom in atoms if atom.name == type]
+
+        results = []
+        for atom in atoms:
+            result = self.calculateRegionDensity([atom.coord], radius, numSD)
+            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
+
+        return results
+
+    def calculateSymmetryAtomRegionDensity(self, radius, numSD=1.5, type=""):
+        """Calculates significant region density in a given radius of each symmetry atom.
+
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance., defaults to 1.5
+        :type numSD: :py:class:`float`
+        :param type: atom type to filter on., defaults to ""
+        :type type: :py:class:`str`
+
+        :return diffMapRegionStats: density map region statistics per atom.
+        :rtype: :py:class:`list`
+        """
+        atoms = self.symmetryAtoms
+        if type:
+            atoms = [atom for atom in atoms if atom.name == type]
+
+        results = []
+        for atom in atoms:
+            (result,valid) = self.calculateRegionDensity([atom.coord], radius, numSD, testValidCrs=True)
+            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, valid] + result)
+
+        return results
+
+    def calculateResidueRegionDensity(self, radius, numSD=1.5, type="", atomMask=None):
+        """Calculates significant region density in a given radius of each residue.
+
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance., defaults to 1.5
+        :type numSD: :py:class:`float`
+        :param type: atom type to filter on., defaults to ""
+        :type type: :py:class:`str`
+        :param atomMask: residue specific atom mask.
+        :type type: :py:class:`dict`, optional
+
+        :return diffMapRegionStats: density map region statistics per residue.
+        :rtype: :py:class:`list`
+        """
+        biopdbObj = self.biopdbObj
+
+        results = []
+        residues = list(biopdbObj.get_residues())
+        if type:
+            residues = [residue for residue in residues if residue.resname == type]
+        for residue in residues:
+            atoms = [atom for atom in residue.get_atoms() if not atomMask or (residue.resname in atomMask and atom.name in atomMask[residue.resname])]
+            xyzCoordList = [atom.coord for atom in atoms]
+            meanOccupancy = np.mean([atom.get_occupancy() for atom in atoms])
+            result = self.calculateRegionDensity(xyzCoordList, radius, numSD)
+            results.append([residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
+
+        return results
+
+    def calculateRegionDensity(self, xyzCoordList, radius, numSD=1.5, testValidCrs=False):
+        """Calculate region-specific density from the electron density matrix.
+
+        :param xyzCoordLists: single xyz coordinate or a list of xyz coordinates.
+        :type xyzCoordList: :py:class:`list`
+        :param radius: the search radius.
+        :type radius: :py:class:`float`
+        :param numSD: number of standard deviations of significance., defaults to 1.5
+        :type numSD: :py:class:`float`
+        :param testValidCrs: whether to test crs are valid and return the results., defaults to :py:obj:`False`
+        :type testValidCrs: :py:class:`bool`
+
+        :return diffMapRegionStats: density map region statistics and optional validCrs result.
+        :rtype: :py:class:`list`, :py:class:`tuple`
+        """
+        if not self.densityElectronRatio:
+            raise RuntimeError("Failed to calculate densityElectronRatio, probably due to total aggregated electrons less than the minimum.")
+        densityElectronRatio = self.densityElectronRatio
+
+        densityObj = self.densityObj
+        densityCutoff = densityObj.meanDensity + numSD * densityObj.stdDensity
+
+        # observed significant regional density
+        blue = densityObj.findAberrantBlobs(xyzCoordList, radius, densityCutoff)
+        actual_sig_regional_density = sum([blob.totalDensity for blob in blue])
+        num_electrons_actual_sig_regional_density = actual_sig_regional_density / densityElectronRatio
+
+        result = [ actual_sig_regional_density, num_electrons_actual_sig_regional_density ]
+        if testValidCrs:
+            return (result, utils.testValidXyzList(densityObj, xyzCoordList, radius))
+        else:
+            return result
+
+
+    # Headers that match the order of the results
     regionDiscrepancyHeader = [ "actual_abs_significant_regional_discrepancy", "num_electrons_actual_abs_significant_regional_discrepancy",
-                 "expected_abs_significant_regional_discrepancy", "num_electrons_expected_abs_significant_regional_discrepancy" ]
+                 "expected_abs_significant_regional_discrepancy", "num_electrons_expected_abs_significant_regional_discrepancy",
+                 "actual_significant_regional_discrepancy", "num_electrons_actual_significant_regional_discrepancy",
+                 "actual_positive_significant_regional_discrepancy", "num_electrons_actual_positive_significant_regional_discrepancy",
+                 "actual_negative_significant_regional_discrepancy", "num_electrons_actual_negative_significant_regional_discrepancy" ]
     atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDiscrepancyHeader
     symmetryAtomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "atom_xyz", "fully_within_density_map"] + regionDiscrepancyHeader
     residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDiscrepancyHeader
@@ -993,7 +1116,7 @@ class DensityAnalysis(object):
 
         return results
 
-    def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type=""):
+    def calculateResidueRegionDiscrepancies(self, radius, numSD=3.0, type="", atomMask=None):
         """Calculates significant region discrepancies in a given radius of each residue.
 
         :param radius: the search radius.
@@ -1002,6 +1125,8 @@ class DensityAnalysis(object):
         :type numSD: :py:class:`float`
         :param type: atom type to filter on., defaults to ""
         :type type: :py:class:`str`
+        :param atomMask: residue specific atom mask.
+        :type type: :py:class:`dict`, optional
 
         :return diffMapRegionStats: Difference density map region statistics per residue.
         :rtype: :py:class:`list`
@@ -1013,7 +1138,7 @@ class DensityAnalysis(object):
         if type:
             residues = [residue for residue in residues if residue.resname == type]
         for residue in residues:
-            atoms = [atom for atom in residue.get_atoms()]
+            atoms = [atom for atom in residue.get_atoms() if not atomMask or (residue.resname in atomMask and atom.name in atomMask[residue.resname])]
             xyzCoordList = [atom.coord for atom in atoms]
             meanOccupancy = np.mean([atom.get_occupancy() for atom in atoms])
             result = self.calculateRegionDiscrepancy(xyzCoordList, radius, numSD)
@@ -1043,10 +1168,16 @@ class DensityAnalysis(object):
         diffDensityObj = self.diffDensityObj
         diffDensityCutoff = diffDensityObj.meanDensity + numSD * diffDensityObj.stdDensity
 
-        # observed absolute significant regional discrepancy
+        # observed significant regional discrepancy
         green = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, diffDensityCutoff)
         red = diffDensityObj.findAberrantBlobs(xyzCoordList, radius, -1.0 * diffDensityCutoff)
-        actual_abs_sig_regional_discrep = sum([abs(blob.totalDensity) for blob in green + red])
+        actual_positive_sig_regional_discrep = sum([blob.totalDensity for blob in green])
+        num_electrons_actual_positive_sig_regional_discrep = actual_positive_sig_regional_discrep / densityElectronRatio
+        actual_negative_sig_regional_discrep = sum([blob.totalDensity for blob in red])
+        num_electrons_actual_negative_sig_regional_discrep = actual_negative_sig_regional_discrep / densityElectronRatio
+        actual_sig_regional_discrep = actual_positive_sig_regional_discrep + actual_negative_sig_regional_discrep
+        num_electrons_actual_sig_regional_discrep = actual_sig_regional_discrep / densityElectronRatio
+        actual_abs_sig_regional_discrep = abs(actual_positive_sig_regional_discrep) + abs(actual_negative_sig_regional_discrep)
         num_electrons_actual_abs_sig_regional_discrep = actual_abs_sig_regional_discrep / densityElectronRatio
 
         # expected absolute significant regional discrepancy
@@ -1058,7 +1189,10 @@ class DensityAnalysis(object):
         num_electrons_expected_abs_sig_regional_discrep = expected_abs_sig_regional_discrep / densityElectronRatio
 
         result = [ actual_abs_sig_regional_discrep, num_electrons_actual_abs_sig_regional_discrep,
-                 expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep ]
+                 expected_abs_sig_regional_discrep, num_electrons_expected_abs_sig_regional_discrep,
+                 actual_sig_regional_discrep, num_electrons_actual_sig_regional_discrep,
+                 actual_positive_sig_regional_discrep, num_electrons_actual_positive_sig_regional_discrep,
+                 actual_negative_sig_regional_discrep, num_electrons_actual_negative_sig_regional_discrep ]
 
         if testValidCrs:
             return (result, utils.testValidXyzList(diffDensityObj, xyzCoordList, radius))
