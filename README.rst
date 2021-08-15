@@ -134,7 +134,7 @@ The `pdb_eda` package can be used in several ways:
 
 CHANGELOG
 ---------
-Version 2.3.1:
+Version 2.3.2:
 Fixed logical and runtime errors in single density --atom-mask option.
 Improved cythonization further.
 Added --optimized-radii option to single density submode.
