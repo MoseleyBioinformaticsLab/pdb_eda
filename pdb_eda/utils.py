@@ -249,8 +249,8 @@ def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, radius, densityCutoff=0
     :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
     :param xyzCoordList: xyz coordinates.
     :type xyzCoordList: :py:class:`list`
-    :param radius:
-    :type radius: :py:class:`float`
+    :param radius: search radius or list of search radii
+    :type radius: :py:class:`float` or :py:class:`list`
     :param densityCutoff: a density cutoff for all the points wants to be included., defaults to 0
             Default 0 means include every point within the radius.
             If cutoff < 0, include only points with density < cutoff.
@@ -260,7 +260,10 @@ def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, radius, densityCutoff=0
     :return: crsCoordList of crs coordinates
     :rtype: :py:class:`set`
     """
-    return {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff)}
+    if isinstance(radius, list):
+        return {tuple(crsCoord) for xyzCoord,testRadius in zip(xyzCoordList,radius) for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, testRadius, densityCutoff)}
+    else:
+        return {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff)}
 
 def testValidXyz(densityMatrix, xyzCoord, radius):
     """Tests whether all crs coordinates within a given distance of a xyzCoord is within the densityMatrix.

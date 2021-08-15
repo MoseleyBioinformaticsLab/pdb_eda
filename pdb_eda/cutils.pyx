@@ -5,7 +5,7 @@ Cythonized Utilities (pdb_eda.cutils)
 Contains low-level functions used in pdb_eda.ccp4 and pdb_eda.densityAnalysis.
 """
 
-cdef bint _testOverlap(selfBlob, otherBlob):
+cdef inline bint _testOverlap(selfBlob, otherBlob):
     """Check if two blobs overlaps or right next to each other.
 
     :param selfBlob:
@@ -166,7 +166,7 @@ cpdef bint testValidCrs(densityMatrix, crsCoord):
 
     return True
 
-cdef bint _testValidCrsList(densityMatrix, crsList):
+cdef inline bint _testValidCrsList(densityMatrix, crsList):
     """Tests whether all of the crs coordinates in the list are valid.
 
     :param densityMatrix:
@@ -247,15 +247,15 @@ cpdef list getSphereCrsFromXyz(densityMatrix, xyzCoord, float radius, float dens
 
     return crsCoordList
 
-def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, float radius, float densityCutoff=0):
+def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, radius, float densityCutoff=0):
     """Calculates a list of crs coordinates that within a given distance from a list of xyz points.
 
     :param densityMatrix:
     :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
     :param xyzCoordList: xyz coordinates.
     :type xyzCoordList: :py:class:`list`
-    :param radius:
-    :type radius: :py:class:`float`
+    :param radius: search radius or list of search radii
+    :type radius: :py:class:`float` or :py:class:`list`
     :param densityCutoff: a density cutoff for all the points wants to be included., defaults to 0
             Default 0 means include every point within the radius.
             If cutoff < 0, include only points with density < cutoff.
@@ -265,7 +265,10 @@ def getSphereCrsFromXyzList(densityMatrix, xyzCoordList, float radius, float den
     :return: crsCoordList of crs coordinates
     :rtype: :py:class:`set`
     """
-    return {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff)}
+    if isinstance(radius, list):
+        return {tuple(crsCoord) for xyzCoord,testRadius in zip(xyzCoordList,radius) for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, testRadius, densityCutoff)}
+    else:
+        return {tuple(crsCoord) for xyzCoord in xyzCoordList for crsCoord in getSphereCrsFromXyz(densityMatrix, xyzCoord, radius, densityCutoff)}
 
 cdef bint _testValidXyz(densityMatrix, xyzCoord, float radius):
     """Tests whether all crs coordinates within a given distance of a xyzCoord is within the densityMatrix.
@@ -274,7 +277,7 @@ cdef bint _testValidXyz(densityMatrix, xyzCoord, float radius):
     :type densityMatrix: :class:`pdb_eda.ccp4.DensityMatrix`
     :param xyzCoord: xyz coordinates.
     :type xyzCoord: :py:class:`list`
-    :param radius:
+    :param radius: search radius
     :type radius: :py:class:`float`
 
     :return: bool
@@ -291,7 +294,7 @@ cdef bint _testValidXyz(densityMatrix, xyzCoord, float radius):
 def testValidXyz(densityMatrix, xyzCoord, float radius):
     return _testValidXyz(densityMatrix, xyzCoord, radius)
 
-cdef bint _testValidXyzList(densityMatrix, xyzCoordList, float radius):
+cdef inline bint _testValidXyzList(densityMatrix, xyzCoordList, float radius):
     """Tests whether all crs coordinates within a given distance of a set of xyzCoords is within the densityMatrix.
 
     :param densityMatrix:

@@ -7,7 +7,7 @@ Usage:
     pdb_eda single -h | --help
     pdb_eda single <pdbid> <out-file> map (--density | --diff-density)
     pdb_eda single <pdbid> <out-file> cloud (--atom | --residue | --domain) [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
-    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --symmetry-atom) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid] [--atom-mask=<mask-file>]
+    pdb_eda single <pdbid> <out-file> density (--atom | --residue | --symmetry-atom) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid] [--atom-mask=<mask-file>] [--optimized-radii]
     pdb_eda single <pdbid> <out-file> difference (--atom | --residue | --symmetry-atom) [--type=<type>] [--radius=<radius>] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid] [--atom-mask=<mask-file>]
     pdb_eda single <pdbid> <out-file> blob [--green] [--red] [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
     pdb_eda single <pdbid> <out-file> blob --blue [--num-sd=<num-sd>] [--out-format=<format>] [--params=<params-file>] [--include-pdbid]
@@ -31,6 +31,7 @@ Options:
     --radius=<radius>               Radius (in angstroms) around atom or residue to calculate significant discrepancy. [default: 3.5]
     --num-sd=<num-sd>               Number of standard deviation units to use as a significant discrepancy cutoff. Default is 3.0 for atom, residue, green, and red.  Default is 1.5 for blue.
     --atom-mask=<mask-file>         JSON file with dictionary of residue type to list of atom types to use in calculating residue-specific regional electron density and discrepancies.
+    --optimized-radii               Use optimized atom radii when available.
     --type=<type>                   Residue type or atom type to filter by.
     --out-format=<format>           Output file format, available formats: csv, json [default: json].
     --print-validation              Print comparison of median absolute values below 1 sigma for Fo and Fc maps, which should be very similar.
@@ -107,13 +108,13 @@ def main():
     elif args["density"]:
         if args["--atom"]:
             headerList = densityAnalysis.DensityAnalysis.atomRegionDensityHeader
-            result = analyzer.calculateAtomRegionDensity(args["--radius"], args["--num-sd"], args["--type"])
+            result = analyzer.calculateAtomRegionDensity(args["--radius"], args["--num-sd"], args["--type"], args["--optimized-radii"])
         elif args["--residue"]:
             headerList = densityAnalysis.DensityAnalysis.residueRegionDensityHeader
-            result = analyzer.calculateResidueRegionDensity(args["--radius"], args["--num-sd"], args["--type"], atom_mask)
+            result = analyzer.calculateResidueRegionDensity(args["--radius"], args["--num-sd"], args["--type"], atom_mask, args["--optimized-radii"])
         elif args["--symmetry-atom"]:
             headerList = densityAnalysis.DensityAnalysis.symmetryAtomRegionDensityHeader
-            result = analyzer.calculateSymmetryAtomRegionDensity(args["--radius"], args["--num-sd"], args["--type"])
+            result = analyzer.calculateSymmetryAtomRegionDensity(args["--radius"], args["--num-sd"], args["--type"], args["--optimized-radii"])
             for atomInfo in result:
                 atomInfo[4] = [val for val in atomInfo[4]]
                 atomInfo[5] = [float(val) for val in atomInfo[5]]

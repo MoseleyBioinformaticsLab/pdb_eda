@@ -944,7 +944,7 @@ class DensityAnalysis(object):
     residueRegionDensityHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDensityHeader
 
 
-    def calculateAtomRegionDensity(self, radius, numSD=1.5, type=""):
+    def calculateAtomRegionDensity(self, radius, numSD=1.5, type="", useOptimizedRadii=False):
         """Calculates significant region density in a given radius of each atom.
 
         :param radius: the search radius.
@@ -964,12 +964,14 @@ class DensityAnalysis(object):
 
         results = []
         for atom in atoms:
-            result = self.calculateRegionDensity([atom.coord], radius, numSD)
+            resAtom = residueAtomName(atom)
+            testRadius = radiiGlobal[fullAtomNameMapAtomTypeGlobal[resAtom]] if useOptimizedRadii and resAtom in fullAtomNameMapAtomTypeGlobal.keys() else radius
+            result = self.calculateRegionDensity([atom.coord], testRadius, numSD)
             results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
 
         return results
 
-    def calculateSymmetryAtomRegionDensity(self, radius, numSD=1.5, type=""):
+    def calculateSymmetryAtomRegionDensity(self, radius, numSD=1.5, type="", useOptimizedRadii=False):
         """Calculates significant region density in a given radius of each symmetry atom.
 
         :param radius: the search radius.
@@ -988,12 +990,14 @@ class DensityAnalysis(object):
 
         results = []
         for atom in atoms:
-            (result,valid) = self.calculateRegionDensity([atom.coord], radius, numSD, testValidCrs=True)
+            resAtom = residueAtomName(atom)
+            testRadius = radiiGlobal[fullAtomNameMapAtomTypeGlobal[resAtom]] if useOptimizedRadii and resAtom in fullAtomNameMapAtomTypeGlobal.keys() else radius
+            (result,valid) = self.calculateRegionDensity([atom.coord], testRadius, numSD, testValidCrs=True)
             results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, valid] + result)
 
         return results
 
-    def calculateResidueRegionDensity(self, radius, numSD=1.5, type="", atomMask=None):
+    def calculateResidueRegionDensity(self, radius, numSD=1.5, type="", atomMask=None, useOptimizedRadii=False):
         """Calculates significant region density in a given radius of each residue.
 
         :param radius: the search radius.
@@ -1019,7 +1023,12 @@ class DensityAnalysis(object):
             if atoms:
                 xyzCoordList = [atom.coord for atom in atoms]
                 meanOccupancy = np.mean([atom.get_occupancy() for atom in atoms])
-                result = self.calculateRegionDensity(xyzCoordList, radius, numSD)
+                if useOptimizedRadii:
+                    resAtoms = [residueAtomName(atom) for atom in atoms]
+                    radii = [radiiGlobal[fullAtomNameMapAtomTypeGlobal[resAtom]] if resAtom in fullAtomNameMapAtomTypeGlobal.keys() else radius for resAtom in resAtoms]
+                    result = self.calculateRegionDensity(xyzCoordList, radii, numSD)
+                else:
+                    result = self.calculateRegionDensity(xyzCoordList, radius, numSD)
                 results.append([residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
 
         return results
@@ -1029,8 +1038,8 @@ class DensityAnalysis(object):
 
         :param xyzCoordLists: single xyz coordinate or a list of xyz coordinates.
         :type xyzCoordList: :py:class:`list`
-        :param radius: the search radius.
-        :type radius: :py:class:`float`
+        :param radius: the search radius or list of search radii.
+        :type radius: :py:class:`float` or :py:class:`list`
         :param numSD: number of standard deviations of significance., defaults to 1.5
         :type numSD: :py:class:`float`
         :param testValidCrs: whether to test crs are valid and return the results., defaults to :py:obj:`False`

@@ -439,8 +439,8 @@ class DensityMatrix:
 
         :param xyzCoords: single xyz coordinate or a list of xyz coordinates.
         :type xyzCoords: :py:class:`list`
-        :param radius:
-        :type radius: :py:class:`float`
+        :param radius: search radius or list of search radii
+        :type radius: :py:class:`float` or :py:class:`list`
         :param densityCutoff: A density cutoff for all the points wants to be included, defaults to 0
                 Default 0 means include every point within the radius.
                 If cutoff < 0, include only points with density < cutoff.
