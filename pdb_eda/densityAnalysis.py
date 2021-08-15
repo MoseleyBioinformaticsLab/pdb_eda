@@ -1015,11 +1015,12 @@ class DensityAnalysis(object):
         if type:
             residues = [residue for residue in residues if residue.resname == type]
         for residue in residues:
-            atoms = [atom for atom in residue.get_atoms() if not atomMask or (residue.resname in atomMask and atom.name in atomMask[residue.resname])]
-            xyzCoordList = [atom.coord for atom in atoms]
-            meanOccupancy = np.mean([atom.get_occupancy() for atom in atoms])
-            result = self.calculateRegionDensity(xyzCoordList, radius, numSD)
-            results.append([residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
+            atoms = [atom for atom in residue.get_atoms() if not atomMask or residue.resname not in atomMask or atom.name in atomMask[residue.resname]]
+            if atoms:
+                xyzCoordList = [atom.coord for atom in atoms]
+                meanOccupancy = np.mean([atom.get_occupancy() for atom in atoms])
+                result = self.calculateRegionDensity(xyzCoordList, radius, numSD)
+                results.append([residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
 
         return results
 
