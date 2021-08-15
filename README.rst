@@ -134,7 +134,20 @@ The `pdb_eda` package can be used in several ways:
 
 CHANGELOG
 ---------
-Since version 1.0.1, over 2200 lines of additional code has been written and most of the code base has been revised and refactored.
+Version 2.3.1:
+Fixed logical and runtime errors in single density --atom-mask option.
+Improved cythonization further.
+Added --optimized-radii option to single density submode.
+
+Version 2.2.1:
+Moved previous single density submode to cloud submode.
+Created new single density submode that has near parallel options to single difference submode.
+Added --atom-mask option to single density submode.
+Improved cythonization to gain additional computational performance.
+Performed a variety of bug fixes.
+
+Version 2.1.1:
+Over 2200 lines of additional code has been written and most of the code base has been revised and refactored.
 Computationally intensive parts of the code have been cythonized to improve execution performance.
 Many variables and functions have been renamed to greatly improve readability and understanding of the code base, API, and CLI.
 
