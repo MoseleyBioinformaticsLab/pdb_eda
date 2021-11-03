@@ -1,10 +1,16 @@
 # Compile using:
 # $ python3 cutils_setup.py build_ext --inplace
-# $ cp build/lib.linux-x86_64-3.6/pdb_eda/cutils.cpython-36m-x86_64-linux-gnu.so cutils.so
 
-from setuptools import setup
-from Cython.Build import cythonize
+from setuptools import setup, Extension
+import Cython.Build
 
 setup(
-    ext_modules = cythonize("cutils.pyx")
+  name = 'cutils',
+  ext_modules=[
+    Extension('cutils',
+              sources=['cutils.pyx'],
+              extra_compile_args=['-O3'],
+              language='c++')
+    ],
+  cmdclass = {'build_ext': Cython.Build.build_ext}
 )

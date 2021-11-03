@@ -39,7 +39,7 @@ SETUP_REQUIRES = [
 ]
 
 EXTENSIONS = [
-    Extension("pdb_eda.cutils",sources=["pdb_eda/cutils.pyx"],include_dirs=[numpy.get_include()])
+    Extension("pdb_eda.cutils", sources=["pdb_eda/cutils.pyx"], extra_compile_args=['-O3'], include_dirs=[numpy.get_include()])
 ]
 
 setup(

@@ -6,3 +6,4 @@ dist/
 pdb_eda.egg-info/
 *.so
 *.c
+*.cpp
