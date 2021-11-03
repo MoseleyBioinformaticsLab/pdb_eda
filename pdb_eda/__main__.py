@@ -55,7 +55,7 @@ def main():
         print(__doc__)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # this is hidden from the console script created by pip, since main() is called directly.
     if len(sys.argv) > 1 and sys.argv[1] == "--profile":
         sys.argv.pop(1)
         import cProfile

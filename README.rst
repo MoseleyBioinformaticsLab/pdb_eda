@@ -134,6 +134,9 @@ The `pdb_eda` package can be used in several ways:
 
 CHANGELOG
 ---------
+Version 2.4.1:
+Added -O3 compile option to cythonization.
+
 Version 2.3.2:
 Fixed logical and runtime errors in single density --atom-mask option.
 Improved cythonization further.
