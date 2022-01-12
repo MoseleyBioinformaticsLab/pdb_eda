@@ -63,11 +63,11 @@ def main():
 		atoms = list(analyzer.biopdbObj.get_atoms())
 		contacts = findCoordContacts(np.asarray([atom.coord for atom in atoms]), crystalNeighborCoords, args["--distance"])
 
-	headerList = ['chain', 'residue_number', 'residue_name', "atom_name", "occupancy", "symmetry", "xyz", "crystal_contact_distance"]
+	headerList = ['model', 'chain', 'residue_number', 'residue_name', "atom_name", "occupancy", "symmetry", "xyz", "crystal_contact_distance"]
 	result = []
 	for index,contactDistance in contacts:
 		atom = atoms[index]
-		result.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(),
+		result.append([atom.parent.parent.parent.id, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy(),
 					   [x for x in atom.symmetry] if args["--symmetry-atoms"] else [0,0,0,0], [float(c) for c in atom.coord], contactDistance])
 
 	if args["--include-pdbid"]:

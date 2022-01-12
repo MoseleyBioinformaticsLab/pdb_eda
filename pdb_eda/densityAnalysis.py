@@ -939,9 +939,9 @@ class DensityAnalysis(object):
 
     # Headers that match the order of the results
     regionDensityHeader = [ "actual_significant_regional_density", "num_electrons_actual_significant_regional_density" ]
-    atomRegionDensityHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDensityHeader
-    symmetryAtomRegionDensityHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "atom_xyz", "fully_within_density_map"] + regionDensityHeader
-    residueRegionDensityHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDensityHeader
+    atomRegionDensityHeader = ['model', 'chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDensityHeader
+    symmetryAtomRegionDensityHeader = ['model', 'chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "atom_xyz", "fully_within_density_map"] + regionDensityHeader
+    residueRegionDensityHeader = ['model', 'chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDensityHeader
 
 
     def calculateAtomRegionDensity(self, radius, numSD=1.5, type="", useOptimizedRadii=False):
@@ -967,7 +967,7 @@ class DensityAnalysis(object):
             resAtom = residueAtomName(atom)
             testRadius = radiiGlobal[fullAtomNameMapAtomTypeGlobal[resAtom]] if useOptimizedRadii and resAtom in fullAtomNameMapAtomTypeGlobal.keys() else radius
             result = self.calculateRegionDensity([atom.coord], testRadius, numSD)
-            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
+            results.append([atom.parent.parent.parent.id, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
 
         return results
 
@@ -993,7 +993,7 @@ class DensityAnalysis(object):
             resAtom = residueAtomName(atom)
             testRadius = radiiGlobal[fullAtomNameMapAtomTypeGlobal[resAtom]] if useOptimizedRadii and resAtom in fullAtomNameMapAtomTypeGlobal.keys() else radius
             (result,valid) = self.calculateRegionDensity([atom.coord], testRadius, numSD, testValidCrs=True)
-            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, valid] + result)
+            results.append([atom.parent.parent.parent.id, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, valid] + result)
 
         return results
 
@@ -1029,7 +1029,7 @@ class DensityAnalysis(object):
                     result = self.calculateRegionDensity(xyzCoordList, radii, numSD)
                 else:
                     result = self.calculateRegionDensity(xyzCoordList, radius, numSD)
-                results.append([residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
+                results.append([residue.parent.parent.id, residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
 
         return results
 
@@ -1073,9 +1073,9 @@ class DensityAnalysis(object):
                  "actual_significant_regional_discrepancy", "num_electrons_actual_significant_regional_discrepancy",
                  "actual_positive_significant_regional_discrepancy", "num_electrons_actual_positive_significant_regional_discrepancy",
                  "actual_negative_significant_regional_discrepancy", "num_electrons_actual_negative_significant_regional_discrepancy" ]
-    atomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDiscrepancyHeader
-    symmetryAtomRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "atom_xyz", "fully_within_density_map"] + regionDiscrepancyHeader
-    residueRegionDiscrepancyHeader = ['chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDiscrepancyHeader
+    atomRegionDiscrepancyHeader = ['model', 'chain', 'residue_number', 'residue_name', "atom_name", "occupancy"] + regionDiscrepancyHeader
+    symmetryAtomRegionDiscrepancyHeader = ['model', 'chain', 'residue_number', 'residue_name', "atom_name", "symmetry", "atom_xyz", "fully_within_density_map"] + regionDiscrepancyHeader
+    residueRegionDiscrepancyHeader = ['model', 'chain', 'residue_number', 'residue_name', "mean_occupancy"] + regionDiscrepancyHeader
 
     def calculateAtomRegionDiscrepancies(self, radius, numSD=3.0, type=""):
         """Calculates significant region discrepancies in a given radius of each atom.
@@ -1098,7 +1098,7 @@ class DensityAnalysis(object):
         results = []
         for atom in atoms:
             result = self.calculateRegionDiscrepancy([atom.coord], radius, numSD)
-            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
+            results.append([atom.parent.parent.parent.id, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.get_occupancy()] + result)
 
         return results
 
@@ -1122,7 +1122,7 @@ class DensityAnalysis(object):
         results = []
         for atom in atoms:
             (result,valid) = self.calculateRegionDiscrepancy([atom.coord], radius, numSD, testValidCrs=True)
-            results.append([atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, valid] + result)
+            results.append([atom.parent.parent.parent.id, atom.parent.parent.id, atom.parent.id[1], atom.parent.resname, atom.name, atom.symmetry, atom.coord, valid] + result)
 
         return results
 
@@ -1152,7 +1152,7 @@ class DensityAnalysis(object):
             xyzCoordList = [atom.coord for atom in atoms]
             meanOccupancy = np.mean([atom.get_occupancy() for atom in atoms])
             result = self.calculateRegionDiscrepancy(xyzCoordList, radius, numSD)
-            results.append([residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
+            results.append([residue.parent.parent.id, residue.parent.id, residue.id[1], residue.resname, meanOccupancy ] + result)
 
         return results
 
