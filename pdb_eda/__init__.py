@@ -2,7 +2,7 @@
 
 # from .ccp4 import readFromPDBID
 
-__version__ = "2.4.2"
+__version__ = "2.5.1"
 
 from .densityAnalysis import fromPDBid
 

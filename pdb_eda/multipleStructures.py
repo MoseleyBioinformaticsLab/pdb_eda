@@ -8,7 +8,7 @@ Usage:
     pdb_eda multiple <in-result-file> <out-pdbid-file> --filter [--out-format=<format>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>] [--min-atoms=<min-atoms>] [--min-residues=<min-residues>] [--min-elements=<min-elements>]
     pdb_eda multiple <pdbid-file> --reload
     pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing] [--silent]
-    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing] [--silent]
+    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing] [--silent] [--safe]
 
 Options:
     -h, --help                                      Show this screen.
@@ -23,6 +23,7 @@ Options:
     --silent                                        Do not print error message to stderr.
     --single-mode=<quoted-single-mode-options>      Run single structure analysis mode on a set of PDB entries.
     --contacts-mode=<quoted-contacts-mode-options>  Run (crystal) contacts analysis mode on a set of PDB entries.
+    --safe                                          Run as a separate subprocess, since the pymol module is not always stable for multiple executions.
     --filter                                        Filter pdbids based on criteria.
     --max-resolution=<max-resolution>               Maximum x-ray crystallographic resolution to allow. [default: 3.5]
     --min-resolution=<min-resolution>               Minimum x-ray crystallographic resolution to allow. [default: 0]
@@ -43,6 +44,7 @@ import sys
 import json
 import csv
 import multiprocessing
+import subprocess
 import signal
 import collections
 import docopt
@@ -146,7 +148,7 @@ def main():
                 else:
                     raise RuntimeError(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
         elif globalArgs["--contacts-mode"]:
-            processFunction = contactsModeFunction
+            processFunction = contactsModeFunction if not globalArgs["--safe"] else contactsModeFunctionSafe
             if not os.path.isdir(globalArgs["<out-dir>"]):
                 if not os.path.isfile(globalArgs["<out-dir>"]):
                     os.mkdir(globalArgs["<out-dir>"])
@@ -246,6 +248,37 @@ def contactsModeFunction(pdbid):
 
     gc.collect()
     return 0
+
+
+def contactsModeFunctionSafe(pdbid):
+    """Execute pdb_eda contacts mode on a given pdbid as a separate subprocess.
+
+    :param pdbid:
+    :type pdbid: :py:class:`str`
+
+    :return: 0
+    """
+    contactsModeCommandLine = "pdb_eda contacts " + pdbid + " " + globalArgs["<out-dir>"] + "/" + pdbid + ".result " + globalArgs["--contacts-mode"]
+    args = contactsModeCommandLine.split()
+    if globalArgs["--time-out"]:
+        try:
+            with timeout(seconds=globalArgs["--time-out"]):
+                subprocess.run(args)
+        except Exception as exception:
+            if not globalArgs["--silent"]:
+                print(pdbid, exception, file=sys.stderr)
+    elif globalArgs["--testing"]:
+        subprocess.run(args)
+    else:
+        try:
+            subprocess.run(args)
+        except Exception as exception:
+            if not globalArgs["--silent"]:
+                print(pdbid, exception, file=sys.stderr)
+
+    gc.collect()
+    return 0
+
 
 
 def multipleModeFunction(pdbid):

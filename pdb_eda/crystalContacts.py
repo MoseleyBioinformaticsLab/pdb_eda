@@ -8,13 +8,14 @@ Usage:
 	pdb_eda contacts -h | --help
 	pdb_eda contacts <pdbid> <out-file> [--distance=<cutoff>] [--symmetry-atoms] [--include-pdbid] [--out-format=<format>]
 
-Arguments:
-	<pdbid>                The PDB ID to download and analyze.
-	<out-file>             Output filename. "-" will write to standard output.
-	--distance=<cutoff>    Distance cutoff in angstroms for detecting crystal contacts. [default: 5.0]
-	--symmetry-atoms       Calculate crystal contacts to symmetry atoms too.
-	--include-pdbid        Include PDB ID at the beginning of each result.
-	--out-format=<format>  Output file format, available formats: csv, json [default: json].
+Options:
+    -h, --help             Show this screen.
+    <pdbid>                The PDB ID to download and analyze.
+    <out-file>             Output filename. "-" will write to standard output.
+    --distance=<cutoff>    Distance cutoff in angstroms for detecting crystal contacts [default: 5.0].
+    --symmetry-atoms       Calculate crystal contacts to symmetry atoms too.
+    --include-pdbid        Include PDB ID at the beginning of each result.
+    --out-format=<format>  Output file format, available formats: csv, json [default: json].
 """
 
 import scipy.spatial.distance
