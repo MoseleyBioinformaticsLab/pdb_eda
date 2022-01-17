@@ -7,8 +7,8 @@ Usage:
     pdb_eda multiple <pdbid-file> <out-result-file> [--params=<params-file>] [--out-format=<format>] [--testing] [--time-out=<seconds>] [--silent]
     pdb_eda multiple <in-result-file> <out-pdbid-file> --filter [--out-format=<format>] [--max-resolution=<max-resolution>] [--min-resolution=<min-resolution>] [--min-atoms=<min-atoms>] [--min-residues=<min-residues>] [--min-elements=<min-elements>]
     pdb_eda multiple <pdbid-file> --reload
-    pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing] [--silent]
-    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing] [--silent] [--safe]
+    pdb_eda multiple <pdbid-file> <out-dir> --single-mode=<quoted-single-mode-options> [--time-out=<seconds>] [--testing] [--silent] [--skip]
+    pdb_eda multiple <pdbid-file> <out-dir> --contacts-mode=<quoted-contacts-mode-options> [--time-out=<seconds>] [--testing] [--silent] [--skip] [--safe]
 
 Options:
     -h, --help                                      Show this screen.
@@ -23,6 +23,7 @@ Options:
     --silent                                        Do not print error message to stderr.
     --single-mode=<quoted-single-mode-options>      Run single structure analysis mode on a set of PDB entries.
     --contacts-mode=<quoted-contacts-mode-options>  Run (crystal) contacts analysis mode on a set of PDB entries.
+    --skip                                          Skip pdbids that where previously analyzed.
     --safe                                          Run as a separate subprocess, since the pymol module is not always stable for multiple executions.
     --filter                                        Filter pdbids based on criteria.
     --max-resolution=<max-resolution>               Maximum x-ray crystallographic resolution to allow. [default: 3.5]
@@ -156,6 +157,9 @@ def main():
                     raise RuntimeError(str("Error: Output directory \"") + globalArgs["<out-dir>"] + "\" is a file.")
         else:
             processFunction = multipleModeFunction
+
+        if globalArgs["--skip"]:
+            pdbids = [ pdbid for pdbid in pdbids if not os.path.isfile(globalArgs["<out-dir>"] + "/" + pdbid + ".result") ]
 
         if globalArgs["--testing"]:
             results = [ processFunction(pdbid) for pdbid in pdbids ]
