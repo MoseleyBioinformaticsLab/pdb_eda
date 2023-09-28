@@ -80,7 +80,8 @@ def loadF000Parameters():
 ccp4urlPrefix = "http://www.ebi.ac.uk/pdbe/coordinates/files/"
 ccp4folder = './ccp4_data/'
 pdbfolder = './pdb_data/'
-pdburlPrefix = "http://ftp.rcsb.org/pub/pdb/data/structures/all/pdb/"
+#pdburlPrefix = "http://ftp.rcsb.org/pub/pdb/data/structures/all/pdb/"
+pdburlPrefix = "https://files.wwpdb.org/pub/pdb/data/structures/all/pdb/"
 mmcifurlPrefix = "http://ftp.rcsb.org/pub/pdb/data/structures/all/mmCIF/"
 
 
